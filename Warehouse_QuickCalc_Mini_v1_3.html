@@ -1,0 +1,229 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Warehouse QuickCalc Mini v1.3</title>
+<style>
+  :root { --bg:#0b0d10; --card:#141821; --border:#1f2a3a; --ink:#e8eef7; --muted:#9fb3c8; --line:#253348; }
+  html, body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  .sub { color:var(--muted); font-size:12px; margin-left:6px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  input[type="number"], select { width:100%; background:#0f131b; color:var(--ink); border:1px solid #29364a; border-radius:10px; padding:12px; font-size:16px; outline:none; }
+  input[type="number"]::placeholder { color:#5f738a; }
+  .row { display:flex; gap:12px; flex-wrap: wrap; }
+  .col { flex:1; min-width: 240px; }
+  .btn { width:100%; padding:12px; border-radius:12px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; font-size:16px; }
+  .btn:active { transform: translateY(1px); }
+  .result { display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap:12px; }
+  .pill { background:#0f131b; border:1px solid #29364a; border-radius:12px; padding:12px; text-align:center; }
+  .pill h3 { margin:0; font-size:14px; color:var(--muted); }
+  .pill p { margin:6px 0 0; font-size:22px; font-weight:800; letter-spacing:0.2px; }
+  .muted { color:#8aa0b8; font-size:12px; }
+  table { width:100%; border-collapse: collapse; font-size:13px; }
+  th, td { border-bottom:1px dashed var(--line); padding:8px 6px; text-align:left; }
+  th { color:var(--muted); font-weight:700; }
+  .wrapgrid { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:10px; }
+  .chip { background:#0f131b; border:1px solid #29364a; border-radius:10px; padding:10px; text-align:center; font-size:13px; }
+  .assume p { margin:6px 0; font-size:13px; color:var(--muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Warehouse QuickCalc Mini <span class="sub">v1.3 · 2025-10-24 17:27 UTC</span></h1>
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label for="customer">Customer</label>
+          <select id="customer">
+            <option value="WAILEY">WAILEY</option>
+<option value="COOWEL">COOWEL</option>
+<option value="ASDERI">ASDERI</option>
+<option value="SAIEME">SAIEME</option>
+<option value="TESWIN">TESWIN</option>
+<option value="COOWES">COOWES</option>
+<option value="COOAVO">COOAVO</option>
+<option value="SAINOR">SAINOR</option>
+          </select>
+        </div>
+        <div class="col">
+          <label for="units">Units</label>
+          <input id="units" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+        </div>
+        <div class="col">
+          <label for="overrideRate">Override Active Rate (u/h) <span class="muted">(optional)</span></label>
+          <input id="overrideRate" type="number" min="1" step="1" inputmode="numeric" placeholder="leave blank to use customer avg">
+        </div>
+      </div>
+      <div style="height:12px"></div>
+      <button class="btn" id="calc" type="button" onclick="calc()">Calculate</button>
+      <div style="height:12px"></div>
+
+      <div class="result">
+        <div class="pill">
+          <h3>Expected Pallets</h3>
+          <p id="pallets">—</p>
+          <div class="muted" id="uPerPallet">—</div>
+        </div>
+        <div class="pill">
+          <h3>Expected Duration (Active)</h3>
+          <p id="duration">—</p>
+          <div class="muted" id="rate">—</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+      <div class="card" style="background:#0e1219;">
+        <div class="row">
+          <div class="col">
+            <label>Estimated Wrap Times (equal pallet splits)</label>
+            <div class="wrapgrid">
+              <div class="chip"><b>1st Wrap</b><div class="muted" id="wrap1">—</div></div>
+              <div class="chip"><b>2nd Wrap</b><div class="muted" id="wrap2">—</div></div>
+              <div class="chip"><b>3rd Wrap</b><div class="muted" id="wrap3">—</div></div>
+            </div>
+          </div>
+          <div class="col assume">
+            <label>Assumptions</label>
+            <p id="assump-cust">Customer: —</p>
+            <p id="assump-upp">Mean units/pallet: —</p>
+            <p id="assump-rate">Active rate used: —</p>
+            <p class="muted">Wrap times assume equal split across pallets at the chosen active rate. Real-world delays not included.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <details class="card">
+      <summary><b>Data (read-only)</b></summary>
+      <p class="muted">These averages are baked into this file. Replace the file to update for everyone.</p>
+      <table id="dataTable">
+        <thead>
+          <tr><th>Customer</th><th>Mean Units / Pallet</th><th>Mean Active u/h</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </details>
+  </div>
+
+<script>
+const VERSION = "1.3";
+const DB = [
+  {name:"WAILEY", upp:192.33, rate:330},
+  {name:"COOWEL", upp:73.00, rate:120},
+  {name:"ASDERI", upp:154.00, rate:225},
+  {name:"SAIEME", upp:289.00, rate:317},
+  {name:"TESWIN", upp:341.33, rate:404},
+  {name:"COOWES", upp:177.00, rate:272},
+  {name:"COOAVO", upp:222.00, rate:247},
+  {name:"SAINOR", upp:213.67, rate:262}
+];
+
+function hhmm(hours) {
+  if (!isFinite(hours) || hours<=0) return "—";
+  const totalMin = Math.round(hours*60);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  return h + " h " + String(m).padStart(2,'0') + " m";
+}
+
+function fillDataTable() {
+  const tb = document.querySelector('#dataTable tbody');
+  tb.innerHTML = "";
+  DB.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.name}</td><td>${row.upp.toFixed(2)}</td><td>${row.rate}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function calc() {
+  try {
+    const name = document.getElementById('customer').value;
+    const units = parseInt(document.getElementById('units').value,10);
+    const overrideRate = parseFloat(document.getElementById('overrideRate').value);
+    const palletsEl = document.getElementById('pallets');
+    const uPerPalletEl = document.getElementById('uPerPallet');
+    const durationEl = document.getElementById('duration');
+    const rateEl = document.getElementById('rate');
+    const wrap1El = document.getElementById('wrap1');
+    const wrap2El = document.getElementById('wrap2');
+    const wrap3El = document.getElementById('wrap3');
+    const aCust = document.getElementById('assump-cust');
+    const aUpp = document.getElementById('assump-upp');
+    const aRate = document.getElementById('assump-rate');
+
+    if (!units || units <= 0) {
+      palletsEl.textContent = "—";
+      uPerPalletEl.textContent = "Enter units above";
+      durationEl.textContent = "—";
+      rateEl.textContent = "—";
+      wrap1El.textContent = wrap2El.textContent = wrap3El.textContent = "—";
+      aCust.textContent = "Customer: —"; aUpp.textContent = "Mean units/pallet: —"; aRate.textContent = "Active rate used: —";
+      return;
+    }
+
+    const row = DB.find(r => r.name === name);
+    if (!row) {
+      palletsEl.textContent = "—";
+      uPerPalletEl.textContent = "Unknown customer";
+      durationEl.textContent = "—";
+      rateEl.textContent = "—";
+      wrap1El.textContent = wrap2El.textContent = wrap3El.textContent = "—";
+      aCust.textContent = "Customer: —"; aUpp.textContent = "Mean units/pallet: —"; aRate.textContent = "Active rate used: —";
+      return;
+    }
+
+    const rate = isFinite(overrideRate) && overrideRate > 0 ? overrideRate : row.rate;
+    const expectedPallets = Math.max(1, Math.ceil(units / row.upp));
+    const expectedHours = units / rate;
+
+    palletsEl.textContent = expectedPallets;
+    uPerPalletEl.textContent = `~${row.upp.toFixed(0)} u/pallet`;
+    durationEl.textContent = hhmm(expectedHours);
+    rateEl.textContent = `${rate} u/h (active)`;
+
+    const unitsPerPallet = Math.ceil(units / expectedPallets);
+    const perPalletHours = unitsPerPallet / rate;
+    const wrapTimes = [];
+    for (let i=1; i<=expectedPallets && i<=3; i++) {
+      wrapTimes.push(hhmm(perPalletHours * i));
+    }
+    wrap1El.textContent = wrapTimes[0] || "—";
+    wrap2El.textContent = wrapTimes[1] || "—";
+    wrap3El.textContent = wrapTimes[2] || "—";
+
+    aCust.textContent = `Customer: ${row.name}`;
+    aUpp.textContent = `Mean units/pallet: ~${row.upp.toFixed(0)}`;
+    aRate.textContent = `Active rate used: ${rate} u/h`;
+  } catch (e) {
+    alert("Calculation error: " + e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  fillDataTable();
+  // Multiple triggers so it works even if button binding fails
+  document.getElementById('calc').addEventListener('click', calc);
+  document.getElementById('customer').addEventListener('change', calc);
+  document.getElementById('units').addEventListener('input', ()=>{ if (document.getElementById('units').value) calc(); });
+  document.getElementById('overrideRate').addEventListener('input', ()=>{ if (document.getElementById('overrideRate').value) calc(); });
+  // Enter key triggers calc
+  ['units','overrideRate'].forEach(id => {
+    document.getElementById(id).addEventListener('keyup', (e)=>{ if (e.key === 'Enter') calc(); });
+  });
+  // Simple cache-bust across versions
+  const stored = localStorage.getItem('quickcalc_version');
+  if (stored && stored !== VERSION) { localStorage.setItem('quickcalc_version', VERSION); location.reload(true); }
+  else { localStorage.setItem('quickcalc_version', VERSION); }
+});
+</script>
+</body>
+</html>
