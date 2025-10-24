@@ -1,0 +1,385 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QuickCalc + Tracker v2.3</title>
+<style>
+  :root {
+    --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --line:#243244;
+    --accent:#2f6bff; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 14px; }
+  h1 { font-size: 20px; margin:0 0 8px; }
+  .sub { color:var(--muted); font-size:12px; margin-left:6px; }
+  .tabs { display:flex; gap:8px; margin:10px 0; position: sticky; top:0; background:var(--bg); padding-top:8px; z-index:5; }
+  .tabbtn { flex:1; text-align:center; padding:10px; border:1px solid #253348; border-radius:10px; background:#0f131b; color:var(--ink); font-weight:700; }
+  .tabbtn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .hidden { display:none; }
+  .card { background:var(--card); border:1px solid #253348; border-radius:14px; padding:14px; margin: 10px 0; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  input, select, button { font-size:16px; }
+  input[type="number"], input[type="time"], input[type="text"], select {
+    width:100%; background:#0f131b; color:#e8eef7; border:1px solid #29364a; border-radius:10px; padding:10px; outline:none;
+  }
+  .row { display:flex; gap:10px; flex-wrap: wrap; }
+  .col { flex:1; min-width:220px; }
+  .btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:#e8eef7; font-weight:700; cursor:pointer; }
+  .btn.ghost { background:transparent; border-color:#29364a; }
+  .btn.ok { border-color:#2e6b3a; background:#173220; }
+  .btn.warn { border-color:#8a6a15; background:#30250f; }
+  .btn.bad { border-color:#7a2b2b; background:#331b1b; }
+  .btn.chip { padding:8px 10px; border-radius:999px; }
+  .pill { border-radius:12px; padding:10px 12px; background:#0f131b; border:1px solid #29364a; text-align:center; }
+  .pill h3 { margin:0; font-size:13px; color:var(--muted); }
+  .pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
+  .summarygrid { display:grid; grid-template-columns: repeat(2, minmax(160px,1fr)); gap:10px; }
+  .rateBanner { position: sticky; top:48px; z-index:4; display:flex; gap:10px; margin:8px 0; }
+  .rateChip { flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid #29364a; background:#0f131b; }
+  .rateChip.good { border-color:#1f4830; background:#14271c; }
+  .rateChip.warn { border-color:#584a1a; background:#2a230f; }
+  .rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
+  .timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
+  .tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
+  .tick .meta { color:#9fb3c8; font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { border-bottom:1px dashed #253348; padding:8px 6px; text-align:left; }
+  th { color:#9fb3c8; }
+  .footer { color:#7e93a8; font-size:12px; text-align:center; margin:14px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Warehouse QuickCalc & Tracker <span class="sub">v2.3 · 2025-10-24 20:33 UTC</span></h1>
+
+  <div class="tabs">
+    <button id="tabCalcBtn" class="tabbtn active" onclick="showTab('calc')">QuickCalc</button>
+    <button id="tabTrackBtn" class="tabbtn" onclick="showTab('tracker')">Tracker</button>
+  </div>
+
+  <div id="liveBanner" class="rateBanner hidden">
+    <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
+    <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
+    <div id="chipGap" class="rateChip"><b>Gap vs 300</b><div id="chipGapVal">—</div></div>
+  </div>
+
+  <!-- QuickCalc -->
+  <section id="tabCalc">
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Customer</label>
+          <select id="qcCustomer"><option value="TESWIN">TESWIN</option>
+<option value="SAINOR">SAINOR</option>
+<option value="SAIEME">SAIEME</option>
+<option value="WAILEY">WAILEY</option>
+<option value="ASDERI">ASDERI</option>
+<option value="COOWES">COOWES</option>
+<option value="COOAVO">COOAVO</option>
+<option value="COOWEL">COOWEL</option></select>
+        </div>
+        <div class="col">
+          <label>Units</label>
+          <input id="qcUnits" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+        </div>
+        <div class="col">
+          <label>Override Active Rate (u/h) <span style="color:#8aa0b8">(optional)</span></label>
+          <input id="qcRate" type="number" min="1" step="1" inputmode="numeric" placeholder="leave blank for avg">
+        </div>
+      </div>
+      <div style="height:6px"></div>
+      <div class="summarygrid">
+        <div class="pill"><h3>Expected Pallets</h3><p id="qcPallets">—</p></div>
+        <div class="pill"><h3>Expected Duration</h3><p id="qcDur">—</p><div id="qcRateUsed" style="color:#8aa0b8;font-size:12px;">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tracker -->
+  <section id="tabTracker" class="hidden">
+    <div class="card" id="shiftCard">
+      <div class="row">
+        <div class="col">
+          <label>Shift Start (HH:MM)</label>
+          <div style="display:flex; gap:8px; align-items:end;">
+            <input id="tStart" type="time" placeholder="08:00">
+            <button class="btn chip" onclick="setNow('tStart')">Now</button>
+          </div>
+        </div>
+        <div class="col">
+          <label>Shift Length (hours)</label>
+          <input id="tLen" type="number" min="1" step="0.5" value="9">
+        </div>
+        <div class="col" style="align-self:end;">
+          <button class="btn ok" onclick="beginShift()">Begin Tracking</button>
+        </div>
+      </div>
+      <div style="color:#9fb3c8; font-size:12px; margin-top:6px;">Daily avg uses full shift length. Live rate uses Start → last Order Close.</div>
+    </div>
+
+    <div class="card" id="activeOrderCard" style="display:none;">
+      <div class="row">
+        <div class="col">
+          <label>Customer</label>
+          <select id="oCust"><option value="TESWIN">TESWIN</option>
+<option value="SAINOR">SAINOR</option>
+<option value="SAIEME">SAIEME</option>
+<option value="WAILEY">WAILEY</option>
+<option value="ASDERI">ASDERI</option>
+<option value="COOWES">COOWES</option>
+<option value="COOAVO">COOAVO</option>
+<option value="COOWEL">COOWEL</option></select>
+        </div>
+        <div class="col">
+          <label>Total units</label>
+          <input id="oTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 1024">
+        </div>
+        <div class="col" style="align-self:end; display:flex; gap:8px; justify-content:flex-end;">
+          <button class="btn" onclick="startOrder()">Start</button>
+          <button class="btn ghost" onclick="resetOrder()">Reset</button>
+          <button class="btn chip" title="20 min break" onclick="addBreak('B')">B</button>
+          <button class="btn chip" title="30 min lunch" onclick="addBreak('L')">L</button>
+        </div>
+      </div>
+      <div id="orderArea" style="display:none; margin-top:10px;">
+        <div class="row">
+          <div class="col">
+            <label>Units left (log wrap)</label>
+            <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+          </div>
+          <div class="col" style="align-self:end;">
+            <button class="btn" onclick="logWrap()">Log Wrap</button>
+          </div>
+          <div class="col">
+            <label>Order Close (HH:MM)</label>
+            <div style="display:flex; gap:8px; align-items:end;">
+              <input id="oClose" type="time" placeholder="e.g. 10:52">
+              <button class="btn chip" onclick="setNow('oClose')">Now</button>
+            </div>
+          </div>
+          <div class="col" style="align-self:end;">
+            <button class="btn ok" onclick="completeOrder()">Complete</button>
+          </div>
+        </div>
+        <div class="timeline" id="orderTimeline"></div>
+      </div>
+    </div>
+
+    <div class="card" id="completedCard" style="display:none;">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Closed</th><th>Order Rate (excl. B/L)</th></tr></thead>
+        <tbody id="doneBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="summaryCard" style="display:none;">
+      <div class="summarygrid">
+        <div class="pill"><h3>Total Units</h3><p id="sumUnits">0</p></div>
+        <div class="pill"><h3>Live Rate</h3><p id="liveRate">0</p><div class="small" id="liveWindow">—</div></div>
+        <div class="pill"><h3>Daily Avg</h3><p id="dayRate">0</p><div class="small">units ÷ full shift</div></div>
+        <div class="pill"><h3>Gap vs 300</h3><p id="gap300">—</p></div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="footer">v2.3: Break/Lunch per-order exclusion, sleek end-time display.</div>
+</div>
+
+<script>
+let picks = []; // Finalised orders
+let tempWraps = []; // Wraps for current order: [{left, done}]
+let current = null; // {name, total, start:'HH:MM', breaks:[{type:'B'|'L', start:'HH:MM', end:'HH:MM', minutes:int}]}
+let startTime = ""; // shift HH:MM
+let lastClose = ""; // HH:MM
+
+function showTab(which){
+  document.getElementById('tabCalc').classList.toggle('hidden', which!=='calc');
+  document.getElementById('tabTracker').classList.toggle('hidden', which!=='tracker');
+  document.getElementById('tabCalcBtn').classList.toggle('active', which==='calc');
+  document.getElementById('tabTrackBtn').classList.toggle('active', which==='tracker');
+  document.getElementById('liveBanner').classList.toggle('hidden', which!=='tracker');
+}
+
+// ===== Helpers =====
+function hm(str){ if(!str) return NaN; const [h,m]=str.split(':'); const H=parseInt(h||'0',10), M=parseInt(m||'0',10); if(isNaN(H)||isNaN(M)) return NaN; return H + M/60; }
+function fmtH(hours){ const total=Math.round(hours*60); const h=Math.floor(total/60); const m=total%60; return h+' h '+String(m).padStart(2,'0')+' m'; }
+function nowHHMM(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function addMinutes(hhmm, mins){ const [h,m]=hhmm.split(':').map(x=>parseInt(x,10)); const total=h*60+m+mins; const H=((Math.floor(total/60))%24+24)%24; const M=((total%60)+60)%60; return String(H).padStart(2,'0')+':'+String(M).padStart(2,'0'); }
+function setNow(id){ const el=document.getElementById(id); if(el){ el.value=nowHHMM(); if(id==='tStart') startTime=el.value; updateSummary(); } }
+
+// ===== QuickCalc minimal =====
+function updCalc(){
+  const units = parseInt(document.getElementById('qcUnits').value||'0',10);
+  const rateOverride = parseFloat(document.getElementById('qcRate').value||'0');
+  const uppMap = {TESWIN:341,SAINOR:214,SAIEME:289,WAILEY:192,ASDERI:154,COOWES:177,COOAVO:222,COOWEL:73};
+  const rateMap = {TESWIN:404,SAINOR:262,SAIEME:317,WAILEY:330,ASDERI:225,COOWES:272,COOAVO:247,COOWEL:120};
+  const name = document.getElementById('qcCustomer').value;
+  const upp = uppMap[name]; const r = rateOverride>0?rateOverride:rateMap[name];
+  if(!units){ document.getElementById('qcPallets').textContent='—'; document.getElementById('qcDur').textContent='—'; document.getElementById('qcRateUsed').textContent='—'; return; }
+  const pallets = Math.max(1, Math.ceil(units/upp));
+  const hours = units / r;
+  document.getElementById('qcPallets').textContent = pallets;
+  document.getElementById('qcDur').textContent = fmtH(hours);
+  document.getElementById('qcRateUsed').textContent = r+' u/h used';
+}
+['qcCustomer','qcUnits','qcRate'].forEach(id=>{ document.addEventListener('DOMContentLoaded', ()=>{ document.getElementById(id).addEventListener('input', updCalc); }); });
+
+// ===== Tracker flow =====
+function beginShift(){
+  startTime = document.getElementById('tStart').value || startTime;
+  document.getElementById('shiftCard').style.display='none';
+  document.getElementById('activeOrderCard').style.display='block';
+  document.getElementById('summaryCard').style.display='block';
+  document.getElementById('completedCard').style.display='block';
+  updateSummary();
+}
+
+function startOrder(){
+  const name = document.getElementById('oCust').value;
+  const total = parseInt(document.getElementById('oTotal').value||'0',10);
+  if(!name || !total) return alert('Enter customer and total units');
+  current = {name, total, start: nowHHMM(), breaks: []};
+  tempWraps = [];
+  document.getElementById('orderArea').style.display='block';
+  renderTimeline();
+}
+
+function resetOrder(){
+  if(!current) return;
+  if(!confirm('Reset current order?')) return;
+  current = null; tempWraps = [];
+  document.getElementById('orderArea').style.display='none';
+  document.getElementById('orderTimeline').innerHTML='';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value=''; document.getElementById('oClose').value='';
+}
+
+function addBreak(type){
+  if(!current) return alert('Start an order first');
+  const start = nowHHMM();
+  const mins = (type==='B') ? 20 : 30;
+  const end = addMinutes(start, mins);
+  current.breaks.push({type, start, end, minutes: mins});
+  const tl = document.getElementById('orderTimeline');
+  const emoji = type==='B' ? '🅱️' : '🍽️';
+  tl.innerHTML += `<div class="tick"><span>${emoji} ${'B': 'Break 20m', 'L': 'Lunch 30m'}[type] — ${start} → <b>${end}</b></span><span class="meta">excludes ${20: '20', 30: '30'}[mins] min from order rate</span></div>`;
+}
+
+function logWrap(){
+  if(!current) return alert('Start an order first');
+  const left = parseInt(document.getElementById('oLeft').value||'0',10);
+  if(left<0 || left>current.total) return alert('Units left must be between 0 and total');
+  const prevLeft = tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
+  if(left>prevLeft) return alert('Units left cannot increase vs previous wrap');
+  const done = prevLeft - left;
+  if(done<=0) return alert('No progress since last wrap');
+  tempWraps.push({left, done});
+  document.getElementById('oLeft').value = '';
+  renderTimeline();
+}
+
+function editWrap(idx){
+  if(idx<0 || idx>=tempWraps.length) return;
+  const prevLeft = idx===0 ? current.total : tempWraps[idx-1].left;
+  const nextLeft = idx<tempWraps.length-1 ? tempWraps[idx+1].left : 0;
+  const cur = tempWraps[idx];
+  const val = prompt(`Edit units left for wrap #${idx+1} (min ${nextLeft} max ${prevLeft}):`, cur.left);
+  if(val===null) return;
+  const left = parseInt(val,10);
+  if(isNaN(left) || left<nextLeft || left>prevLeft) return alert('Invalid value (respect order).');
+  tempWraps[idx].left = left;
+  tempWraps[idx].done = prevLeft - left;
+  for(let i=idx+1;i<tempWraps.length;i++){
+    const pLeft = tempWraps[i-1].left;
+    if(tempWraps[i].left>pLeft) tempWraps[i].left = pLeft;
+    tempWraps[i].done = pLeft - tempWraps[i].left;
+  }
+  renderTimeline();
+}
+
+function renderTimeline(){
+  const tl = document.getElementById('orderTimeline');
+  tl.innerHTML = `<div class="tick"><span>⏳ Order started</span><span class="meta">Start: ${current.start} • Total: ${current.total} u</span></div>`;
+  current.breaks.forEach(b=>{
+    const emoji = b.type==='B' ? '🅱️' : '🍽️';
+    tl.innerHTML += `<div class="tick"><span>${emoji} ${b.type==='B'?'Break 20m':'Lunch 30m'} — ${b.start} → <b>${b.end}</b></span><span class="meta">excludes ${b.minutes} min</span></div>`;
+  });
+  tempWraps.forEach((w,i)=>{
+    tl.innerHTML += `<div class="tick"><span>📦 Wrap ${i+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><button class="btn ghost" onclick="editWrap(${i})">Edit</button></div>`;
+  });
+}
+
+function completeOrder(){
+  if(!current) return alert('Start an order first');
+  const close = document.getElementById('oClose').value || nowHHMM();
+  if(!startTime) return alert('Add shift start first');
+  const lastLeft = tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
+  const finalDone = lastLeft;
+  const palletsCount = tempWraps.length + (finalDone>0?1:0);
+  const unitsDone = current.total;
+  const exclMins = current.breaks.reduce((a,b)=>a + (b.minutes||0), 0);
+  picks.push({ name: current.name, units: unitsDone, pallets: palletsCount, close: close, start: current.start, excl: exclMins });
+  lastClose = close;
+  current = null; tempWraps = []; document.getElementById('orderArea').style.display='none'; document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  document.getElementById('oClose').value='';
+  renderDone();
+  updateSummary();
+}
+
+function renderDone(){
+  const tb = document.getElementById('doneBody'); tb.innerHTML='';
+  picks.forEach((o,i)=>{
+    const rate = orderRateForOrder(o);
+    tb.innerHTML += `<tr><td>${i+1}</td><td>${o.name}</td><td>${o.units}</td><td>${o.pallets}</td><td>${o.close}</td><td>${ rate>0?rate+' u/h':'—' }</td></tr>`;
+  })
+}
+
+function orderRateForOrder(o){
+  const s = hm(o.start); const e = hm(o.close);
+  if(isNaN(s)||isNaN(e)||e<=s) return 0;
+  const elapsed = e - s; // hours
+  const excl = (o.excl||0)/60; // hours
+  const net = Math.max(0.01, elapsed - excl);
+  return Math.round(o.units / net);
+}
+
+function updateSummary(){
+  const totalUnits = picks.reduce((a,b)=>a+b.units,0);
+  const tS = hm(startTime); const tE = hm(lastClose);
+  let liveRate = 0; let windowStr='—';
+  if(!isNaN(tS) && !isNaN(tE) && tE>tS){ const hr = tE-tS; liveRate = Math.round(totalUnits/hr); windowStr = `from ${startTime} → ${lastClose} (${hr.toFixed(2)} h)`; }
+  const shiftLen = parseFloat(document.getElementById('tLen').value||'9');
+  const dayRate = shiftLen>0? Math.round(totalUnits/shiftLen) : 0;
+  const gap = liveRate-300;
+
+  document.getElementById('sumUnits').textContent = totalUnits;
+  document.getElementById('liveRate').textContent = liveRate;
+  document.getElementById('liveWindow').textContent = windowStr;
+  document.getElementById('dayRate').textContent = dayRate;
+  document.getElementById('gap300').textContent = (gap>0?'+':'')+gap;
+
+  document.getElementById('chipRateVal').textContent = liveRate || '—';
+  document.getElementById('chipTotalVal').textContent = totalUnits;
+  document.getElementById('chipGapVal').textContent = (gap>0?'+':'')+gap;
+
+  const chip = document.getElementById('chipRate');
+  chip.classList.remove('good','warn','bad');
+  if (liveRate >= 300) chip.classList.add('good');
+  else if (liveRate >= 250) chip.classList.add('warn');
+  else chip.classList.add('bad');
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  showTab('tracker');
+  document.getElementById('tLen').addEventListener('input', updateSummary);
+  document.getElementById('tStart').addEventListener('change', ()=>{startTime=document.getElementById('tStart').value; updateSummary();});
+  ['qcCustomer','qcUnits','qcRate'].forEach(id=>{ document.getElementById(id).addEventListener('input', updCalc); });
+  updCalc();
+});
+</script>
+</body>
+</html>
