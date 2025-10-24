@@ -1,0 +1,381 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>QuickCalc v1.8</title>
+<style>
+  :root { --bg:#0b0d10; --card:#141821; --border:#1f2a3a; --ink:#e8eef7; --muted:#9fb3c8; --line:#253348; --accent:#2f6bff; }
+  html, body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { max-width: 840px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 0 0 10px; }
+  .sub { color:var(--muted); font-size:12px; margin-left:6px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  input[type="number"], select { width:100%; background:#0f131b; color:var(--ink); border:1px solid #29364a; border-radius:10px; padding:10px; font-size:16px; outline:none; }
+  .row { display:flex; gap:10px; flex-wrap: wrap; }
+  .col { flex:1; min-width: 220px; }
+  .result { display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap:10px; }
+  .pill { background:#0f131b; border:1px solid #29364a; border-radius:12px; padding:12px; text-align:center; }
+  .pill h3 { margin:0; font-size:13px; color:var(--muted); }
+  .pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
+  .muted { color:#8aa0b8; font-size:12px; }
+  .tabs { display:flex; gap:8px; margin-bottom:10px; }
+  .tabbtn { flex:1; text-align:center; padding:10px; border:1px solid var(--border); border-radius:10px; background:#0f131b; color:var(--ink); font-weight:700; }
+  .tabbtn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .hidden { display:none; }
+  table { width:100%; border-collapse: collapse; font-size:13px; }
+  th, td { border-bottom:1px dashed var(--line); padding:8px 6px; text-align:left; }
+  th { color:#9fb3c8; font-weight:700; }
+  .btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; font-size:14px; }
+  .btn.danger { border-color:#7a3232; background:#40201a; }
+  .grid3 { display:grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap:10px; }
+  @media (max-width:640px){ .grid3 { grid-template-columns: 1fr; } }
+  .small { font-size:12px; color:#9fb3c8; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Warehouse QuickCalc <span class="sub">v1.8 · 2025-10-24 18:52 UTC</span></h1>
+
+    <div class="tabs">
+      <button class="tabbtn active" id="tabCalcBtn" onclick="showTab('calc')">QuickCalc</button>
+      <button class="tabbtn" id="tabTrackBtn" onclick="showTab('tracker')">Tracker</button>
+    </div>
+
+    <!-- TAB: QuickCalc -->
+    <section id="tabCalc">
+      <div class="card">
+        <div class="row">
+          <div class="col">
+            <label for="customer">Customer</label>
+            <select id="customer"><option value="TESWIN">TESWIN</option>
+<option value="SAINOR">SAINOR</option>
+<option value="SAIEME">SAIEME</option>
+<option value="WAILEY">WAILEY</option>
+<option value="ASDERI">ASDERI</option>
+<option value="COOWES">COOWES</option>
+<option value="COOAVO">COOAVO</option>
+<option value="COOWEL">COOWEL</option></select>
+          </div>
+          <div class="col">
+            <label for="units">Units</label>
+            <input id="units" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+          </div>
+          <div class="col">
+            <label for="overrideRate">Override Active Rate (u/h) <span class="muted">(optional)</span></label>
+            <input id="overrideRate" type="number" min="1" step="1" inputmode="numeric" placeholder="use customer avg if blank">
+          </div>
+        </div>
+        <div style="height:6px"></div>
+        <div class="result">
+          <div class="pill">
+            <h3>Expected Pallets</h3>
+            <p id="pallets">—</p>
+            <div class="muted" id="uPerPallet">—</div>
+          </div>
+          <div class="pill">
+            <h3>Expected Duration (Active)</h3>
+            <p id="duration">—</p>
+            <div class="muted" id="rate">—</div>
+          </div>
+        </div>
+      </div>
+      <details class="card">
+        <summary><b>Details & wrap times</b></summary>
+        <div class="row">
+          <div class="col">
+            <div class="muted">Equal split estimate @ chosen active rate</div>
+            <table>
+              <tr><th>1st Wrap</th><td id="wrap1">—</td></tr>
+              <tr><th>2nd Wrap</th><td id="wrap2">—</td></tr>
+              <tr><th>3rd Wrap</th><td id="wrap3">—</td></tr>
+            </table>
+          </div>
+          <div class="col">
+            <div class="muted" id="assumptions">—</div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- TAB: Tracker -->
+    <section id="tabTracker" class="hidden">
+      <div class="card">
+        <div class="grid3">
+          <div>
+            <label for="tLen">Shift length (hours)</label>
+            <input id="tLen" type="number" min="1" step="0.5" value="9">
+            <div class="small">Pick rate uses full shift length.</div>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="btn" onclick="clearAll()">Reset Tracker</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="col">
+            <label for="oCust">Start Order – Customer</label>
+            <select id="oCust"><option value="TESWIN">TESWIN</option>
+<option value="SAINOR">SAINOR</option>
+<option value="SAIEME">SAIEME</option>
+<option value="WAILEY">WAILEY</option>
+<option value="ASDERI">ASDERI</option>
+<option value="COOWES">COOWES</option>
+<option value="COOAVO">COOAVO</option>
+<option value="COOWEL">COOWEL</option></select>
+          </div>
+          <div class="col">
+            <label for="oTotal">Start Order – Total units</label>
+            <input id="oTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+          </div>
+          <div class="col">
+            <label>&nbsp;</label>
+            <button class="btn" onclick="startOrder()">Start Order</button>
+          </div>
+        </div>
+
+        <div class="row" id="wrapRow" style="margin-top:10px; display:none;">
+          <div class="col">
+            <label for="oLeft">Log Wrap – Units left</label>
+            <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+          </div>
+          <div class="col">
+            <label>&nbsp;</label>
+            <button class="btn" onclick="logWrap()">Log Wrap</button>
+          </div>
+          <div class="col">
+            <label>&nbsp;</label>
+            <button class="btn" onclick="completeOrder()">Complete Order</button>
+          </div>
+        </div>
+        <div class="small" id="orderHint" style="display:none; margin-top:6px;">Order in progress: —</div>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Customer</th><th>Pallet Units</th><th>Order Total</th><th>Units Left</th><th></th></tr>
+          </thead>
+          <tbody id="palletsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="result">
+          <div class="pill">
+            <h3>Total Units Completed</h3>
+            <p id="sumUnits">0</p>
+          </div>
+          <div class="pill">
+            <h3>Shift Length (h)</h3>
+            <p id="sumHours">9.0</p>
+          </div>
+          <div class="pill">
+            <h3>Pick Rate (u/h)</h3>
+            <p id="sumRate">0</p>
+          </div>
+          <div class="pill">
+            <h3>Gap vs 300</h3>
+            <p id="sumGap">0</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+const VERSION = "1.8";
+const DB = [ {name:"TESWIN", upp:341.00, rate:404},
+  {name:"SAINOR", upp:214.00, rate:262},
+  {name:"SAIEME", upp:289.00, rate:317},
+  {name:"WAILEY", upp:192.00, rate:330},
+  {name:"ASDERI", upp:154.00, rate:225},
+  {name:"COOWES", upp:177.00, rate:272},
+  {name:"COOAVO", upp:222.00, rate:247},
+  {name:"COOWEL", upp:73.00, rate:120} ];
+
+function showTab(which){
+  document.getElementById('tabCalc').classList.toggle('hidden', which!=='calc');
+  document.getElementById('tabTracker').classList.toggle('hidden', which!=='tracker');
+  document.getElementById('tabCalcBtn').classList.toggle('active', which==='calc');
+  document.getElementById('tabTrackBtn').classList.toggle('active', which==='tracker');
+}
+
+// ===== QuickCalc =====
+function hhmm(hours) {
+  if (!isFinite(hours) || hours<=0) return "—";
+  const totalMin = Math.round(hours*60);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  return h + " h " + String(m).padStart(2,'0') + " m";
+}
+function getRow(name){ return DB.find(r=>r.name===name); }
+function recalc(){
+  const name = document.getElementById('customer').value;
+  const units = parseInt(document.getElementById('units').value,10);
+  const overrideRate = parseFloat(document.getElementById('overrideRate').value);
+  const palletsEl = document.getElementById('pallets');
+  const uPerPalletEl = document.getElementById('uPerPallet');
+  const durationEl = document.getElementById('duration');
+  const rateEl = document.getElementById('rate');
+  const wrap1El = document.getElementById('wrap1');
+  const wrap2El = document.getElementById('wrap2');
+  const wrap3El = document.getElementById('wrap3');
+  const assumptionsEl = document.getElementById('assumptions');
+
+  if (!units || units <= 0) {
+    palletsEl.textContent = "—";
+    uPerPalletEl.textContent = "Enter units above";
+    durationEl.textContent = "—";
+    rateEl.textContent = "—";
+    wrap1El.textContent = wrap2El.textContent = wrap3El.textContent = "—";
+    assumptionsEl.textContent = "—";
+    return;
+  }
+  const row = getRow(name); if (!row) return;
+  const rate = isFinite(overrideRate) && overrideRate > 0 ? overrideRate : row.rate;
+  const expectedPallets = Math.max(1, Math.ceil(units / row.upp));
+  const expectedHours = units / rate;
+
+  palletsEl.textContent = expectedPallets;
+  uPerPalletEl.textContent = `~${row.upp.toFixed(0)} u/pallet`;
+  durationEl.textContent = hhmm(expectedHours);
+  rateEl.textContent = `${rate} u/h (active)`;
+
+  const unitsPerPallet = Math.ceil(units / expectedPallets);
+  const perPalletHours = unitsPerPallet / rate;
+  wrap1El.textContent = hhmm(perPalletHours * 1);
+  wrap2El.textContent = expectedPallets >= 2 ? hhmm(perPalletHours * 2) : "—";
+  wrap3El.textContent = expectedPallets >= 3 ? hhmm(perPalletHours * 3) : "—";
+
+  assumptionsEl.textContent = `Customer: ${row.name} • Mean u/pallet: ~${row.upp.toFixed(0)} • Active rate: ${rate} u/h`;
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  ['customer','units','overrideRate'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', recalc);
+    document.getElementById(id).addEventListener('change', recalc);
+  });
+});
+
+// ===== Tracker (Shift-length based) =====
+let currentOrder = null; // {name, total, left}
+let pallets = []; // {name, palletUnits, orderTotal, leftAfter}
+
+function updateSummary(){
+  const totalUnits = pallets.reduce((a,b)=>a + b.palletUnits, 0);
+  const shiftLen = parseFloat(document.getElementById('tLen').value) || 9;
+  const rate = shiftLen>0 ? Math.round(totalUnits / shiftLen) : 0;
+  document.getElementById('sumUnits').textContent = totalUnits;
+  document.getElementById('sumHours').textContent = shiftLen.toFixed(1);
+  document.getElementById('sumRate').textContent = rate;
+  document.getElementById('sumGap').textContent = (rate - 300);
+}
+
+function renderPallets(){
+  const body = document.getElementById('palletsBody');
+  body.innerHTML = "";
+  pallets.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${p.name}</td><td>${p.palletUnits}</td><td>${p.orderTotal}</td><td>${p.leftAfter}</td><td><button class="btn danger" onclick="delPallet(${i})">Delete</button></td>`;
+    body.appendChild(tr);
+  });
+  updateSummary();
+}
+
+function setOrderHint(){
+  const hint = document.getElementById('orderHint');
+  if (currentOrder){
+    hint.style.display = 'block';
+    hint.textContent = `Order in progress: ${currentOrder.name} • total ${currentOrder.total} • left ${currentOrder.left}`;
+  } else {
+    hint.style.display = 'none';
+    hint.textContent = 'Order in progress: —';
+  }
+}
+
+function startOrder(){
+  const name = document.getElementById('oCust').value;
+  const total = parseInt(document.getElementById('oTotal').value, 10);
+  if (!name || !total || total<=0) return alert('Enter customer and total units to start an order.');
+  currentOrder = {name, total, left: total};
+  document.getElementById('wrapRow').style.display = 'flex';
+  setOrderHint();
+}
+
+function logWrap(){
+  if (!currentOrder) return alert('Start an order first.');
+  const left = parseInt(document.getElementById('oLeft').value, 10);
+  if (!Number.isInteger(left) || left<0 || left>currentOrder.left) return alert('Units left must be between 0 and current left.');
+  const palletUnits = currentOrder.left - left;
+  if (palletUnits<=0) return alert('No progress since last wrap.');
+  pallets.push({name: currentOrder.name, palletUnits, orderTotal: currentOrder.total, leftAfter: left});
+  currentOrder.left = left;
+  document.getElementById('oLeft').value = '';
+  setOrderHint();
+  renderPallets();
+  saveState();
+}
+
+function completeOrder(){
+  if (!currentOrder) return alert('Start an order first.');
+  if (currentOrder.left>0){
+    const palletUnits = currentOrder.left;
+    pallets.push({name: currentOrder.name, palletUnits, orderTotal: currentOrder.total, leftAfter: 0});
+  }
+  currentOrder = null;
+  document.getElementById('wrapRow').style.display = 'none';
+  setOrderHint();
+  renderPallets();
+  saveState();
+}
+
+function delPallet(idx){
+  pallets.splice(idx,1);
+  renderPallets();
+  saveState();
+}
+
+function clearAll(){
+  if (!confirm('Reset the whole tracker (orders and pallets)?')) return;
+  pallets = [];
+  currentOrder = null;
+  document.getElementById('wrapRow').style.display = 'none';
+  setOrderHint();
+  renderPallets();
+  saveState();
+}
+
+// Persist across sessions
+function saveState(){
+  const s = { pallets, currentOrder, tLen: document.getElementById('tLen').value };
+  localStorage.setItem('tracker_v18', JSON.stringify(s));
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem('tracker_v18');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    pallets = Array.isArray(s.pallets) ? s.pallets : [];
+    currentOrder = s.currentOrder || null;
+    if (s.tLen) document.getElementById('tLen').value = s.tLen;
+    document.getElementById('wrapRow').style.display = currentOrder ? 'flex' : 'none';
+    setOrderHint();
+    renderPallets();
+  }catch(e){ /* ignore */ }
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('tLen').addEventListener('input', ()=>{ updateSummary(); saveState(); });
+  loadState();
+  recalc();
+});
+</script>
+</body>
+</html>
