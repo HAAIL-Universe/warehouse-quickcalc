@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Warehouse QuickCalc & Tracker — v9.2 (mobile-first)</title>
+<title>Warehouse QuickCalc & Tracker — Mobile v9.2</title>
 <style>
 :root{
   --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff;
-  --line:#243244; --chip:#0f1320; --pill:#0d1322; --shadow:0 8px 24px rgba(0,0,0,.28);
+  --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; --chip:#0f1320;
+  --btn:#1b2540; --btn2:#1d2a52; --pill:#0d1322; --shadow:0 8px 24px rgba(0,0,0,.28);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-.container{max-width:860px;margin:0 auto;padding:16px 14px 64px}
+.container{max-width:840px;margin:0 auto;padding:16px 14px 64px}
 h1{font-size:20px;margin:8px 0 6px}
 h2{font-size:16px;color:var(--muted);margin:14px 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--shadow)}
@@ -20,11 +21,11 @@ input,select,button,textarea{
   width:100%;background:#0e1423;border:1px solid var(--line);color:var(--ink);
   padding:12px 12px;border-radius:10px;font-size:15px;outline:none;
 }
-button{background:#1b2540;border:1px solid transparent;color:var(--ink);cursor:pointer}
-button.primary{background:var(--accent);color:white}
-button.ghost{background:transparent;border-color:var(--line)}
-button.warning{background:#3a2a0f}
-button.danger{background:#3a1616}
+button{background:var(--btn);cursor:pointer}
+button.primary{background:var(--accent);border-color:transparent;color:white}
+button.ghost{background:transparent}
+button.warning{background:#3a2a0f;border-color:#5a3a10}
+button.danger{background:#3a1616;border-color:#6a2626}
 button.small{padding:8px 10px;font-size:14px}
 .pill{background:var(--pill);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;color:var(--muted)}
 hr{border:0;border-top:1px solid var(--line);margin:10px 0}
@@ -33,19 +34,24 @@ hr{border:0;border-top:1px solid var(--line);margin:10px 0}
 .kpi{flex:1 1 120px;background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:10px}
 .kpi .label{font-size:12px;color:var(--muted)}
 .kpi .value{font-size:18px;margin-top:4px}
-.sub{font-size:12px;color:var(--muted)}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#101728;color:var(--muted)}
 .stack{display:flex;flex-direction:column;gap:8px}
+.flex{display:flex;gap:8px}
+.flex > *{flex:1}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap}
 .loglist{display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow:auto;padding-right:2px}
 .logitem{display:flex;gap:8px;align-items:flex-start}
 .tag{font-size:11px;background:#10192c;color:#b8c6dc;border:1px solid var(--line);padding:4px 8px;border-radius:999px;white-space:nowrap}
 .time{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;color:#b9d1ff;font-size:13px}
+.dim{color:var(--muted)}
+.footer-space{height:24px}
+.hidden{display:none !important}
+.checkbox{display:flex;align-items:center;gap:8px}
+.sub{font-size:12px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:14px}
 td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left}
 th{color:#cfe0ff;font-weight:600}
-.footer-space{height:24px}
-.hidden{display:none !important}
-/* large screens */
+tfoot td{color:var(--muted)}
 @media(min-width:760px){
   .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;align-items:start}
 }
@@ -64,7 +70,7 @@ th{color:#cfe0ff;font-weight:600}
     </div>
   </div>
 
-  <!-- TOP KPIs (single location; removed bottom stats bar) -->
+  <!-- TOP KPIs (no bottom chip bar anywhere) -->
   <div class="kpis" id="kpis">
     <div class="kpi"><div class="label">Units</div><div class="value" id="kpiUnits">0</div></div>
     <div class="kpi"><div class="label">Rate (u/h)</div><div class="value" id="kpiRate">0</div></div>
@@ -74,7 +80,7 @@ th{color:#cfe0ff;font-weight:600}
 
   <div class="grid" style="margin-top:12px">
 
-    <!-- LEFT: Setup & Logging -->
+    <!-- LEFT: Shift & Logging -->
     <section class="stack">
       <div class="card">
         <h2>Shift setup</h2>
@@ -91,7 +97,7 @@ th{color:#cfe0ff;font-weight:600}
           <button id="btnUndoStart">Undo start</button>
           <button class="warning" id="btnRestart">Restart shift</button>
         </div>
-        <div class="sub">Rate = Units ÷ full shift hours (breaks included). Break minutes are tracked for visibility only.</div>
+        <div class="sub">Rule: Rate is computed over full shift length (breaks included).</div>
       </div>
 
       <div class="card">
@@ -99,7 +105,7 @@ th{color:#cfe0ff;font-weight:600}
         <div class="toolbar">
           <button class="small" data-log="P">+ Pick</button>
           <button class="small" data-log="B">+ Break start</button>
-          <button class="small" data-log="C">+ Continue</button>
+          <button class="small" data-log="C">+ Continue (end break)</button>
           <button class="small" data-log="L">+ Lunch start</button>
         </div>
         <div class="row">
@@ -111,7 +117,7 @@ th{color:#cfe0ff;font-weight:600}
           <button id="btnLogCustomTime">Log w/ time…</button>
         </div>
         <div class="row">
-          <input id="freeText" type="text" placeholder='Free text (e.g. "P-655 WAIBRA", "B @ 10:02", "L @ 12:30 with 140 left", "C @ 11:15")' />
+          <input id="freeText" type="text" placeholder='Free text (e.g. "P-655 OCABRI", "B @ 10:02", "L @ 12:30 with 140 left", "C @ 11:15")' />
         </div>
         <div class="toolbar">
           <button id="btnParse">Parse & Log</button>
@@ -126,7 +132,7 @@ th{color:#cfe0ff;font-weight:600}
       </div>
     </section>
 
-    <!-- RIGHT: QuickCalc, Analyse, Safety -->
+    <!-- RIGHT: Analysis & Tools -->
     <section class="stack">
       <div class="card">
         <h2>QuickCalc</h2>
@@ -152,7 +158,10 @@ th{color:#cfe0ff;font-weight:600}
       <div class="card">
         <h2>Analyse</h2>
         <div class="toolbar">
-          <label class="sub"><input id="byCustomer" type="checkbox" checked /> Group by customer</label>
+          <div class="checkbox">
+            <input id="byCustomer" type="checkbox" checked />
+            <label for="byCustomer" class="sub">Group by customer</label>
+          </div>
           <button id="btnAnalyse">Refresh</button>
         </div>
         <div style="overflow:auto">
@@ -161,13 +170,13 @@ th{color:#cfe0ff;font-weight:600}
               <tr><th>Customer</th><th>Units</th><th>Sessions</th><th>Avg u/h*</th></tr>
             </thead>
             <tbody></tbody>
-            <tfoot><tr><td colspan="4" class="sub">*Avg u/h uses full shift hours (breaks included) to mirror management calc.</td></tr></tfoot>
+            <tfoot><tr><td colspan="4" class="sub">*Avg u/h uses full shift hours (breaks included) to stay consistent with management calc.</td></tr></tfoot>
           </table>
         </div>
       </div>
 
       <div class="card">
-        <h2>Data & safety</h2>
+        <h2>Safety</h2>
         <div class="toolbar">
           <button class="danger" id="btnFullReset">Full Reset (wipe local)</button>
         </div>
@@ -181,154 +190,192 @@ th{color:#cfe0ff;font-weight:600}
 <input type="file" id="importFile" class="hidden" accept="application/json" />
 
 <script>
-/* ===================== State ===================== */
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
+/* ====== State ====== */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
 
 const state = {
   started:false,
   date:"",
-  startTimeISO:"",
+  startTime:"",
   shiftHours:9,
   target:2700,
-  logs:[] // {tISO, kind:'P'|'B'|'C'|'L', qty?, cust?, note?}
+  logs:[], // {tISO, kind:'P'|'B'|'C'|'L', qty?, cust?, note?}
 };
 
 function save(){ localStorage.setItem('wh_tracker_v92', JSON.stringify(state)); }
 function load(){
   const raw = localStorage.getItem('wh_tracker_v92');
   if(!raw) return;
-  try{ Object.assign(state, JSON.parse(raw)); }catch{}
+  try{ const s = JSON.parse(raw); Object.assign(state, s); }catch(e){}
 }
 
-/* ===================== Utils ===================== */
+/* ====== Utils ====== */
 function nowISO(){ return new Date().toISOString(); }
+function toISOFromDateAndTimeStr(dateStr, timeStr){
+  try {
+    const t = timeStr && timeStr.includes(':') ? timeStr : "09:00";
+    const d = new Date(`${dateStr} ${t}`);
+    if (isNaN(d)) return new Date().toISOString();
+    return d.toISOString();
+  } catch { return new Date().toISOString(); }
+}
+function parseClock(s){
+  const m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return null;
+  const d = new Date();
+  d.setHours(parseInt(m[1],10), parseInt(m[2],10), 0, 0);
+  return d;
+}
+function minutesDiff(a,b){ return (a - b) / 60000; }
+function fmtHM(d){
+  if(!(d instanceof Date)) d = new Date(d);
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
 function todayPretty(){
   const d = new Date();
-  return d.toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+  return d.toLocaleDateString(undefined, {weekday:'short', day:'2-digit', month:'short', year:'numeric'});
 }
-function toISOFrom(dateStr,timeStr){
-  const t = timeStr && timeStr.includes(':') ? timeStr : "09:00";
-  const d = new Date(`${dateStr} ${t}`);
-  return isNaN(d)? new Date().toISOString() : d.toISOString();
-}
-function parseClock(hm){
-  const m = /^(\d{1,2}):(\d{2})$/.exec(hm||"");
-  if(!m) return null;
-  const d = new Date(); d.setHours(+m[1], +m[2], 0, 0); return d;
-}
-function minutesDiff(a,b){ return Math.round((a-b)/60000); }
-function fmtHM(x){ const d = x instanceof Date ? x : new Date(x); return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 
-/* ===================== Calculations ===================== */
+/* ====== Core Calculations (rate uses full shift hours) ====== */
 function getTotals(){
-  const units = state.logs.filter(l=>l.kind==='P').reduce((a,b)=>a+(b.qty||0),0);
-  // break minutes from B/L .. C
-  let breakMin = 0, open = null;
-  for(const l of state.logs){
-    if(l.kind==='B' || l.kind==='L'){ open = new Date(l.tISO); }
-    else if(l.kind==='C' && open){ breakMin += minutesDiff(new Date(l.tISO), open); open=null; }
+  const units = state.logs.filter(x=>x.kind==='P').reduce((a,b)=>a+(b.qty||0),0);
+  let breakMin = 0;
+  let openBreakStart = null;
+  for(const log of state.logs){
+    if(log.kind==='B' || log.kind==='L'){
+      openBreakStart = new Date(log.tISO);
+    } else if(log.kind==='C' && openBreakStart){
+      breakMin += minutesDiff(new Date(log.tISO), openBreakStart);
+      openBreakStart = null;
+    }
   }
-  if(open){ breakMin += minutesDiff(new Date(), open); }
-  const rate = state.shiftHours>0 ? Math.round((units/state.shiftHours)*10)/10 : 0;
-  return {units, breakMin:Math.max(0,breakMin), rate};
+  if(openBreakStart){ breakMin += minutesDiff(new Date(), openBreakStart); }
+
+  const shiftHrs = Number(state.shiftHours||9);
+  const rate = shiftHrs>0 ? Math.round((units/shiftHrs)*10)/10 : 0;
+  return { units, breakMin:Math.max(0, Math.round(breakMin)), rate };
 }
 
-/* ===================== Renderers ===================== */
+/* ====== UI Binding ====== */
 function renderTop(){
   $('#nowTxt').textContent = todayPretty() + ' — ' + fmtHM(new Date());
   const {units, breakMin, rate} = getTotals();
-  $('#kpiUnits').textContent  = units;
-  $('#kpiBreak').textContent  = breakMin;
-  $('#kpiRate').textContent   = rate;
+  $('#kpiUnits').textContent = units;
+  $('#kpiBreak').textContent = breakMin;
+  $('#kpiRate').textContent  = rate;
   $('#kpiTarget').textContent = state.target || 2700;
 
   const firstPick = state.logs.find(x=>x.kind==='P');
-  const lockSetup = state.started && !!firstPick;
-  $('#date').disabled  = lockSetup;
-  $('#start').disabled = lockSetup;
-  $('#length').disabled= lockSetup;
-  $('#companyTarget').disabled= lockSetup;
+  const setupDisabled = state.started && !!firstPick;
+  $('#date').disabled  = setupDisabled;
+  $('#start').disabled = setupDisabled;
+  $('#length').disabled= setupDisabled;
+  $('#companyTarget').disabled= setupDisabled;
 }
 
 function renderLogs(){
-  const box = $('#loglist'); box.innerHTML = '';
-  state.logs.forEach((l,i)=>{
-    const row = document.createElement('div'); row.className='logitem';
-    const tag = document.createElement('span'); tag.className='tag';
-    tag.textContent = (l.kind==='P'?'Pick': l.kind==='B'?'Break start': l.kind==='C'?'Continue':'Lunch start');
+  const box = $('#loglist');
+  box.innerHTML = '';
+  for(const [i, log] of state.logs.entries()){
+    const row = document.createElement('div');
+    row.className = 'logitem';
+    const t = new Date(log.tISO);
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = (log.kind==='P'?'Pick': log.kind==='B'?'Break start': log.kind==='C'?'Continue':'Lunch start');
     const meta = document.createElement('div');
-    const t = new Date(l.tISO);
     meta.innerHTML = `<div class="time">${fmtHM(t)}</div>` +
-      (l.kind==='P'? `<div class="sub">${l.qty||0} units — ${l.cust||'—'}</div>` :
-       l.note? `<div class="sub">${l.note}</div>` : '');
-    const del = document.createElement('button'); del.className='small ghost'; del.textContent='Delete';
-    del.onclick=()=>{ state.logs.splice(i,1); save(); renderAll(); };
-    row.append(tag, meta, del); box.append(row);
-  });
+      (log.kind==='P' ? `<div class="sub">${log.qty||0} units — ${log.cust||'—'}</div>` :
+       log.note ? `<div class="sub">${log.note}</div>` : '');
+    const del = document.createElement('button');
+    del.className = 'small ghost';
+    del.textContent = 'Delete';
+    del.onclick = ()=>{ state.logs.splice(i,1); save(); renderAll(); };
+    row.append(tag, meta, del);
+    box.append(row);
+  }
 }
 
 function renderAnalysis(){
-  const tbody = $('#analysisTbl tbody'); tbody.innerHTML='';
+  const body = $('#analysisTbl tbody');
+  body.innerHTML = '';
   const byCust = $('#byCustomer').checked;
   const g = {};
-  for(const l of state.logs){
-    if(l.kind!=='P') continue;
-    const key = byCust ? (l.cust||'—') : 'All picks';
-    g[key] = g[key] || {units:0, sessions:0};
-    g[key].units += (l.qty||0); g[key].sessions += 1;
+  for(const log of state.logs){
+    if(log.kind!=='P') continue;
+    const key = byCust ? (log.cust||'—') : 'All picks';
+    g[key] = g[key] || { units:0, sessions:0 };
+    g[key].units += (log.qty||0);
+    g[key].sessions += 1;
   }
   const keys = Object.keys(g).sort((a,b)=>g[b].units - g[a].units);
-  keys.forEach(k=>{
-    const avg = state.shiftHours>0 ? Math.round((g[k].units/state.shiftHours)*10)/10 : 0;
+  for(const k of keys){
     const tr = document.createElement('tr');
+    const avg = (state.shiftHours>0) ? Math.round((g[k].units/state.shiftHours)*10)/10 : 0;
     tr.innerHTML = `<td>${k}</td><td>${g[k].units}</td><td>${g[k].sessions}</td><td>${avg}</td>`;
-    tbody.append(tr);
-  });
+    body.append(tr);
+  }
 }
 
 function renderAll(){ renderTop(); renderLogs(); renderAnalysis(); }
 
-/* ===================== Actions ===================== */
-function ensureStarted(){ if(!state.started){ alert('Start the shift first.'); return false; } return true; }
+/* ====== Actions ====== */
+function ensureStarted(){
+  if(!state.started){ alert('Start the shift first.'); return false; }
+  return true;
+}
 
 $('#btnStart').onclick = ()=>{
-  const date = $('#date').value.trim() || todayPretty();
-  const time = $('#start').value || new Date().toTimeString().slice(0,5);
-  const len  = Number($('#length').value || 9);
-  const tgt  = Number($('#companyTarget').value || 2700);
-  state.date = date;
-  state.startTimeISO = toISOFrom(date, time);
-  state.shiftHours   = len>0? len : 9;
-  state.target       = tgt>0? tgt : 2700;
-  state.started = true; save(); renderAll();
-};
-
-$('#btnUndoStart').onclick = ()=>{
-  if(!state.started) return;
-  if(state.logs.find(x=>x.kind==='P')){ alert('Cannot undo after first Pick. Use Restart shift.'); return; }
-  if(confirm('Undo shift start and re-enable setup fields?')){ state.started=false; save(); renderAll(); }
-};
-
-$('#btnRestart').onclick = ()=>{
-  if(!confirm('Restart shift? Keeps date/start/length/target; clears ALL logs.')) return;
-  const date = $('#date').value || todayPretty();
-  const time = $('#start').value || new Date().toTimeString().slice(0,5);
-  state.logs = []; state.started = true;
-  state.date = date;
-  state.startTimeISO = toISOFrom(date, time);
-  state.shiftHours = Number($('#length').value || 9);
-  state.target     = Number($('#companyTarget').value || 2700);
+  const dateStr = $('#date').value.trim() || todayPretty();
+  const timeStr = $('#start').value || new Date().toTimeString().slice(0,5);
+  const len = Number($('#length').value || 9);
+  const tgt = Number($('#companyTarget').value || 2700);
+  state.date = dateStr;
+  state.startTime = toISOFromDateAndTimeStr(dateStr, timeStr);
+  state.shiftHours = len>0 ? len : 9;
+  state.target = tgt>0 ? tgt : 2700;
+  if(!state.started){
+    state.started = true;
+  }
   save(); renderAll();
 };
 
-// Quick buttons
-document.querySelectorAll('button.small[data-log]').forEach(b=>{
+$('#btnUndoStart').onclick = ()=>{
+  if(!state.started){ return; }
+  if(state.logs.find(x=>x.kind==='P')){
+    alert('Cannot undo after first Pick. Use Restart shift if needed.');
+    return;
+  }
+  if(confirm('Undo shift start and keep entered fields editable?')){
+    state.started=false;
+    save(); renderAll();
+  }
+};
+
+$('#btnRestart').onclick = ()=>{
+  if(confirm('Restart shift? Keeps date, start, length and clears ALL logs.')){
+    const dateVal = $('#date').value;
+    const startVal = $('#start').value;
+    const lenVal = $('#length').value;
+    const tgtVal = $('#companyTarget').value;
+    state.logs = [];
+    state.started = true;
+    state.date = dateVal || todayPretty();
+    state.startTime = toISOFromDateAndTimeStr(state.date, startVal || new Date().toTimeString().slice(0,5));
+    state.shiftHours = Number(lenVal || 9);
+    state.target = Number(tgtVal || 2700);
+    save(); renderAll();
+  }
+};
+
+$$('button.small').forEach(b=>{
+  const k = b.getAttribute('data-log'); if(!k) return;
   b.onclick = ()=>{
     if(!ensureStarted()) return;
-    const k = b.getAttribute('data-log');
     if(k==='P'){
-      const q = Number($('#qty').value||0); if(q<=0){ alert('Enter Qty'); return; }
+      const q = Number($('#qty').value||0);
+      if(q<=0){ alert('Enter Qty for Pick'); return; }
       state.logs.push({tISO: nowISO(), kind:'P', qty:q, cust:($('#cust').value||'')});
     }else{
       state.logs.push({tISO: nowISO(), kind:k});
@@ -339,62 +386,87 @@ document.querySelectorAll('button.small[data-log]').forEach(b=>{
 
 $('#btnLogNow').onclick = ()=>{
   if(!ensureStarted()) return;
-  const q = Number($('#qty').value||0); if(q<=0){ alert('Enter Qty'); return; }
+  const q = Number($('#qty').value||0);
+  if(q<=0){ alert('Enter Qty'); return; }
   state.logs.push({tISO: nowISO(), kind:'P', qty:q, cust:($('#cust').value||'')});
   save(); renderAll();
 };
 
 $('#btnLogCustomTime').onclick = ()=>{
   if(!ensureStarted()) return;
-  const hm = prompt('Time (HH:MM, 24h)'); if(!hm) return;
-  const d = parseClock(hm); if(!d){ alert('Bad time'); return; }
-  const kind = (prompt('Type: P (Pick), B (Break), C (Continue), L (Lunch)')||'P').toUpperCase();
-  if(kind==='P'){
-    const q = Number(prompt('Qty units?')||'0'); if(q<=0){ alert('Qty required'); return; }
+  const t = prompt('Time (HH:MM, 24h)'); if(!t) return;
+  const d = parseClock(t); if(!d){ alert('Bad time'); return; }
+  const kind = prompt('Type: P (Pick), B (Break), C (Continue), L (Lunch)')||'P';
+  if(kind.toUpperCase()==='P'){
+    const q = Number(prompt('Qty units?')||'0');
+    if(q<=0){ alert('Qty required'); return; }
     const cust = prompt('Customer/Route?')||'';
     state.logs.push({tISO: d.toISOString(), kind:'P', qty:q, cust});
   }else{
-    state.logs.push({tISO: d.toISOString(), kind});
+    state.logs.push({tISO: d.toISOString(), kind:kind.toUpperCase()});
   }
   save(); renderAll();
 };
 
 $('#btnParse').onclick = ()=>{
   if(!ensureStarted()) return;
-  const s = ($('#freeText').value||'').trim(); if(!s) return;
+  const s = ($('#freeText').value||'').trim();
+  if(!s){ return; }
 
+  // P-655 OCABRI
   let m = s.match(/^P[-\s]*(\d+)\s+(.+)$/i);
-  if(m){ state.logs.push({tISO: nowISO(), kind:'P', qty:Number(m[1]), cust:m[2].trim()}); save(); renderAll(); return; }
-
+  if(m){
+    const qty = Number(m[1]);
+    const cust = m[2].trim();
+    state.logs.push({tISO: nowISO(), kind:'P', qty, cust});
+    save(); renderAll(); return;
+  }
+  // B @ 10:02 or C @ 11:15 or L @ 12:30
   m = s.match(/^([BCL])\s*@\s*(\d{1,2}:\d{2})(?:\s*(.*))?$/i);
-  if(m){ const d=parseClock(m[2])||new Date(); const note=(m[3]||'').trim()||undefined;
-        state.logs.push({tISO:d.toISOString(), kind:m[1].toUpperCase(), note}); save(); renderAll(); return; }
-
+  if(m){
+    const kind = m[1].toUpperCase();
+    const d = parseClock(m[2]) || new Date();
+    const note = (m[3]||'').trim() || undefined;
+    state.logs.push({tISO: d.toISOString(), kind, note});
+    save(); renderAll(); return;
+  }
+  // L @ 12:30 with 140 left
   m = s.match(/^L\s*@\s*(\d{1,2}:\d{2}).*?with\s+(\d+)\s+left/i);
-  if(m){ const d=parseClock(m[1])||new Date(); const note=`with ${m[2]} left`;
-        state.logs.push({tISO:d.toISOString(), kind:'L', note}); save(); renderAll(); return; }
-
+  if(m){
+    const d = parseClock(m[1]) || new Date();
+    const note = `with ${m[2]} left`;
+    state.logs.push({tISO: d.toISOString(), kind:'L', note});
+    save(); renderAll(); return;
+  }
   alert('Could not parse. Supported: "P-655 WAIBRA", "B @ 10:02", "C @ 11:15", "L @ 12:30 with 140 left"');
 };
 
-$('#btnClearInputs').onclick = ()=>{ $('#qty').value=''; $('#cust').value=''; $('#freeText').value=''; };
+$('#btnClearInputs').onclick = ()=>{
+  $('#qty').value=''; $('#cust').value=''; $('#freeText').value='';
+};
 
 $('#btnCalc').onclick = ()=>{
   const need = Number($('#calcUnitsMore').value||0);
   const hrs  = Number($('#calcHoursLeft').value||0);
-  $('#calcOut').textContent = (need>0 && hrs>0)? `${Math.ceil(need/hrs)} u/h needed` : '—';
+  if(need<=0 || hrs<=0){ $('#calcOut').textContent='—'; return; }
+  const req = Math.ceil(need/hrs);
+  $('#calcOut').textContent = `${req} u/h needed`;
 };
 
 $('#btnWhatIf').onclick = ()=>{
   const u = Number($('#whatIfUnits').value||0);
   const m = Number($('#whatIfMinutes').value||0);
-  $('#whatIfOut').textContent = (u>0 && m>0)? `${Math.round((u/(m/60))*10)/10} u/h over that burst` : '—';
+  if(u<=0 || m<=0){ $('#whatIfOut').textContent='—'; return; }
+  const pace = Math.round((u/(m/60))*10)/10;
+  $('#whatIfOut').textContent = `${pace} u/h over that burst`;
 };
 
 $('#btnAnalyse').onclick = renderAnalysis;
 
 $('#btnFullReset').onclick = ()=>{
-  if(confirm('Wipe ALL saved data for this tool?')){ localStorage.removeItem('wh_tracker_v92'); location.reload(); }
+  if(!confirm('This will wipe ALL saved data for this tool. Continue?')) return;
+  localStorage.removeItem('wh_tracker_v92');
+  location.reload();
 };
 
 $('#btnExport').onclick = ()=>{
@@ -406,7 +478,7 @@ $('#btnExport').onclick = ()=>{
 };
 
 $('#btnImport').onclick = ()=> $('#importFile').click();
-$('#importFile').addEventListener('change', e=>{
+$('#importFile').addEventListener('change', (e)=>{
   const f = e.target.files?.[0]; if(!f) return;
   const r = new FileReader();
   r.onload = ()=>{
@@ -415,14 +487,17 @@ $('#importFile').addEventListener('change', e=>{
       if(!data || !Array.isArray(data.logs)) throw new Error('Invalid file');
       localStorage.setItem('wh_tracker_v92', JSON.stringify(data));
       Object.assign(state, data);
-      renderAll(); alert('Imported.');
+      renderAll();
+      alert('Imported.');
     }catch(err){ alert('Import failed: '+err.message); }
   };
   r.readAsText(f);
 });
 
-/* ===================== Init ===================== */
-function tick(){ $('#nowTxt').textContent = todayPretty() + ' — ' + fmtHM(new Date()); }
+/* ====== Init ====== */
+function tick(){
+  $('#nowTxt').textContent = todayPretty() + ' — ' + fmtHM(new Date());
+}
 load();
 if(!state.date) $('#date').value = todayPretty(); else $('#date').value = state.date;
 if(state.shiftHours) $('#length').value = state.shiftHours;
