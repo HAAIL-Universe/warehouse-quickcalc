@@ -1,518 +1,434 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Warehouse QuickCalc & Tracker — v9.2 (mobile-first)</title>
 <style>
-:root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
-* { box-sizing: border-box; }
-html,body { margin:0; padding:0; background:#0b0d10; color:var(--ink); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-.wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
-h1 { font-size: 20px; margin:6px 0 10px; }
-.tabs { display:flex; gap:8px; margin:6px 0 10px; position: sticky; top:0; background:#0b0d10; padding-top:6px; z-index:5; }
-.tabbtn { flex:1; text-align:center; padding:10px; border:1px solid #253348; border-radius:10px; background:#0f131b; color:var(--ink); font-weight:700; cursor:pointer; }
-.tabbtn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.hidden { display:none; }
-.card { background:var(--card); border:1px solid #253348; border-radius:14px; padding:14px; margin: 10px 0; }
-label { display:block; font-size:12px; color:#9fb3c8; margin-bottom:4px; }
-input, select, button { font-size:16px; }
-input[type="number"], input[type="time"], input[type="text"], select {
-  width:100%; background:#0f131b; color:var(--ink); border:1px solid #29364a; border-radius:10px; padding:10px; outline:none;
+:root{
+  --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff;
+  --line:#243244; --chip:#0f1320; --pill:#0d1322; --shadow:0 8px 24px rgba(0,0,0,.28);
 }
-.row { display:flex; gap:10px; flex-wrap: wrap; align-items:flex-end; }
-.col { flex:1; min-width:220px; }
-.btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; cursor:pointer; }
-.btn.ghost { background:transparent; border-color:#29364a; }
-.btn.ok { border-color:#2e6b3a; background:#173220; }
-.btn.warn { border-color:#8a6a15; background:#30250f; }
-.btn.bad { border-color:#7a2b2b; background:#331b1b; }
-.btn.chip { padding:8px 10px; border-radius:999px; }
-.btn.slim { padding:6px 10px; border-radius:999px; font-size:14px; }
-.pill { border-radius:12px; padding:10px 12px; background:#0f131b; border:1px solid #29364a; text-align:center; }
-.pill h3 { margin:0; font-size:13px; color:#9fb3c8; }
-.pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
-.rateBanner { position: sticky; top:48px; z-index:4; display:flex; gap:10px; margin:8px 0; }
-.rateChip { flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid #29364a; background:#0f131b; }
-.rateChip.good { border-color:#1f4830; background:#14271c; }
-.rateChip.warn { border-color:#584a1a; background:#2a230f; }
-.rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
-.timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
-.tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
-.tick .meta { color:#9fb3c8; font-size:12px; }
-table { width:100%; border-collapse:collapse; font-size:14px; }
-th, td { border-bottom:1px dashed #253348; padding:8px 6px; text-align:left; }
-th { color:#9fb3c8; }
-.bottom-bar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top: 12px; }
-.hint { color:#9fb3c8; font-size:12px; }
-.small { font-size:12px; color:#9fb3c8; }
-.sectionHead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.countdown { font-size:13px; color:#cfe2ff; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+.container{max-width:860px;margin:0 auto;padding:16px 14px 64px}
+h1{font-size:20px;margin:8px 0 6px}
+h2{font-size:16px;color:var(--muted);margin:14px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--shadow)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,select,button,textarea{
+  width:100%;background:#0e1423;border:1px solid var(--line);color:var(--ink);
+  padding:12px 12px;border-radius:10px;font-size:15px;outline:none;
+}
+button{background:#1b2540;border:1px solid transparent;color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:white}
+button.ghost{background:transparent;border-color:var(--line)}
+button.warning{background:#3a2a0f}
+button.danger{background:#3a1616}
+button.small{padding:8px 10px;font-size:14px}
+.pill{background:var(--pill);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:10px 0}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.kpis{display:flex;gap:8px;flex-wrap:wrap}
+.kpi{flex:1 1 120px;background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:10px}
+.kpi .label{font-size:12px;color:var(--muted)}
+.kpi .value{font-size:18px;margin-top:4px}
+.sub{font-size:12px;color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:8px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.loglist{display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow:auto;padding-right:2px}
+.logitem{display:flex;gap:8px;align-items:flex-start}
+.tag{font-size:11px;background:#10192c;color:#b8c6dc;border:1px solid var(--line);padding:4px 8px;border-radius:999px;white-space:nowrap}
+.time{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;color:#b9d1ff;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left}
+th{color:#cfe0ff;font-weight:600}
+.footer-space{height:24px}
+.hidden{display:none !important}
+/* large screens */
+@media(min-width:760px){
+  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;align-items:start}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Warehouse QuickCalc & Tracker</h1>
-
-  <div class="tabs">
-    <button id="tabCalcBtn" class="tabbtn active" onclick="showTab('calc')">QuickCalc</button>
-    <button id="tabTrackBtn" class="tabbtn" onclick="showTab('tracker')">Tracker</button>
-    <button id="tabHistBtn" class="tabbtn" onclick="showTab('history')">History</button>
+<div class="container">
+  <div class="topbar">
+    <div>
+      <h1>Warehouse Tracker — v9.2</h1>
+      <div class="sub" id="nowTxt">—</div>
+    </div>
+    <div class="toolbar">
+      <button class="small ghost" id="btnExport">Export</button>
+      <button class="small ghost" id="btnImport">Import</button>
+    </div>
   </div>
 
-  <div id="liveBanner" class="rateBanner hidden">
-    <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
-    <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
-    <div id="chipGap" class="rateChip"><b>Δ vs 300</b><div id="chipGapVal">—</div></div>
+  <!-- TOP KPIs (single location; removed bottom stats bar) -->
+  <div class="kpis" id="kpis">
+    <div class="kpi"><div class="label">Units</div><div class="value" id="kpiUnits">0</div></div>
+    <div class="kpi"><div class="label">Rate (u/h)</div><div class="value" id="kpiRate">0</div></div>
+    <div class="kpi"><div class="label">Break (min)</div><div class="value" id="kpiBreak">0</div></div>
+    <div class="kpi"><div class="label">Target</div><div class="value" id="kpiTarget">2700</div></div>
   </div>
 
-  <!-- QuickCalc -->
-  <section id="tabCalc">
-    <div class="card">
-      <div class="row">
-        <div class="col">
-          <label>Customer</label>
-          <select id="qcCustomer">
-            <option value="TESWIN">TESWIN</option>
-            <option value="SAINOR">SAINOR</option>
-            <option value="SAIEME">SAIEME</option>
-            <option value="WAILEY">WAILEY</option>
-            <option value="ASDERI">ASDERI</option>
-            <option value="COOWES">COOWES</option>
-            <option value="COOAVO">COOAVO</option>
-            <option value="COOWEL">COOWEL</option>
-          </select>
-        </div>
-        <div class="col">
-          <label>Units</label>
-          <input id="qcUnits" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
-        </div>
-        <div class="col">
-          <label>Override Rate (u/h)</label>
-          <input id="qcRate" type="number" min="1" step="1" inputmode="numeric" placeholder="optional">
-        </div>
-      </div>
-      <div style="height:6px"></div>
-      <div class="pill"><h3>Expected Pallets & Duration</h3><p id="qcCombo">—</p><div id="qcRateUsed" class="small">—</div></div>
-    </div>
-  </section>
+  <div class="grid" style="margin-top:12px">
 
-  <!-- Tracker -->
-  <section id="tabTracker" class="hidden">
-    <div class="card" id="shiftCard">
-      <div class="row">
-        <div class="col">
-          <label>Shift Start (HH:MM)</label>
-          <input id="tStart" type="time" placeholder="08:00">
-        </div>
-        <div class="col">
-          <label>Shift Length (hours)</label>
-          <input id="tLen" type="number" min="1" step="0.5" value="9">
-        </div>
-        <div class="col" style="text-align:right;">
-          <button class="btn chip" onclick="setNow('tStart')">Now</button>
-          <button class="btn ok" onclick="beginShift()" id="btnBegin" style="min-width:180px; margin-left:8px;">Begin Tracking</button>
-        </div>
-      </div>
-      <div class="hint">Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (or now if order active).</div>
-    </div>
-
-    <div class="card" id="activeOrderCard" style="display:none;">
-      <div class="sectionHead">
-        <h3 style="margin:0; font-size:14px; color:#9fb3c8;">Active Order</h3>
-        <button id="btnManualToggle" class="btn ghost" onclick="toggleManual()">Add Manual Order</button>
-      </div>
-      <div class="row">
-        <div class="col">
-          <label>Customer</label>
-          <select id="oCust">
-            <option value="TESWIN">TESWIN</option>
-            <option value="SAINOR">SAINOR</option>
-            <option value="SAIEME">SAIEME</option>
-            <option value="WAILEY">WAILEY</option>
-            <option value="ASDERI">ASDERI</option>
-            <option value="COOWES">COOWES</option>
-            <option value="COOAVO">COOAVO</option>
-            <option value="COOWEL">COOWEL</option>
-          </select>
-        </div>
-        <div class="col">
-          <label>Total units</label>
-          <input id="oTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 1024">
-        </div>
-        <div class="col" style="text-align:right;">
-          <button class="btn" onclick="startOrder()" id="btnStart">Start</button>
-          <button class="btn ok" onclick="completeOrder()" id="btnComplete" style="display:none;">Complete</button>
-          <button id="btnUndo" class="btn slim" onclick="undoLast()" style="display:none; margin-left:8px;">Undo</button>
-        </div>
-      </div>
-
-      <div id="orderArea" style="display:none; margin-top:10px;">
+    <!-- LEFT: Setup & Logging -->
+    <section class="stack">
+      <div class="card">
+        <h2>Shift setup</h2>
         <div class="row">
-          <div class="col">
-            <label>Units left (log wrap)</label>
-            <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
-          </div>
-          <div class="col" style="text-align:right;">
-            <button class="btn" onclick="logWrap()">Log Wrap</button>
-          </div>
+          <input id="date" type="text" placeholder="Date (e.g. Thu 23 Oct 2025)" />
+          <input id="start" type="time" />
         </div>
-        <div class="timeline" id="orderTimeline"></div>
+        <div class="row">
+          <input id="length" type="number" step="0.25" placeholder="Shift length (hr) default 9" />
+          <input id="companyTarget" type="number" placeholder="Target units (default 2700)" />
+        </div>
+        <div class="toolbar">
+          <button class="primary" id="btnStart">Start shift</button>
+          <button id="btnUndoStart">Undo start</button>
+          <button class="warning" id="btnRestart">Restart shift</button>
+        </div>
+        <div class="sub">Rate = Units ÷ full shift hours (breaks included). Break minutes are tracked for visibility only.</div>
       </div>
-    </div>
 
-    <div class="card" id="completedCard" style="display:none;">
-      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
-      <table>
-        <thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate (excl. B/L)</th></tr></thead>
-        <tbody id="doneBody"></tbody>
-      </table>
-    </div>
-
-    <div class="card" id="summaryCard" style="display:none;">
-      <div class="row" style="gap:10px;">
-        <div class="pill" style="flex:1"><h3>Total Units</h3><p id="sumUnits">0</p></div>
-        <div class="pill" style="flex:1"><h3>Live Rate</h3><p id="liveRate">0</p></div>
-        <div class="pill" style="flex:1"><h3>Daily Avg</h3><p id="dayRate">0</p><div class="small">units ÷ full shift</div></div>
-        <div class="pill" style="flex:1"><h3>Δ vs 300</h3><p id="gap300">—</p></div>
-      </div>
-    </div>
-
-    <div class="bottom-bar">
-      <div>
-        <button id="btnDelay" class="btn ghost" onclick="toggleDelay()">⏱ Delay</button>
-        <button id="btnB" class="btn chip" onclick="startBreak('B')">B (20m)</button>
-        <button id="btnL" class="btn chip" onclick="startBreak('L')">L (30m)</button>
-        <span id="breakInfo" class="countdown"></span>
-      </div>
-      <div>
-        <button class="btn ok" id="btnEndShift" onclick="endShift()" style="display:none; min-width:220px;">End Shift & Archive →</button>
-      </div>
-    </div>
-
-    <!-- Delay panel -->
-    <div id="delayPanel" class="card hidden">
-      <div class="row">
-        <div class="col"><label>Reason</label><input id="delayReason" type="text" placeholder="e.g. wrapper congestion"></div>
-        <div class="col" style="text-align:right;">
-          <button class="btn" onclick="startDelay()">Start Delay</button>
-          <button class="btn ok" onclick="stopDelay()">Stop & Add</button>
+      <div class="card">
+        <h2>Quick log</h2>
+        <div class="toolbar">
+          <button class="small" data-log="P">+ Pick</button>
+          <button class="small" data-log="B">+ Break start</button>
+          <button class="small" data-log="C">+ Continue</button>
+          <button class="small" data-log="L">+ Lunch start</button>
+        </div>
+        <div class="row">
+          <input id="qty" type="number" placeholder="Qty (for Pick)" />
+          <input id="cust" type="text" placeholder="Customer / Route (for Pick)" />
+        </div>
+        <div class="toolbar">
+          <button class="primary" id="btnLogNow">Log now</button>
+          <button id="btnLogCustomTime">Log w/ time…</button>
+        </div>
+        <div class="row">
+          <input id="freeText" type="text" placeholder='Free text (e.g. "P-655 WAIBRA", "B @ 10:02", "L @ 12:30 with 140 left", "C @ 11:15")' />
+        </div>
+        <div class="toolbar">
+          <button id="btnParse">Parse & Log</button>
+          <button class="ghost" id="btnClearInputs">Clear</button>
         </div>
       </div>
-      <div class="hint" id="delayStatus">No active delay.</div>
-    </div>
 
-    <!-- Manual Order editor -->
-    <section id="manualBox" class="card hidden">
-      <div class="row">
-        <div class="col">
-          <label>Customer</label>
-          <select id="mCust">
-            <option value="TESWIN">TESWIN</option>
-            <option value="SAINOR">SAINOR</option>
-            <option value="SAIEME">SAIEME</option>
-            <option value="WAILEY">WAILEY</option>
-            <option value="ASDERI">ASDERI</option>
-            <option value="COOWES">COOWES</option>
-            <option value="COOAVO">COOAVO</option>
-            <option value="COOWEL">COOWEL</option>
-          </select>
-        </div>
-        <div class="col"><label>Units</label><input id="mUnits" type="number" min="1" step="1"></div>
-        <div class="col"><label>Pallets (optional)</label><input id="mPallets" type="number" min="1" step="1" placeholder="1"></div>
+      <div class="card">
+        <h2>Log</h2>
+        <div class="loglist" id="loglist"></div>
+        <div class="footer-space"></div>
       </div>
-      <div class="row">
-        <div class="col"><label>Start (HH:MM)</label><input id="mStart" type="time"></div>
-        <div class="col"><label>End (HH:MM)</label><input id="mEnd" type="time"></div>
-        <div class="col"><label>Excl. mins (B/L)</label><input id="mExcl" type="number" min="0" step="1" placeholder="0"></div>
-        <div class="col" style="text-align:right;"><button class="btn ok" onclick="addManual()">Add Manual Order</button></div>
-      </div>
-      <div class="hint">Backfill missed orders. Rate = Units ÷ ((End−Start) − Excl/60).</div>
     </section>
 
-  </section>
-
-  <!-- History -->
-  <section id="tabHistory" class="hidden">
-    <div class="card">
-      <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-        <h3 style="margin:0; font-size:14px; color:#9fb3c8;">History (daily archives)</h3>
-        <div>
-          <button class="btn" onclick="exportCSV()">Export CSV (today)</button>
-          <button class="btn" onclick="exportJSON()">Export JSON (all)</button>
-          <button class="btn" style="background:#331b1b;border-color:#7a2b2b;" onclick="clearHistory()">Clear History</button>
+    <!-- RIGHT: QuickCalc, Analyse, Safety -->
+    <section class="stack">
+      <div class="card">
+        <h2>QuickCalc</h2>
+        <div class="row">
+          <input id="calcUnitsMore" type="number" placeholder="Units remaining to hit target" />
+          <input id="calcHoursLeft" type="number" step="0.25" placeholder="Hours left (clock time)" />
+        </div>
+        <div class="toolbar">
+          <button id="btnCalc">Compute needed u/h</button>
+          <span class="pill" id="calcOut">—</span>
+        </div>
+        <hr />
+        <div class="row">
+          <input id="whatIfUnits" type="number" placeholder="If I pick this many next… (units)" />
+          <input id="whatIfMinutes" type="number" placeholder="…over this many minutes" />
+        </div>
+        <div class="toolbar">
+          <button id="btnWhatIf">What’s my pace?</button>
+          <span class="pill" id="whatIfOut">—</span>
         </div>
       </div>
-      <div id="histList" style="margin-top:8px;"></div>
-    </div>
-  </section>
+
+      <div class="card">
+        <h2>Analyse</h2>
+        <div class="toolbar">
+          <label class="sub"><input id="byCustomer" type="checkbox" checked /> Group by customer</label>
+          <button id="btnAnalyse">Refresh</button>
+        </div>
+        <div style="overflow:auto">
+          <table id="analysisTbl">
+            <thead>
+              <tr><th>Customer</th><th>Units</th><th>Sessions</th><th>Avg u/h*</th></tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot><tr><td colspan="4" class="sub">*Avg u/h uses full shift hours (breaks included) to mirror management calc.</td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Data & safety</h2>
+        <div class="toolbar">
+          <button class="danger" id="btnFullReset">Full Reset (wipe local)</button>
+        </div>
+        <div class="sub">Exports include shift meta + logs. Import replaces current state.</div>
+      </div>
+    </section>
+
+  </div>
 </div>
 
+<input type="file" id="importFile" class="hidden" accept="application/json" />
+
 <script>
-const STORE_KEY = 'wqt_store_v1';
-const DEFAULT_CODES = ['TESWIN','SAINOR','SAIEME','WAILEY','ASDERI','COOWES','COOAVO','COOWEL'];
+/* ===================== State ===================== */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
 
-let picks=[], tempWraps=[], current=null, startTime='', lastClose='', historyDays=[], shiftBreaks=[], delays=[], undoStack=[];
+const state = {
+  started:false,
+  date:"",
+  startTimeISO:"",
+  shiftHours:9,
+  target:2700,
+  logs:[] // {tISO, kind:'P'|'B'|'C'|'L', qty?, cust?, note?}
+};
 
-// Storage
-function saveAll(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify({picks, startTime, lastClose, history:historyDays, shiftBreaks, delays})); }catch(e){} }
-function loadAll(){ try{ var raw=localStorage.getItem(STORE_KEY); if(raw){ var p=JSON.parse(raw); picks=p.picks||[]; startTime=p.startTime||''; lastClose=p.lastClose||''; historyDays=p.history||[]; shiftBreaks=p.shiftBreaks||[]; delays=p.delays||[]; } }catch(e){} }
-
-// Helpers
-function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10), M=parseInt(a[1],10); if(isNaN(H)||isNaN(M)) return NaN; return H + M/60; }
-function addMinutes(hhmm, mins){ var p=hhmm.split(':').map(x=>parseInt(x,10)); var t=p[0]*60+p[1]+mins; var H=((Math.floor(t/60))%24+24)%24; var M=((t%60)+60)%60; return String(H).padStart(2,'0')+':'+String(M).padStart(2,'0'); }
-function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function rateFrom(o){ var s=hm(o.start), e=hm(o.close); var net=(e>s)?(e-s)-(o.excl||0)/60:0.01; return Math.round(o.units/Math.max(0.01,net)); }
-
-// Tabs
-function showTab(which){
-  ['tabCalc','tabTracker','tabHistory'].forEach(id=>document.getElementById(id).classList.toggle('hidden', id!=='tab'+which.charAt(0).toUpperCase()+which.slice(1)));
-  ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(id=>document.getElementById(id).classList.remove('active'));
-  if(which==='calc') document.getElementById('tabCalcBtn').classList.add('active');
-  if(which==='tracker') document.getElementById('tabTrackBtn').classList.add('active');
-  if(which==='history') document.getElementById('tabHistBtn').classList.add('active');
-  document.getElementById('liveBanner').classList.toggle('hidden', which!=='tracker');
-  updateEndShiftVisibility();
+function save(){ localStorage.setItem('wh_tracker_v92', JSON.stringify(state)); }
+function load(){
+  const raw = localStorage.getItem('wh_tracker_v92');
+  if(!raw) return;
+  try{ Object.assign(state, JSON.parse(raw)); }catch{}
 }
 
-// QuickCalc
-function updCalc(){
-  var sel=document.getElementById('qcCustomer'), name=sel.value;
-  var units=parseInt(document.getElementById('qcUnits').value||'0',10);
-  var rate=parseFloat(document.getElementById('qcRate').value||'0')||300;
-  if(!name || !units){ document.getElementById('qcCombo').textContent='—'; document.getElementById('qcRateUsed').textContent='—'; return; }
-  var uppMap = {TESWIN:341,SAINOR:214,SAIEME:289,WAILEY:192,ASDERI:154,COOWES:177,COOAVO:222,COOWEL:73};
-  var pallets = Math.max(1, Math.ceil(units/(uppMap[name]||300)));
-  var hours = units / (rate||300);
-  document.getElementById('qcCombo').textContent = pallets+' pallets • '+hours.toFixed(2)+' h';
-  document.getElementById('qcRateUsed').textContent = rate+' u/h';
+/* ===================== Utils ===================== */
+function nowISO(){ return new Date().toISOString(); }
+function todayPretty(){
+  const d = new Date();
+  return d.toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+}
+function toISOFrom(dateStr,timeStr){
+  const t = timeStr && timeStr.includes(':') ? timeStr : "09:00";
+  const d = new Date(`${dateStr} ${t}`);
+  return isNaN(d)? new Date().toISOString() : d.toISOString();
+}
+function parseClock(hm){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hm||"");
+  if(!m) return null;
+  const d = new Date(); d.setHours(+m[1], +m[2], 0, 0); return d;
+}
+function minutesDiff(a,b){ return Math.round((a-b)/60000); }
+function fmtHM(x){ const d = x instanceof Date ? x : new Date(x); return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+
+/* ===================== Calculations ===================== */
+function getTotals(){
+  const units = state.logs.filter(l=>l.kind==='P').reduce((a,b)=>a+(b.qty||0),0);
+  // break minutes from B/L .. C
+  let breakMin = 0, open = null;
+  for(const l of state.logs){
+    if(l.kind==='B' || l.kind==='L'){ open = new Date(l.tISO); }
+    else if(l.kind==='C' && open){ breakMin += minutesDiff(new Date(l.tISO), open); open=null; }
+  }
+  if(open){ breakMin += minutesDiff(new Date(), open); }
+  const rate = state.shiftHours>0 ? Math.round((units/state.shiftHours)*10)/10 : 0;
+  return {units, breakMin:Math.max(0,breakMin), rate};
 }
 
-// Shift controls
-function setNow(id){ var el=document.getElementById(id); var v=nowHHMM(); el.value=v; if(id==='tStart'){ startTime=v; } updateSummary(); saveAll(); }
-function beginShift(){ var typed=document.getElementById('tStart').value; if(typed) startTime=typed; document.getElementById('shiftCard').style.display='none'; document.getElementById('activeOrderCard').style.display='block'; document.getElementById('summaryCard').style.display='block'; document.getElementById('completedCard').style.display='block'; renderDone(); updateSummary(); updateEndShiftVisibility(); saveAll(); }
+/* ===================== Renderers ===================== */
+function renderTop(){
+  $('#nowTxt').textContent = todayPretty() + ' — ' + fmtHM(new Date());
+  const {units, breakMin, rate} = getTotals();
+  $('#kpiUnits').textContent  = units;
+  $('#kpiBreak').textContent  = breakMin;
+  $('#kpiRate').textContent   = rate;
+  $('#kpiTarget').textContent = state.target || 2700;
 
-// Active Order flow
-function startOrder(){
-  var name=document.getElementById('oCust').value;
-  var total=parseInt(document.getElementById('oTotal').value||'0',10);
-  if(!name || total<=0) return alert('Enter customer and total units');
-  current={name, total, start: nowHHMM(), breaks: [], delays: []};
-  tempWraps=[]; undoStack.push({type:'start'});
-  document.getElementById('orderArea').style.display='block';
-  document.getElementById('btnStart').style.display='none';
-  document.getElementById('btnComplete').style.display='inline-block';
-  document.getElementById('btnUndo').style.display='inline-block';
-  renderTimeline(); updateSummary(); updateEndShiftVisibility(); saveAll();
+  const firstPick = state.logs.find(x=>x.kind==='P');
+  const lockSetup = state.started && !!firstPick;
+  $('#date').disabled  = lockSetup;
+  $('#start').disabled = lockSetup;
+  $('#length').disabled= lockSetup;
+  $('#companyTarget').disabled= lockSetup;
 }
 
-function logWrap(){
-  if(!current) return alert('Start an order first');
-  var left=parseInt(document.getElementById('oLeft').value||'0',10);
-  if(left<0 || left>current.total) return alert('Units left must be between 0 and total');
-  var prevLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
-  if(left>prevLeft) return alert('Units left cannot increase vs previous wrap');
-  var done=prevLeft-left; if(done<=0) return alert('No progress since last wrap');
-  tempWraps.push({left,done,t:nowHHMM()}); undoStack.push({type:'wrap'});
-  document.getElementById('oLeft').value=''; renderTimeline(); updateSummary(); saveAll();
-}
-
-function completeOrder(){
-  if(!current) return alert('Start an order first');
-  if(!startTime) return alert('Add shift start first');
-  var close=nowHHMM();
-  var lastLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
-  var finalDone=lastLeft;
-  var palletsCount=tempWraps.length + (finalDone>0?1:0);
-  var unitsDone=current.total;
-  var exclMins=(current.breaks||[]).reduce((a,b)=>a+(b.minutes||0),0);
-  var order={name:current.name, units:unitsDone, pallets:palletsCount, close, start:current.start, excl:exclMins};
-  picks.push(order); lastClose=close;
-  current=null; tempWraps=[]; undoStack=[];
-  document.getElementById('orderArea').style.display='none';
-  document.getElementById('btnStart').style.display='inline-block';
-  document.getElementById('btnComplete').style.display='none';
-  document.getElementById('btnUndo').style.display='none';
-  renderDone(); updateSummary(); saveAll(); updateEndShiftVisibility();
-}
-
-function undoLast(){
-  if(undoStack.length===0 && !current){ alert('Nothing to undo'); return; }
-  var last=undoStack.pop();
-  if(last && last.type==='wrap'){ tempWraps.pop(); }
-  else if(last && last.type==='break_order'){ if(current && current.breaks.length) current.breaks.pop(); }
-  else if(last && last.type==='break_shift'){ if(shiftBreaks.length) shiftBreaks.pop(); }
-  else if(last && last.type==='delay'){ if(current && current.delays && current.delays.length) current.delays.pop(); else if(delays.length) delays.pop(); }
-  else if(last && last.type==='start'){ current=null; tempWraps=[]; document.getElementById('orderArea').style.display='none'; document.getElementById('btnStart').style.display='inline-block'; document.getElementById('btnComplete').style.display='none'; document.getElementById('btnUndo').style.display='none'; }
-  renderTimeline(); updateSummary(); updateEndShiftVisibility(); saveAll();
-}
-
-// Break/Lunch bottom controls (global)
-let breakTimer=null, breakEndsAt=null, breakType=null;
-function startBreak(kind){
-  var start=nowHHMM(), mins=(kind==='B')?20:30;
-  breakType = kind;
-  breakEndsAt = addMinutes(start, mins);
-  if(current){ current.breaks.push({type:kind,start,end:breakEndsAt,minutes:mins}); undoStack.push({type:'break_order'}); }
-  else { shiftBreaks.push({type:kind,start,end:breakEndsAt,minutes:mins}); undoStack.push({type:'break_shift'}); }
-  document.getElementById('breakInfo').textContent = (kind==='B'?'Break':'Lunch')+' ends at '+breakEndsAt+' ('+mins+'m)';
-  if(breakTimer) clearInterval(breakTimer);
-  breakTimer=setInterval(function(){
-    var now=nowHHMM();
-    document.getElementById('breakInfo').textContent = (kind==='B'?'Break':'Lunch')+' ends at '+breakEndsAt+' • now '+now;
-    if(hm(now) >= hm(breakEndsAt)){
-      clearInterval(breakTimer); breakTimer=null;
-      document.getElementById('breakInfo').textContent = (kind==='B'?'Break':'Lunch')+' finished '+breakEndsAt;
-      try{ alert((kind==='B'?'Break':'Lunch')+' over'); }catch(e){}
-    }
-  }, 1000);
-  updateSummary(); saveAll();
-}
-
-// Delay (does NOT exclude from rates)
-let delayStart=null;
-function toggleDelay(){ document.getElementById('delayPanel').classList.toggle('hidden'); }
-function startDelay(){
-  if(delayStart){ document.getElementById('delayStatus').textContent='Delay already running since '+delayStart; return; }
-  delayStart = nowHHMM();
-  document.getElementById('delayStatus').textContent='Delay running since '+delayStart;
-}
-function stopDelay(){
-  if(!delayStart){ document.getElementById('delayStatus').textContent='No active delay.'; return; }
-  var reason=(document.getElementById('delayReason').value||'').trim();
-  var end=nowHHMM();
-  var rec={start:delayStart, end, reason};
-  if(current){ if(!current.delays) current.delays=[]; current.delays.push(rec); undoStack.push({type:'delay'}); }
-  else { delays.push(rec); undoStack.push({type:'delay'}); }
-  delayStart=null; document.getElementById('delayReason').value=''; document.getElementById('delayStatus').textContent='Delay saved.';
-  renderTimeline(); saveAll();
-}
-
-// Render timeline + completed + summary
-function renderTimeline(){
-  var tl=document.getElementById('orderTimeline'); tl.innerHTML='';
-  if(!current) return;
-  var done = tempWraps.length? (current.total - tempWraps[tempWraps.length-1].left) : 0;
-  var left = current.total - done;
-  tl.innerHTML += '<div class="tick"><span>⏳ <b>'+current.name+'</b> — '+done+' done / '+left+' left</span><span class="meta">Start: '+current.start+' • Total: '+current.total+' u</span></div>';
-  (current.breaks||[]).forEach(function(b){ tl.innerHTML += '<div class="tick"><span>☕ '+(b.type==='B'?'Break 20m':'Lunch 30m')+'</span><span class="meta">'+b.start+' → '+b.end+'</span></div>'; });
-  (current.delays||[]).forEach(function(d){ tl.innerHTML += '<div class="tick"><span>🕒 Delay: '+(d.reason||'—')+'</span><span class="meta">'+d.start+' → '+d.end+'</span></div>'; });
-  tempWraps.forEach(function(w,i){ tl.innerHTML += '<div class="tick"><span>📦 Wrap '+(i+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; });
-}
-
-function renderDone(){
-  var tb=document.getElementById('doneBody'); tb.innerHTML='';
-  picks.forEach(function(o,i){ tb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rateFrom(o)+' u/h</td></tr>'; });
-  document.getElementById('completedCard').style.display = picks.length? 'block':'none';
-}
-
-function lastEventTime(){
-  if(current){ if(tempWraps.length) return tempWraps[tempWraps.length-1].t; return nowHHMM(); }
-  return lastClose || '';
-}
-
-function updateSummary(){
-  var closedUnits=picks.reduce((a,b)=>a+b.units,0);
-  var progress=current? (current.total - (tempWraps.length?tempWraps[tempWraps.length-1].left:current.total)) : 0;
-  var totalForChip=closedUnits+progress;
-  var s=hm(startTime), e=hm(lastEventTime());
-  var live=(!isNaN(s)&&!isNaN(e)&&e>s)? Math.round(totalForChip/(e-s)) : 0;
-  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
-  var dayAvg=shiftLen>0? Math.round(closedUnits/shiftLen):0;
-  document.getElementById('sumUnits').textContent=totalForChip;
-  document.getElementById('liveRate').textContent=live;
-  document.getElementById('dayRate').textContent=dayAvg;
-  var delta = live - 300;
-  var sign = delta>0? '+' : (delta<0? '−':'±');
-  document.getElementById('gap300').textContent = sign + Math.abs(delta);
-  document.getElementById('chipRateVal').textContent=live? (live+' u/h'):'—';
-  document.getElementById('chipTotalVal').textContent=totalForChip;
-  document.getElementById('chipGapVal').textContent= (delta>0? '+' : (delta<0? '−':'±')) + Math.abs(delta);
-  var chipRate=document.getElementById('chipRate'); chipRate.classList.remove('good','warn','bad'); if(live>=300) chipRate.classList.add('good'); else if(live>=250) chipRate.classList.add('warn'); else chipRate.classList.add('bad');
-}
-
-function updateEndShiftVisibility(){ var btn=document.getElementById('btnEndShift'); var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden'); btn.style.display=(trackerVisible && !current && picks.length>0)?'inline-block':'none'; }
-
-function endShift(){
-  if(!picks.length) return alert('No orders to archive.');
-  var dateStr=todayISO();
-  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
-  var totalUnits=picks.reduce((a,b)=>a+b.units,0);
-  var tS=hm(startTime), tE=hm(lastClose);
-  var liveRate=(!isNaN(tS)&&!isNaN(tE)&&tE>tS)?Math.round(totalUnits/(tE-tS)):0;
-  var dayRate=shiftLen>0?Math.round(totalUnits/shiftLen):0;
-  var snapshot={date:dateStr,start:startTime||'',end:lastClose||'',shiftLen,totalUnits,liveRate,dayRate,picks:picks.slice(0), shiftBreaks:shiftBreaks.slice(0), delays:delays.slice(0)};
-  historyDays.push(snapshot); saveAll(); renderHistory();
-  // reset
-  picks=[]; lastClose=''; current=null; tempWraps=[]; shiftBreaks=[]; delays=[]; undoStack=[];
-  document.getElementById('orderArea').style.display='none';
-  document.getElementById('btnStart').style.display='inline-block';
-  document.getElementById('btnComplete').style.display='none';
-  document.getElementById('btnUndo').style.display='none';
-  document.getElementById('completedCard').style.display='none';
-  document.getElementById('summaryCard').style.display='none';
-  document.getElementById('shiftCard').style.display='block';
-  startTime=''; renderDone(); updateSummary(); showTab('history'); updateEndShiftVisibility(); saveAll();
-}
-
-function renderHistory(){
-  var host=document.getElementById('histList'); host.innerHTML='';
-  if(!historyDays.length){ host.innerHTML='<div class="hint">No archived days yet.</div>'; return; }
-  historyDays.slice(0).reverse().forEach(function(d){
-    var table='<table><thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead><tbody>';
-    (d.picks||[]).forEach(function(o,i){ table+='<tr><td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rateFrom(o)+' u/h</td></tr>'; });
-    table+='</tbody></table>';
-    var div=document.createElement('div'); div.className='card';
-    div.innerHTML='<div class="sectionHead"><b>'+d.date+'</b><span>Units: '+d.totalUnits+' • Day Avg: '+d.dayRate+' u/h • Live (end): '+d.liveRate+' u/h</span></div>'+table;
-    host.appendChild(div);
+function renderLogs(){
+  const box = $('#loglist'); box.innerHTML = '';
+  state.logs.forEach((l,i)=>{
+    const row = document.createElement('div'); row.className='logitem';
+    const tag = document.createElement('span'); tag.className='tag';
+    tag.textContent = (l.kind==='P'?'Pick': l.kind==='B'?'Break start': l.kind==='C'?'Continue':'Lunch start');
+    const meta = document.createElement('div');
+    const t = new Date(l.tISO);
+    meta.innerHTML = `<div class="time">${fmtHM(t)}</div>` +
+      (l.kind==='P'? `<div class="sub">${l.qty||0} units — ${l.cust||'—'}</div>` :
+       l.note? `<div class="sub">${l.note}</div>` : '');
+    const del = document.createElement('button'); del.className='small ghost'; del.textContent='Delete';
+    del.onclick=()=>{ state.logs.splice(i,1); save(); renderAll(); };
+    row.append(tag, meta, del); box.append(row);
   });
 }
 
-// Export/Import/Clear
-function toCSV(day){
-  function esc(s){ return '"'+String(s).replace(/"/g,'""')+'"'; }
-  var rows=[['#','Customer','Units','Pallets','Start','Closed','OrderRate']];
-  (day.picks||[]).forEach(function(o,i){ rows.push([i+1,o.name,o.units,o.pallets,o.start,o.close,rateFrom(o)]); });
-  return rows.map(r=>r.map(esc).join(',')).join('\n');
+function renderAnalysis(){
+  const tbody = $('#analysisTbl tbody'); tbody.innerHTML='';
+  const byCust = $('#byCustomer').checked;
+  const g = {};
+  for(const l of state.logs){
+    if(l.kind!=='P') continue;
+    const key = byCust ? (l.cust||'—') : 'All picks';
+    g[key] = g[key] || {units:0, sessions:0};
+    g[key].units += (l.qty||0); g[key].sessions += 1;
+  }
+  const keys = Object.keys(g).sort((a,b)=>g[b].units - g[a].units);
+  keys.forEach(k=>{
+    const avg = state.shiftHours>0 ? Math.round((g[k].units/state.shiftHours)*10)/10 : 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${k}</td><td>${g[k].units}</td><td>${g[k].sessions}</td><td>${avg}</td>`;
+    tbody.append(tr);
+  });
 }
-function exportCSV(){
-  var day={ date: todayISO(), picks:picks };
-  var csv=toCSV(day);
-  var blob = new Blob([csv], {type:'text/csv'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='wqt_today.csv'; a.click();
-}
-function exportJSON(){
-  var data={picks, startTime, lastClose, history:historyDays, shiftBreaks, delays};
-  var blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='wqt_all.json'; a.click();
-}
-function clearHistory(){ if(!confirm('Clear ALL archived days?')) return; historyDays=[]; saveAll(); renderHistory(); }
 
-// Manual add
-function addManual(){
-  var name=document.getElementById('mCust').value;
-  var units=parseInt(document.getElementById('mUnits').value||'0',10);
-  var pallets=parseInt(document.getElementById('mPallets').value||'0',10)||1;
-  var start=document.getElementById('mStart').value||nowHHMM();
-  var close=document.getElementById('mEnd').value||nowHHMM();
-  var excl=parseInt(document.getElementById('mExcl').value||'0',10);
-  if(!name || units<=0) return alert('Customer + units required');
-  picks.push({name, units, pallets, start, close, excl});
-  lastClose=close; renderDone(); updateSummary(); saveAll(); alert('Manual order added');
-}
-function toggleManual(){ document.getElementById('manualBox').classList.toggle('hidden'); }
+function renderAll(){ renderTop(); renderLogs(); renderAnalysis(); }
 
-// Boot
-document.addEventListener('DOMContentLoaded', function(){
-  loadAll(); renderHistory(); renderDone(); updateSummary();
-  if(picks.length>0 || startTime){ showTab('tracker'); document.getElementById('shiftCard').style.display = startTime? 'none':'block'; document.getElementById('summaryCard').style.display='block'; document.getElementById('activeOrderCard').style.display='block'; if(picks.length) document.getElementById('completedCard').style.display='block'; }
-  // live rate ticker
-  setInterval(function(){ if (!document.getElementById('tabTracker').classList.contains('hidden')) updateSummary(); }, 30000);
-  // quickcalc live
-  ['qcUnits','qcRate','qcCustomer'].forEach(id=>{ var el=document.getElementById(id); if(el) el.addEventListener('input', updCalc); });
-  updCalc();
+/* ===================== Actions ===================== */
+function ensureStarted(){ if(!state.started){ alert('Start the shift first.'); return false; } return true; }
+
+$('#btnStart').onclick = ()=>{
+  const date = $('#date').value.trim() || todayPretty();
+  const time = $('#start').value || new Date().toTimeString().slice(0,5);
+  const len  = Number($('#length').value || 9);
+  const tgt  = Number($('#companyTarget').value || 2700);
+  state.date = date;
+  state.startTimeISO = toISOFrom(date, time);
+  state.shiftHours   = len>0? len : 9;
+  state.target       = tgt>0? tgt : 2700;
+  state.started = true; save(); renderAll();
+};
+
+$('#btnUndoStart').onclick = ()=>{
+  if(!state.started) return;
+  if(state.logs.find(x=>x.kind==='P')){ alert('Cannot undo after first Pick. Use Restart shift.'); return; }
+  if(confirm('Undo shift start and re-enable setup fields?')){ state.started=false; save(); renderAll(); }
+};
+
+$('#btnRestart').onclick = ()=>{
+  if(!confirm('Restart shift? Keeps date/start/length/target; clears ALL logs.')) return;
+  const date = $('#date').value || todayPretty();
+  const time = $('#start').value || new Date().toTimeString().slice(0,5);
+  state.logs = []; state.started = true;
+  state.date = date;
+  state.startTimeISO = toISOFrom(date, time);
+  state.shiftHours = Number($('#length').value || 9);
+  state.target     = Number($('#companyTarget').value || 2700);
+  save(); renderAll();
+};
+
+// Quick buttons
+document.querySelectorAll('button.small[data-log]').forEach(b=>{
+  b.onclick = ()=>{
+    if(!ensureStarted()) return;
+    const k = b.getAttribute('data-log');
+    if(k==='P'){
+      const q = Number($('#qty').value||0); if(q<=0){ alert('Enter Qty'); return; }
+      state.logs.push({tISO: nowISO(), kind:'P', qty:q, cust:($('#cust').value||'')});
+    }else{
+      state.logs.push({tISO: nowISO(), kind:k});
+    }
+    save(); renderAll();
+  };
 });
+
+$('#btnLogNow').onclick = ()=>{
+  if(!ensureStarted()) return;
+  const q = Number($('#qty').value||0); if(q<=0){ alert('Enter Qty'); return; }
+  state.logs.push({tISO: nowISO(), kind:'P', qty:q, cust:($('#cust').value||'')});
+  save(); renderAll();
+};
+
+$('#btnLogCustomTime').onclick = ()=>{
+  if(!ensureStarted()) return;
+  const hm = prompt('Time (HH:MM, 24h)'); if(!hm) return;
+  const d = parseClock(hm); if(!d){ alert('Bad time'); return; }
+  const kind = (prompt('Type: P (Pick), B (Break), C (Continue), L (Lunch)')||'P').toUpperCase();
+  if(kind==='P'){
+    const q = Number(prompt('Qty units?')||'0'); if(q<=0){ alert('Qty required'); return; }
+    const cust = prompt('Customer/Route?')||'';
+    state.logs.push({tISO: d.toISOString(), kind:'P', qty:q, cust});
+  }else{
+    state.logs.push({tISO: d.toISOString(), kind});
+  }
+  save(); renderAll();
+};
+
+$('#btnParse').onclick = ()=>{
+  if(!ensureStarted()) return;
+  const s = ($('#freeText').value||'').trim(); if(!s) return;
+
+  let m = s.match(/^P[-\s]*(\d+)\s+(.+)$/i);
+  if(m){ state.logs.push({tISO: nowISO(), kind:'P', qty:Number(m[1]), cust:m[2].trim()}); save(); renderAll(); return; }
+
+  m = s.match(/^([BCL])\s*@\s*(\d{1,2}:\d{2})(?:\s*(.*))?$/i);
+  if(m){ const d=parseClock(m[2])||new Date(); const note=(m[3]||'').trim()||undefined;
+        state.logs.push({tISO:d.toISOString(), kind:m[1].toUpperCase(), note}); save(); renderAll(); return; }
+
+  m = s.match(/^L\s*@\s*(\d{1,2}:\d{2}).*?with\s+(\d+)\s+left/i);
+  if(m){ const d=parseClock(m[1])||new Date(); const note=`with ${m[2]} left`;
+        state.logs.push({tISO:d.toISOString(), kind:'L', note}); save(); renderAll(); return; }
+
+  alert('Could not parse. Supported: "P-655 WAIBRA", "B @ 10:02", "C @ 11:15", "L @ 12:30 with 140 left"');
+};
+
+$('#btnClearInputs').onclick = ()=>{ $('#qty').value=''; $('#cust').value=''; $('#freeText').value=''; };
+
+$('#btnCalc').onclick = ()=>{
+  const need = Number($('#calcUnitsMore').value||0);
+  const hrs  = Number($('#calcHoursLeft').value||0);
+  $('#calcOut').textContent = (need>0 && hrs>0)? `${Math.ceil(need/hrs)} u/h needed` : '—';
+};
+
+$('#btnWhatIf').onclick = ()=>{
+  const u = Number($('#whatIfUnits').value||0);
+  const m = Number($('#whatIfMinutes').value||0);
+  $('#whatIfOut').textContent = (u>0 && m>0)? `${Math.round((u/(m/60))*10)/10} u/h over that burst` : '—';
+};
+
+$('#btnAnalyse').onclick = renderAnalysis;
+
+$('#btnFullReset').onclick = ()=>{
+  if(confirm('Wipe ALL saved data for this tool?')){ localStorage.removeItem('wh_tracker_v92'); location.reload(); }
+};
+
+$('#btnExport').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `warehouse-tracker-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+};
+
+$('#btnImport').onclick = ()=> $('#importFile').click();
+$('#importFile').addEventListener('change', e=>{
+  const f = e.target.files?.[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const data = JSON.parse(r.result);
+      if(!data || !Array.isArray(data.logs)) throw new Error('Invalid file');
+      localStorage.setItem('wh_tracker_v92', JSON.stringify(data));
+      Object.assign(state, data);
+      renderAll(); alert('Imported.');
+    }catch(err){ alert('Import failed: '+err.message); }
+  };
+  r.readAsText(f);
+});
+
+/* ===================== Init ===================== */
+function tick(){ $('#nowTxt').textContent = todayPretty() + ' — ' + fmtHM(new Date()); }
+load();
+if(!state.date) $('#date').value = todayPretty(); else $('#date').value = state.date;
+if(state.shiftHours) $('#length').value = state.shiftHours;
+if(state.target) $('#companyTarget').value = state.target;
+renderAll();
+setInterval(tick, 15000);
 </script>
 </body>
 </html>
