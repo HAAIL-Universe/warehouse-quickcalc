@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warehouse QuickCalc & Tracker v2.7.14</title>
+<style>
+:root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; background:#0b0d10; color:var(--ink); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
+h1 { font-size: 20px; margin:6px 0 10px; }
+.tabs { display:flex; gap:8px; margin:6px 0 10px; position: sticky; top:0; background:var(--bg); padding-top:6px; z-index:5; }
+.tabbtn { flex:1; text-align:center; padding:10px; border:1px solid #253348; border-radius:10px; background:#0f131b; color:var(--ink); font-weight:700; cursor:pointer; }
+.tabbtn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.hidden { display:none; }
+.card { background:var(--card); border:1px solid #253348; border-radius:14px; padding:14px; margin: 10px 0; }
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+input, select, button { font-size:16px; }
+input[type="number"], input[type="time"], input[type="text"], select {
+  width:100%; background:#0f131b; color:var(--ink); border:1px solid #29364a; border-radius:10px; padding:10px; outline:none;
+}
+.row { display:flex; gap:10px; flex-wrap: wrap; }
+.col { flex:1; min-width:220px; }
+.btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; cursor:pointer; }
+.btn.ghost { background:transparent; border-color:#29364a; }
+.btn.ok { border-color:#2e6b3a; background:#173220; }
+.btn.warn { border-color:#8a6a15; background:#30250f; }
+.btn.bad { border-color:#7a2b2b; background:#331b1b; }
+.btn.chip { padding:8px 10px; border-radius:999px; }
+.btn.slim { padding:6px 10px; border-radius:999px; font-size:14px; }
+.pill { border-radius:12px; padding:10px 12px; background:#0f131b; border:1px solid #29364a; text-align:center; }
+.pill h3 { margin:0; font-size:13px; color:var(--muted); }
+.pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
+.summarygrid { display:grid; grid-template-columns: repeat(2, minmax(160px,1fr)); gap:10px; }
+.rateBanner { position: sticky; top:48px; z-index:4; display:flex; gap:10px; margin:8px 0; }
+.rateChip { flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid #29364a; background:#0f131b; }
+.rateChip.good { border-color:#1f4830; background:#14271c; }
+.rateChip.warn { border-color:#584a1a; background:#2a230f; }
+.rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
+.timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
+.tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
+.tick .meta { color:#9fb3c8; font-size:12px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { border-bottom:1px dashed #253348; padding:8px 6px; text-align:left; }
+th { color:#9fb3c8; }
+.bottom-actions { margin: 20px 0 40px; display:flex; justify-content:flex-end; }
+.hint { color:#9fb3c8; font-size:12px; }
+.tagbox { display:flex; flex-wrap:wrap; gap:8px; }
+.tag { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid #29364a; background:#0f131b; font-weight:700; }
+.tag button { border:0; background:transparent; color:#9fb3c8; cursor:pointer; font-size:14px; }
+.accordion .accHead { width:100%; text-align:left; padding:10px; border:1px solid #29364a; background:#0f131b; border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.accordion .accHead.ok { border-color:#1f4830; background:#14271c; }
+.accordion .accHead.warn { border-color:#584a1a; background:#2a230f; }
+.accordion .accHead.bad { border-color:#4f1f1f; background:#2a1313; }
+.accordion .accHead .left { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.accordion .accHead .tag { background:#0b0d10; }
+.accordion .accBody { display:none; padding:10px 0 0 0; }
+.activeSummary { display:grid; grid-template-columns: repeat(4, minmax(120px,1fr)); gap:8px; margin-top:8px; }
+.activeSummary .pill p { font-size:20px; }
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0f131b; border:1px solid #29364a; padding:10px 12px; border-radius:10px; display:none; }
+.toast.show { display:block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Warehouse QuickCalc & Tracker v2.7.14</h1>
+
+  <div class="tabs">
+    <button id="tabCalcBtn" class="tabbtn active" onclick="showTab('calc')">QuickCalc</button>
+    <button id="tabTrackBtn" class="tabbtn" onclick="showTab('tracker')">Tracker</button>
+    <button id="tabHistBtn" class="tabbtn" onclick="showTab('history')">History</button>
+  </div>
+
+  <div id="liveBanner" class="rateBanner hidden">
+    <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
+    <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
+    <div id="chipGap" class="rateChip"><b>Gap vs 300</b><div id="chipGapVal">—</div></div>
+  </div>
+
+  <!-- QuickCalc -->
+  <section id="tabCalc">
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Customer</label>
+          <div class="row" style="gap:6px;">
+            <div class="col">
+              <select id="qcCustomer" onchange="onCustomerChange('qc')" oninput="onCustomerChange('qc')" onclick="onCustomerChange('qc')">
+                <!--OPTIONS-->
+                <option value="__OTHER__">Other…</option>
+              </select>
+            </div>
+            <div class="col">
+              <input id="qcOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <label>Units</label>
+          <input id="qcUnits" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+        </div>
+        <div class="col">
+          <label>Override Rate (u/h)</label>
+          <input id="qcRate" type="number" min="1" step="1" inputmode="numeric" placeholder="optional">
+          <div class="hint">Type <b>0000</b> to unlock Manual Time & Export/Import/Share (session only).</div>
+        </div>
+      </div>
+      <div style="height:6px"></div>
+      <div class="summarygrid">
+        <div class="pill"><h3>Expected Pallets</h3><p id="qcPallets">—</p></div>
+        <div class="pill"><h3>Expected Duration</h3><p id="qcDur">—</p><div id="qcRateUsed" class="small">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tracker -->
+  <section id="tabTracker" class="hidden">
+    <div class="card" id="shiftCard">
+      <div class="row">
+        <div class="col">
+          <label>Shift Start (HH:MM)</label>
+          <div class="row" style="gap:6px;">
+            <div class="col"><input id="tStart" type="time" placeholder="08:00"></div>
+            <div class="col" style="max-width:140px;"><button class="btn chip" onclick="setNow('tStart')">Now</button></div>
+          </div>
+          <div id="snapHint" class="hint"></div>
+        </div>
+        <div class="col">
+          <label>Shift Length (hours)</label>
+          <input id="tLen" type="number" min="1" step="0.5" value="9">
+        </div>
+        <div class="col" style="align-self:end; text-align:right;">
+          <button class="btn ok" onclick="beginShift()" id="btnBegin" style="min-width:180px;">Begin Tracking</button>
+        </div>
+      </div>
+      <div class="hint">Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (includes breaks).</div>
+    </div>
+
+    <div class="card" id="activeOrderCard" style="display:none;">
+      <div class="row" style="align-items:flex-end;">
+        <div class="col">
+          <label>Customer</label>
+          <div class="row" style="gap:6px;">
+            <div class="col">
+              <select id="oCust" onchange="onCustomerChange('o')" oninput="onCustomerChange('o')" onclick="onCustomerChange('o')">
+                <!--OPTIONS-->
+                <option value="__OTHER__">Other…</option>
+              </select>
+            </div>
+            <div class="col">
+              <input id="oOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <label>Total units</label>
+          <input id="oTotal" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 1024">
+        </div>
+        <div class="col" style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <button id="btnUndo" class="btn slim" onclick="undoLast()" style="display:none;">Undo</button>
+          <span style="flex:1"></span>
+          <button id="btnB" class="btn chip" title="20 min break" onclick="addBreak('B')" style="display:none;">B</button>
+          <button id="btnL" class="btn chip" title="30 min lunch" onclick="addBreak('L')" style="display:none;">L</button>
+          <button class="btn" onclick="startOrder()" id="btnStart">Start</button>
+          <button class="btn ok" onclick="completeOrder()" id="btnComplete" style="display:none;">Complete</button>
+        </div>
+      </div>
+
+      <div id="orderArea" style="display:none; margin-top:10px;">
+        <div class="row">
+          <div class="col">
+            <label>Units left (log wrap)</label>
+            <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+          </div>
+          <div class="col">
+            <label id="manualLbl" class="hidden">Manual time (HH:MM)</label>
+            <div class="row" style="gap:6px;">
+              <div class="col"><input id="oManualTime" class="hidden" type="time" placeholder="12:34"></div>
+              <div class="col" style="max-width:160px;"><button class="btn" onclick="logWrap()">Log Wrap</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active order live summary (keep) -->
+        <div class="activeSummary" id="activeSummary" style="display:none;">
+          <div class="pill"><h3>Done so far</h3><p id="sumDone">0</p></div>
+          <div class="pill"><h3>Left</h3><p id="sumLeft">0</p></div>
+          <div class="pill"><h3>Pallets so far</h3><p id="sumPallets">0</p></div>
+          <div class="pill"><h3>Order Rate (excl. B/L)</h3><p id="sumOrderRate">0</p></div>
+        </div>
+
+        <div class="timeline" id="orderTimeline"></div>
+      </div>
+    </div>
+
+    <div class="card" id="completedCard" style="display:none;">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Closed</th><th>Order Rate (excl. B/L)</th></tr></thead>
+        <tbody id="doneBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Removed redundant summaryCard -->
+  </section>
+
+  <!-- History -->
+  <section id="tabHistory" class="hidden">
+    <div class="card">
+      <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <h3 style="margin:0; font-size:14px; color:#9fb3c8;">History (daily archives)</h3>
+        <div>
+          <button class="btn gate-pro" onclick="exportCSV()">Export CSV (today)</button>
+          <button class="btn gate-pro" onclick="exportJSON()">Export JSON (all)</button>
+          <label id="impLabel" class="btn gate-pro hidden" for="impFile">Import JSON</label><input id="impFile" type="file" accept="application/json" style="display:none;">
+          <button class="btn" style="background:#331b1b;border-color:#7a2b2b;" onclick="clearHistory()">Clear History</button>
+          <button class="btn gate-pro" onclick="toggleManageCustomers()">Manage Customers</button>
+        </div>
+      </div>
+      <div id="histList" style="margin-top:8px;"></div>
+    </div>
+
+    <div id="manageCustomersCard" class="card hidden">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Manage Customers</h3>
+      <div class="hint">Manually-added customers are shown below. Tap ✖ to remove.</div>
+      <div id="custTags" class="tagbox" style="margin-top:8px;"></div>
+      <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn ghost" onclick="reloadDropdowns()">Reload dropdowns</button>
+        <button class="btn bad" onclick="clearAllCustom()">Clear ALL custom customers</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="toast" class="toast">Saved</div>
+
+<script>
+// ====== State ======
+let picks = [];         // closed orders
+let tempWraps = [];     // wraps in current order
+let current = null;     // active order
+let startTime = "";     // shift start (HH:MM)
+let lastClose = "";     // last order close time
+let undoStack = [];     // undo actions for current order
+let learned = {};       // learned rates (placeholder for future)
+let historyDays = [];   // archived days
+let customCodes = [];   // user-added customer codes
+
+const KEY = 'wqt_v2714';
+const KEY_CODES = 'wqt_codes';
+const PRO_UNLOCK_CODE = '0000';
+let proUnlocked = false;  // Gate: Manual time + Export/Import/Share + Manage Customers
+
+const DEFAULT_CODES = ["TESWIN","SAINOR","SAIEME","WAILEY","ASDERI","COOWES","COOAVO","COOWEL"];
+var defaultRate = {TESWIN:404,SAINOR:262,SAIEME:317,WAILEY:330,ASDERI:225,COOWES:272,COOAVO:247,COOWEL:120};
+var uppMap     = {TESWIN:341,SAINOR:214,SAIEME:289,WAILEY:192,ASDERI:154,COOWES:177,COOAVO:222,COOWEL:73};
+
+// ====== Utils ======
+function upcase6(s){ return (s||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,6); }
+function isValidCode(s){ return /^[A-Z]{6}$/.test(s||''); }
+function showToast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1200); }
+function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10), M=parseInt(a[1],10); if(isNaN(H)||isNaN(M)) return NaN; return H + M/60; }
+function fmtH(hours){ var total=Math.round(hours*60); var h=Math.floor(total/60); var m=total%60; return h+' h '+String(m).padStart(2,'0')+' m'; }
+function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function addMinutes(hhmm, mins){ var p=hhmm.split(':').map(x=>parseInt(x,10)); var total=p[0]*60+p[1]+mins; var H=((Math.floor(total/60))%24+24)%24; var M=((total%60)+60)%60; return String(H).padStart(2,'0')+':'+String(M).padStart(2,'0'); }
+function snapNearestHour(hhmm){ var a=hhmm.split(':'),H=parseInt(a[0],10),M=parseInt(a[1]||'0',10); if(M>=30) H=(H+1)%24; return String(H).padStart(2,'0')+':00'; }
+function fmtSigned(n){ if(!isFinite(n)) return '—'; return (n>0? '+' : (n<0? '' : '±')) + Math.abs(Math.round(n)); }
+
+function loadAll(){ try { var raw=localStorage.getItem(KEY); if(raw){ var p=JSON.parse(raw); picks=p.picks||[]; learned=p.learned||{}; historyDays=p.history||[]; } } catch(e){} }
+function saveAll(){ try { localStorage.setItem(KEY, JSON.stringify({version:'2.7.14', savedAt:new Date().toISOString(), picks, learned, history:historyDays })); } catch(e){} }
+function loadCustomCodes(){ try{ var raw=localStorage.getItem(KEY_CODES); if(raw){ customCodes=JSON.parse(raw)||[]; } }catch(e){ customCodes=[]; } }
+function saveCustomCodes(){ try{ localStorage.setItem(KEY_CODES, JSON.stringify(customCodes||[])); }catch(e){} }
+function ensureOption(selectId, code){ var sel=document.getElementById(selectId); if(!sel) return; for (var i=0;i<sel.options.length;i++){ if(sel.options[i].value===code) return; } var opt=document.createElement('option'); opt.value=code; opt.textContent=code; var other=sel.querySelector('option[value="__OTHER__"]'); if(other) sel.insertBefore(opt, other); else sel.appendChild(opt); }
+function addCustomCode(code){ if(customCodes.indexOf(code)===-1){ customCodes.push(code); saveCustomCodes(); } ensureOption('qcCustomer', code); ensureOption('oCust', code); }
+
+// ====== Tabs ======
+function showTab(which){
+  ['tabCalc','tabTracker','tabHistory'].forEach(id=>document.getElementById(id).classList.toggle('hidden', id!=='tab'+which.charAt(0).toUpperCase()+which.slice(1)));
+  ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(which==='calc') document.getElementById('tabCalcBtn').classList.add('active');
+  if(which==='tracker') document.getElementById('tabTrackBtn').classList.add('active');
+  if(which==='history') document.getElementById('tabHistBtn').classList.add('active');
+  document.getElementById('liveBanner').classList.toggle('hidden', which!=='tracker');
+  updateEndShiftVisibility();
+}
+
+function applyProGate(){
+  // Manual time fields
+  ['oManualTime','manualLbl'].forEach(id=>{ var el=document.getElementById(id); if(el) el.classList.toggle('hidden', !proUnlocked); });
+  // Share/Export/Import/Manage
+  document.querySelectorAll('.gate-pro').forEach(el=> el.style.display = proUnlocked ? '' : 'none');
+}
+
+// ====== QuickCalc logic (with single gate) ======
+function onCustomerChange(prefix){
+  var sel = document.getElementById(prefix==='qc'?'qcCustomer':'oCust');
+  var input = document.getElementById(prefix==='qc'?'qcOther':'oOther');
+  if(!sel || !input) return;
+  if(sel.value==='__OTHER__'){ input.classList.remove('hidden'); input.focus(); }
+  else { input.classList.add('hidden'); }
+  if(prefix==='qc') updCalc();
+}
+function onOtherInput(prefix){
+  var input = document.getElementById(prefix==='qc'?'qcOther':'oOther');
+  var sel = document.getElementById(prefix==='qc'?'qcCustomer':'oCust');
+  input.value = upcase6(input.value);
+  var code = input.value;
+  if(/^[A-Z]{6}$/.test(code)){ addCustomCode(code); sel.value=code; input.classList.add('hidden'); if(prefix==='qc') updCalc(); showToast('Added '+code); }
+}
+
+function updCalc(){
+  var sel = document.getElementById('qcCustomer'); var name = sel.value;
+  var overrideField = document.getElementById('qcRate');
+  if(name==='__OTHER__'){ document.getElementById('qcPallets').textContent='—'; document.getElementById('qcDur').textContent='—'; document.getElementById('qcRateUsed').textContent='—'; return; }
+  var units = parseInt(document.getElementById('qcUnits').value||'0',10);
+  var overrideRaw = (overrideField.value||'').trim();
+
+  // Gate trigger (from QC)
+  if(overrideRaw === PRO_UNLOCK_CODE && !proUnlocked){ proUnlocked = true; applyProGate(); showToast('Manual Time & Export/Import unlocked for this session'); }
+
+  if(!units){ document.getElementById('qcPallets').textContent='—'; document.getElementById('qcDur').textContent='—'; document.getElementById('qcRateUsed').textContent='—'; return; }
+  var override = parseFloat(overrideRaw);
+  var lr = (learned[name] && learned[name].rate>0) ? Math.round(learned[name].rate) : (defaultRate[name]||300);
+  var rate = (!isNaN(override) && override>0 && overrideRaw !== PRO_UNLOCK_CODE) ? override : lr;
+  var pallets = Math.max(1, Math.ceil(units/(uppMap[name]||300)));
+  var hours = units / (rate||300);
+  document.getElementById('qcPallets').textContent = pallets;
+  document.getElementById('qcDur').textContent = fmtH(hours);
+  document.getElementById('qcRateUsed').textContent = rate+' u/h ('+ (rate===override? 'override' : (learned[name]&&learned[name].rate>0?'learned':'default')) +')';
+}
+
+document.addEventListener('input', function(e){
+  if(e.target && e.target.id==='qcOther') onOtherInput('qc');
+  if(e.target && e.target.id==='qcRate') updCalc();
+  if(e.target && e.target.id==='qcUnits') updCalc();
+});
+
+// ====== Tracker ======
+function setNow(id){ var el=document.getElementById(id); var now=nowHHMM(); if(id==='tStart'){ var s=snapNearestHour(now); el.value=s; startTime=s; document.getElementById('snapHint').textContent='Start set to '+s; updateSummary(); } else { el.value=now; } }
+
+function beginShift(){
+  var typed=document.getElementById('tStart').value;
+  if(typed && !startTime) startTime=typed;
+  document.getElementById('shiftCard').style.display='none';
+  document.getElementById('activeOrderCard').style.display='block';
+  document.getElementById('completedCard').style.display='block';
+  renderDone(); updateSummary(); updateEndShiftVisibility();
+}
+
+function startOrder(){
+  var sel=document.getElementById('oCust'); var name=sel.value;
+  if(name==='__OTHER__'){ onCustomerChange('o'); return; }
+  var total=parseInt(document.getElementById('oTotal').value||'0',10);
+  if(!name || (!total && total!==0)) return alert('Enter customer and total units');
+  current={name:name, total:total, start: nowHHMM(), breaks: []};
+  tempWraps=[]; undoStack=[{type:'start'}];
+  document.getElementById('orderArea').style.display='block';
+  document.getElementById('activeSummary').style.display='grid';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='inline-block');
+  document.getElementById('btnStart').style.display='none';
+  document.getElementById('btnComplete').style.display='inline-block';
+  renderTimeline(); updateSummary(); updateEndShiftVisibility();
+}
+
+function addBreak(type){
+  if(!current) return alert('No active order — unnecessary to log breaks in between orders.');
+  var start=nowHHMM(); var mins=(type==='B')?20:30; var end=addMinutes(start, mins);
+  current.breaks.push({type,start,end,minutes:mins}); undoStack.push({type:'break'});
+  renderTimeline(); updateSummary();
+}
+
+function logWrap(){
+  if(!current) return alert('Start an order first');
+  var left=parseInt(document.getElementById('oLeft').value||'0',10);
+  if(left<0 || left>current.total) return alert('Units left must be between 0 and total');
+  var prevLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
+  if(left>prevLeft) return alert('Units left cannot increase vs previous wrap');
+  var done=prevLeft-left; if(done<=0) return alert('No progress since last wrap');
+  var tManual=(document.getElementById('oManualTime').value||'').trim();
+  var t=(proUnlocked && tManual)? tManual : nowHHMM();
+  tempWraps.push({left,done,t}); undoStack.push({type:'wrap'});
+  document.getElementById('oLeft').value=''; renderTimeline(); updateSummary();
+}
+
+function undoLast(){
+  if(!current){ showToast('Nothing to undo'); return; }
+  var last=undoStack.pop(); if(!last){ showToast('Nothing to undo'); return; }
+  if(last.type==='wrap'){ tempWraps.pop(); renderTimeline(); updateSummary(); return; }
+  if(last.type==='break'){ current.breaks.pop(); renderTimeline(); updateSummary(); return; }
+  if(last.type==='start'){
+    current=null; tempWraps=[];
+    document.getElementById('orderArea').style.display='none';
+    document.getElementById('activeSummary').style.display='none';
+    ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('btnStart').style.display='inline-block';
+    document.getElementById('btnComplete').style.display='none';
+    showToast('Order start undone'); updateEndShiftVisibility(); updateSummary(); return;
+  }
+}
+
+function completeOrder(){
+  if(!current) return alert('Start an order first');
+  var tManual=(document.getElementById('oManualTime').value||'').trim();
+  var close=(proUnlocked && tManual)? tManual : nowHHMM();
+  if(!startTime) return alert('Add shift start first');
+  var lastLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
+  var finalDone=lastLeft;
+  var palletsCount=tempWraps.length + (finalDone>0?1:0);
+  var unitsDone=current.total;
+  var exclMins=current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
+  var order={name:current.name, units:unitsDone, pallets:palletsCount, close, start:current.start, excl:exclMins};
+  picks.push(order); lastClose=close;
+  if(!learned[current.name]) learned[current.name]={rate:0,samples:0,netH:0,units:0};
+  current=null; tempWraps=[]; undoStack=[];
+  document.getElementById('orderArea').style.display='none';
+  document.getElementById('activeSummary').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  renderDone(); updateSummary(); saveAll(); showToast('Order closed at '+close);
+  updateEndShiftVisibility();
+}
+
+// ====== Timeline (active order) ======
+function currentOrderUnitsDone(){ if(!current || !tempWraps.length) return 0; var lastLeft=tempWraps[tempWraps.length-1].left; return current.total - lastLeft; }
+function lastEventTimeHHMM(){ if(current && tempWraps.length) return tempWraps[tempWraps.length-1].t; return lastClose || ''; }
+
+function renderTimeline(){
+  var tl=document.getElementById('orderTimeline'); tl.innerHTML='';
+  if(!current){ document.getElementById('activeSummary').style.display='none'; return; }
+
+  // Header tick
+  tl.innerHTML += '<div class="tick"><span>⏳ Order started for <b>'+current.name+'</b></span><span class="meta">Start: '+current.start+' • Total: '+current.total+' u</span></div>';
+
+  // Breaks
+  current.breaks.forEach(function(b,i){
+    tl.innerHTML += '<div class="tick"><span>☕ '+(b.type==='B'?'Break 20m':'Lunch 30m')+'</span><span class="meta">'+b.start+' → '+b.end+'</span></div>';
+  });
+
+  // Wraps
+  tempWraps.forEach(function(w,i){
+    tl.innerHTML += '<div class="tick"><span>📦 Wrap '+(i+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>';
+  });
+
+  // Live summary (order-level)
+  var done = currentOrderUnitsDone();
+  var left = current.total - done;
+  var pallets = tempWraps.length + (left>0 ? 1 : 0);
+
+  // order rate excl breaks to last event
+  var endHHMM = lastEventTimeHHMM() || nowHHMM();
+  var e = hm(endHHMM), s = hm(current.start);
+  var exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
+  var net = (e>s) ? (e - s) - (exclMins/60) : 0.01;
+  var ordRate = Math.round( (done>0 ? done : 0) / Math.max(0.01, net) );
+
+  document.getElementById('sumDone').textContent = done;
+  document.getElementById('sumLeft').textContent = left;
+  document.getElementById('sumPallets').textContent = pallets;
+  document.getElementById('sumOrderRate').textContent = ordRate + ' u/h';
+  document.getElementById('activeSummary').style.display='grid';
+}
+
+// ====== Completed table ======
+function renderDone(){
+  var tb=document.getElementById('doneBody'); tb.innerHTML='';
+  picks.forEach(function(o,i){
+    var s=hm(o.start), e=hm(o.close); var net=(e>s)?(e-s)-(o.excl||0)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+    tb.innerHTML += '<tr><td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td></tr>';
+  });
+  document.getElementById('completedCard').style.display = picks.length? 'block':'none';
+}
+
+function updateSummary(){
+  // Keep computing top banner numbers
+  var closedUnits=picks.reduce((a,b)=>a+b.units,0);
+  var progress=currentOrderUnitsDone();
+  var totalForChip=closedUnits+progress;
+  var s=hm(startTime), e=hm(lastEventTimeHHMM());
+  var live=(!isNaN(s)&&!isNaN(e)&&e>s)? Math.round(totalForChip/(e-s)) : 0;
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var dayAvg=shiftLen>0? Math.round(closedUnits/shiftLen):0;
+
+  var chipRate=document.getElementById('chipRate'); var chipVal=document.getElementById('chipRateVal'); chipVal.textContent=live? (live+' u/h'):'—';
+  chipRate.classList.remove('good','warn','bad');
+  if(live>=300) chipRate.classList.add('good');
+  else if(live>=249) chipRate.classList.add('warn');
+  else chipRate.classList.add('bad');
+
+  document.getElementById('chipTotalVal').textContent=totalForChip;
+  var deltaLiveAvg = dayAvg - 300;
+  document.getElementById('chipGapVal').textContent=fmtSigned(deltaLiveAvg);
+}
+
+// ====== End Shift & History ======
+function updateEndShiftVisibility(){
+  var btn=document.getElementById('btnEndShift');
+  var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden');
+  var show=trackerVisible && !current && picks.length>0;
+  btn.style.display=show?'inline-block':'none';
+}
+
+function endShift(){
+  if(!picks.length) return alert('No orders to archive.');
+  var dateStr=todayISO();
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var totalUnits=picks.reduce((a,b)=>a+b.units,0);
+  var tS=hm(startTime), tE=hm(lastClose);
+  var liveRate=(!isNaN(tS)&&!isNaN(tE)&&tE>tS)?Math.round(totalUnits/(tE-tS)):0;
+  var dayRate=shiftLen>0?Math.round(totalUnits/shiftLen):0;
+  var snapshot={date:dateStr,start:startTime||'',end:lastClose||'',shiftLen,totalUnits,liveRate,dayRate,picks:picks.slice(0)};
+  historyDays.push(snapshot); saveAll(); renderHistory();
+  picks=[]; lastClose=''; current=null; tempWraps=[]; undoStack=[];
+  document.getElementById('orderArea').style.display='none';
+  document.getElementById('activeSummary').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+  startTime='';
+  renderDone(); updateSummary(); showToast('Shift archived to History'); showTab('history'); updateEndShiftVisibility();
+}
+
+function renderHistory(){
+  var host=document.getElementById('histList'); host.innerHTML='';
+  if(!historyDays.length){ host.innerHTML='<div class="hint">No archived days yet.</div>'; return; }
+  var days=historyDays.slice(0).reverse();
+  days.forEach(function(d){
+    var head=document.createElement('button'); var boxState=d.dayRate>=300?'ok':(d.dayRate>=249?'warn':'bad');
+    head.className='accHead '+boxState;
+    head.innerHTML='<div class="left"><span class="tag">'+new Date(d.date+'T12:00:00').toDateString().slice(0,15)+'</span><span>Units: <b>'+d.totalUnits+'</b></span><span>Day Avg: <b>'+d.dayRate+'</b> u/h</span><span>Live: <b>'+d.liveRate+'</b> u/h</span></div><span class="chev">▾</span>';
+    var body=document.createElement('div'); body.className='accBody';
+    var table='<table><thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead><tbody>';
+    (d.picks||[]).forEach(function(o,i){
+      var s=hm(o.start), e=hm(o.close); var net=(e>s)?(e-s)-(o.excl||0)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+      table+='<tr><td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td></tr>';
+    });
+    table+='</tbody></table>';
+    body.innerHTML=table;
+    var wrap=document.createElement('div'); wrap.className='accordion'; wrap.appendChild(head); wrap.appendChild(body); host.appendChild(wrap);
+    head.addEventListener('click', function(){ var open=body.style.display==='block'; body.style.display=open?'none':'block'; head.querySelector('.chev').textContent=open?'▾':'▴'; });
+  });
+}
+
+// ====== Exports ======
+function exportCSV(){
+  var rows=[['customer','units','pallets','start','close','excl_mins','order_rate']];
+  picks.forEach(o=>rows.push([o.name,o.units,o.pallets,o.start,o.close,o.excl,0]));
+  var csv=rows.map(r=>r.join(',')).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'}); var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='wqt_session.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportJSON(){
+  var payload={version:'2.7.14', exportedAt:new Date().toISOString(), picks, learned, history:historyDays};
+  var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='wqt_data.json'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function toggleManageCustomers(){
+  var card=document.getElementById('manageCustomersCard');
+  card.classList.toggle('hidden');
+}
+
+function clearHistory(){
+  if(!confirm('Clear ALL archived days?')) return;
+  historyDays=[]; saveAll(); renderHistory();
+}
+
+// ====== Boot ======
+document.addEventListener('DOMContentLoaded', function(){
+  // Insert options into selects
+  document.querySelectorAll('#qcCustomer, #oCust').forEach(function(sel){
+    sel.innerHTML = `<option value="TESWIN">TESWIN</option>
+<option value="SAINOR">SAINOR</option>
+<option value="SAIEME">SAIEME</option>
+<option value="WAILEY">WAILEY</option>
+<option value="ASDERI">ASDERI</option>
+<option value="COOWES">COOWES</option>
+<option value="COOAVO">COOAVO</option>
+<option value="COOWEL">COOWEL</option>` + '<option value="__OTHER__">Other…</option>';
+  });
+
+  loadCustomCodes(); customCodes.forEach(code=>{ ensureOption('qcCustomer', code); ensureOption('oCust', code); });
+  loadAll(); renderHistory(); renderDone(); updateSummary();
+  if(picks.length>0) showTab('tracker'); else if(historyDays.length>0) showTab('history'); else showTab('calc');
+  setInterval(function(){
+    var qcSel=document.getElementById('qcCustomer'); if(qcSel && qcSel.value==='__OTHER__') onCustomerChange('qc');
+    var oSel=document.getElementById('oCust'); if(oSel && oSel.value==='__OTHER__') onCustomerChange('o');
+    if(!document.getElementById('tabTracker').classList.contains('hidden')) updateSummary();
+  }, 600);
+  var stEl=document.getElementById('tStart'); if(stEl) stEl.addEventListener('change', function(){ startTime=stEl.value; updateSummary(); });
+  ['qcUnits','qcRate'].forEach(id=>{ var el=document.getElementById(id); if(el) el.addEventListener('input', updCalc); });
+  updCalc();
+});
+</script>
+</body>
+</html>
