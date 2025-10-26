@@ -92,6 +92,156 @@ display:flex;align-items:center;justify-content:space-between}
 .kpFooter{margin-top:8px;display:flex;justify-content:space-between;align-items:center}
 .kpFormula{margin-top:8px;font-size:13px;color:#cfe2ff}
 .kpBadge{padding:2px 8px;border-radius:999px;background:#13243a;border:1px solid #274a82;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Warehouse QuickCalc & Tracker v3.3.1</h1>
+
+<div class="tabs">
+  <button id="tabCalcBtn" class="tabbtn active" onclick="showTab('calc')">QuickCalc</button>
+  <button id="tabTrackBtn" class="tabbtn" onclick="showTab('tracker')">Tracker</button>
+  <button id="tabHistBtn" class="tabbtn" onclick="showTab('history')">History</button>
+</div>
+
+<div id="liveBanner" class="rateBanner hidden">
+  <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
+  <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
+  <div id="chipGap" class="rateChip"><b>Gap vs 300</b><div id="chipGapVal">—</div></div>
+</div>
+
+<!-- QuickCalc -->
+<section id="tabCalc">
+ <div class="card">
+  <div class="row">
+   <div class="col">
+    <label>Customer</label>
+    <div class="row" style="gap:6px">
+      <div class="col"><select id="qcCustomer" class="hidden"></select><div id="qcDD" class="dd"><button class="dd-toggle" type="button">Select customer…</button><div class="dd-menu"></div></div></div>
+      <div class="col"><input id="qcOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF"></div>
+    </div>
+   </div>
+   <div class="col">
+     <label>Units</label>
+     <input id="qcUnits" type="number" min="1" step="1" placeholder="e.g. 820">
+   </div>
+   <div class="col">
+     <label>Override Rate (u/h)</label>
+     <input id="qcRate" type="number" min="1" step="1" placeholder="optional">
+     <div class="hint">Type <b>0000</b> to unlock Pro mode (Export / Manage Customers)</div>
+   </div>
+  </div>
+ </div>
+
+ <!-- Countback Calculator -->
+ <div class="card calcCard">
+   <div class="row" style="align-items:center;justify-content:space-between">
+     <div>
+       <div class="hint">Countback – Layers × U/Layer + Top extras</div>
+       <div id="cbFormula" class="kpFormula">—</div>
+     </div>
+     <div>
+       <button class="btn slim" id="cbOpenBtn">Open Keypad</button>
+       <button class="btn slim ghost" id="cbClearBtn">Clear</button>
+     </div>
+   </div>
+   <div class="kpFooter"><span class="hint">Learns U/Layer per customer for next time</span><span id="cbResultBadge" class="kpBadge" style="display:none"></span></div>
+ </div>
+</section>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warehouse QuickCalc & Tracker v3.3.1</title>
+<style>
+:root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244;
+        --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0b0d10;color:var(--ink);
+font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:14px}
+h1{font-size:20px;margin:6px 0 10px}
+.tabs{display:flex;gap:8px;margin:6px 0 10px;position:sticky;top:0;background:var(--bg);padding-top:6px;z-index:15}
+.tabbtn{flex:1;text-align:center;padding:10px;border:1px solid #253348;border-radius:10px;
+background:#0f131b;color:var(--ink);font-weight:700;cursor:pointer}
+.tabbtn.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.hidden{display:none}
+.card{background:var(--card);border:1px solid #253348;border-radius:14px;padding:14px;margin:10px 0}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input,select,button,textarea{font-size:16px}
+input[type=number],input[type=time],input[type=text],select,textarea{
+width:100%;background:#0f131b;color:var(--ink);border:1px solid #29364a;border-radius:10px;
+padding:10px;outline:none}
+textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.col{flex:1;min-width:220px}
+.btn{padding:10px 12px;border-radius:10px;border:1px solid #32507a;background:#1a2a40;
+color:var(--ink);font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;border-color:#29364a}
+.btn.ok{border-color:#2e6b3a;background:#173220}
+.btn.warn{border-color:#8a6a15;background:#30250f}
+.btn.bad{border-color:#7a2b2b;background:#331b1b}
+.btn.chip{padding:8px 10px;border-radius:999px}
+.btn.slim{padding:6px 10px;border-radius:999px;font-size:14px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.pill{border-radius:12px;padding:10px 12px;background:#0f131b;border:1px solid #29364a;text-align:center}
+.pill h3{margin:0;font-size:13px;color:#9fb3c8}
+.pill p{margin:6px 0 0;font-size:22px;font-weight:800}
+.rateBanner{position:sticky;top:48px;z-index:10;display:flex;gap:10px;margin:8px 0}
+.rateChip{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid #29364a;background:#0f131b}
+.rateChip.good{border-color:#1f4830;background:#14271c}
+.rateChip.warn{border-color:#584a1a;background:#2a230f}
+.rateChip.bad{border-color:#4f1f1f;background:#2a1313}
+.timeline{margin-top:8px;border-left:2px solid #29364a;padding-left:10px}
+.tick{margin:6px 0;color:#cfe2ff;font-size:13px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.tick .meta{color:#9fb3c8;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px dashed #253348;padding:8px 6px;text-align:left}
+th{color:#9fb3c8}
+tr.clickable{cursor:pointer}
+.bottom-actions{margin:20px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bottom-actions .right{white-space:nowrap;display:flex;gap:8px}
+.hint{color:#9fb3c8;font-size:12px}
+.tagbox{display:flex;flex-wrap:wrap;gap:8px}
+.tag{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;
+border:1px solid #29364a;background:#0f131b;font-weight:700}
+.tag button{border:0;background:transparent;color:#9fb3c8;cursor:pointer;font-size:14px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0f131b;
+border:1px solid #29364a;padding:10px 12px;border-radius:10px;display:none;z-index:30}
+.toast.show{display:block}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;
+justify-content:center;z-index:20}
+.modal .box{width:min(560px,92vw);background:#0f131b;border:1px solid #29364a;border-radius:12px;padding:14px}
+.modal .hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.modal .hdr h3{margin:0;font-size:16px;color:#cfe2ff}
+.count{font-variant-numeric:tabular-nums;font-weight:800;font-size:28px}
+.dd{position:relative}
+.dd-toggle{width:100%;text-align:left;padding:10px;border:1px solid #29364a;border-radius:10px;
+background:#0f131b;color:var(--ink);cursor:pointer}
+.dd.open .dd-menu{display:block}
+.dd-menu{position:absolute;z-index:12;left:0;right:0;top:110%;background:#0f131b;
+border:1px solid #29364a;border-radius:10px;padding:6px;display:none;max-height:280px;overflow:auto}
+.dd-group{border:1px solid #29364a;border-radius:8px;margin:6px 0;overflow:hidden}
+.dd-group h4{margin:0;padding:8px 10px;background:#0b0d10;color:#cfe2ff;font-size:13px;cursor:pointer;
+display:flex;align-items:center;justify-content:space-between}
+.dd-items{display:none;padding:4px 6px}
+.dd-items button{width:100%;text-align:left;padding:8px 10px;background:transparent;border:0;color:var(--ink);cursor:pointer;border-radius:6px}
+.dd-items button:hover{background:#11151d}
+.dd-other{margin:6px 0 0;display:flex;gap:6px}
+.dd-other button{flex:1}
+.dd-other input{flex:1}
+/* keypad sheet */
+.kpModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:30}
+.kpSheet{width:100%;max-width:480px;background:#0f131b;border-top-left-radius:16px;border-top-right-radius:16px;border:1px solid #29364a;padding:12px}
+.kpHdr{display:flex;align-items:center;justify-content:space-between}
+.kpGrid{margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpGrid button{padding:14px;border-radius:12px;border:1px solid #29364a;background:#11151b;color:var(--ink);font-weight:800;font-size:18px}
+.kpChips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.kpChips .chip{padding:6px 10px;border:1px solid #29364a;border-radius:999px;background:#11151b;cursor:pointer}
+.kpFooter{margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+.kpFormula{margin-top:8px;font-size:13px;color:#cfe2ff}
+.kpBadge{padding:2px 8px;border-radius:999px;background:#13243a;border:1px solid #274a82;font-size:12px}
 /* mini calc (inline) */
 .calcCard{margin-top:8px;padding:10px;border-radius:12px;border:1px dashed #29364a;background:#0f131b}
 </style>
