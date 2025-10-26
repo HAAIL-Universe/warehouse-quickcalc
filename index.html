@@ -1,3 +1,5 @@
+Got it — I moved the Countback keypad above QuickCalc, removed the Apply → Units button, and added a live QuickCalc Result that updates as you type (uses the override u/h if provided, otherwise 300 by default). Here’s the full updated page:
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -122,6 +124,52 @@ td.small { font-size:12px; color:#9fb3c8; }
 
   <!-- QuickCalc -->
   <section id="tabCalc">
+    <!-- Countback calculator (moved ABOVE QuickCalc) -->
+    <div class="cbCard">
+      <div class="cbRow" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="cbDisplay">
+          <div class="cbBox">
+            <h4>Layers</h4>
+            <div id="cbLayers" class="cbVal">0</div>
+          </div>
+          <div class="cbBox">
+            <h4>U/Layer</h4>
+            <div id="cbUL" class="cbVal">0</div>
+            <div id="cbChips" class="cbChips"></div>
+          </div>
+          <div class="cbBox">
+            <h4>Extras</h4>
+            <div id="cbExtras" class="cbVal">0</div>
+          </div>
+          <div class="cbSummary">
+            <div class="hint">Total</div>
+            <div id="cbTotal" class="count">0</div>
+          </div>
+        </div>
+        <div style="flex:1; min-width:240px; display:flex; gap:8px;">
+          <div class="cbPad" style="flex:0 0 240px;">
+            <button onclick="cbTap('7')">7</button>
+            <button onclick="cbTap('8')">8</button>
+            <button onclick="cbTap('9')">9</button>
+            <button onclick="cbTap('4')">4</button>
+            <button onclick="cbTap('5')">5</button>
+            <button onclick="cbTap('6')">6</button>
+            <button onclick="cbTap('1')">1</button>
+            <button onclick="cbTap('2')">2</button>
+            <button onclick="cbTap('3')">3</button>
+            <button onclick="cbTap('0')">0</button>
+            <button onclick="cbBack()">⌫</button>
+            <button onclick="cbReset()">Reset</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+            <button class="btn" onclick="cbNextField()">Next →</button>
+          </div>
+        </div>
+      </div>
+      <div class="hint" id="cbHint">(Layers × U/Layer) + Extras</div>
+    </div>
+
+    <!-- QuickCalc inputs -->
     <div class="card">
       <div class="row">
         <div class="col">
@@ -149,52 +197,27 @@ td.small { font-size:12px; color:#9fb3c8; }
           <div class="hint">Type <b>0000</b> to unlock Pro (Export/Import & Manage Customers) — session only.</div>
         </div>
       </div>
-    </div>
-
-    <!-- Countback calculator -->
-    <div class="cbCard">
-      <div class="cbRow" style="flex-wrap:wrap; align-items:flex-start;">
-        <div class="cbDisplay">
-          <div class="cbBox">
-            <h4>Layers</h4>
-            <div id="cbLayers" class="cbVal">0</div>
-          </div>
-          <div class="cbBox">
-            <h4>U/Layer</h4>
-            <div id="cbUL" class="cbVal">0</div>
-            <div id="cbChips" class="cbChips"></div>
-          </div>
-          <div class="cbBox">
-            <h4>Extras</h4>
-            <div id="cbExtras" class="cbVal">0</div>
-          </div>
-          <div class="cbSummary">
-            <div class="hint">Total</div>
-            <div id="cbTotal" class="count">0</div>
-            <button class="btn slim" type="button" onclick="applyCountback()">Apply → Units</button>
+      <!-- Live result -->
+      <div class="row" style="margin-top:10px;">
+        <div class="col">
+          <div class="pill">
+            <h3>Time Needed</h3>
+            <p id="qcTime">—</p>
           </div>
         </div>
-        <div style="flex:1; min-width:240px; display:flex; gap:8px;">
-          <div class="cbPad" style="flex:0 0 240px;">
-            <button onclick="cbTap('7')">7</button>
-            <button onclick="cbTap('8')">8</button>
-            <button onclick="cbTap('9')">9</button>
-            <button onclick="cbTap('4')">4</button>
-            <button onclick="cbTap('5')">5</button>
-            <button onclick="cbTap('6')">6</button>
-            <button onclick="cbTap('1')">1</button>
-            <button onclick="cbTap('2')">2</button>
-            <button onclick="cbTap('3')">3</button>
-            <button onclick="cbTap('0')">0</button>
-            <button onclick="cbBack()">⌫</button>
-            <button onclick="cbReset()">Reset</button>
+        <div class="col">
+          <div class="pill">
+            <h3>Rate Used</h3>
+            <p id="qcRateUsed">300 u/h</p>
           </div>
-          <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
-            <button class="btn" onclick="cbNextField()">Next →</button>
+        </div>
+        <div class="col">
+          <div class="pill">
+            <h3>Units</h3>
+            <p id="qcUnitsEcho">0</p>
           </div>
         </div>
       </div>
-      <div class="hint" id="cbHint">(Layers × U/Layer) + Extras</div>
     </div>
   </section>
 
@@ -602,12 +625,13 @@ function applyProGate(){
 function updCalcGate(){
   const el = document.getElementById('qcRate');
   const raw = (el.value||'').toString().trim();
-  if(raw.replace(/\\s/g,'') === PRO_UNLOCK_CODE && !proUnlocked){
+  if(raw.replace(/\s/g,'') === PRO_UNLOCK_CODE && !proUnlocked){
     proUnlocked = true;
     el.value = '';
     el.blur();
     applyProGate();
     showToast('Pro unlocked for this session');
+    recalcQuick();
   }
 }
 
@@ -1021,7 +1045,7 @@ function computeDowntimes(picksArr, shiftBreaksArr){
   return gaps;
 }
 function endShift(){
-  if(current){ return alert('Complete or undo the current order before ending the shift.'); }
+  if(current){ return alert('Complete or undo the current order before ending the shift.')); }
   if(!picks.length){ return alert('No completed orders to archive.'); }
   var dateStr=todayISO();
   var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
@@ -1071,7 +1095,7 @@ function exportCSV(){
     var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
     rows.push([i+1,o.name,o.units,o.pallets,o.start,o.close,rate]);
   });
-  let csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\\n');
+  let csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   let blob = new Blob([csv], {type:'text/csv'});
   let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'today_picks.csv'; a.click();
 }
@@ -1172,7 +1196,6 @@ function updateSummary(){
 // ====== Countback keypad logic ======
 let learnedUL = {}; // {CUST:{value:count}}
 function getActiveCustomerCode(){
-  const dd = document.querySelector('#qcDD .dd-toggle');
   const sel = document.getElementById('qcCustomer');
   const other = document.getElementById('qcOther');
   let code = sel.value;
@@ -1228,18 +1251,22 @@ function computeCbTotal(){
   document.getElementById('cbTotal').textContent = total;
   return total;
 }
-function applyCountback(){
-  const total = computeCbTotal();
-  document.getElementById('qcUnits').value = total;
-  const U = toInt(cbVals.ul);
-  const code = getActiveCustomerCode();
-  if(U>0){
-    if(!learnedUL[code]) learnedUL[code] = {};
-    learnedUL[code][U] = (learnedUL[code][U]||0)+1;
-    saveAll();
-  }
-  renderULayerChips();
-  showToast('Applied '+total+' to Units');
+
+// ====== QuickCalc live result ======
+function recalcQuick(){
+  const DEFAULT_RATE = 300;
+  const units = toInt(document.getElementById('qcUnits').value);
+  const rawRate = (document.getElementById('qcRate').value||'').trim();
+  const rate = /^\d+$/.test(rawRate) && parseInt(rawRate,10)>0 ? parseInt(rawRate,10) : DEFAULT_RATE;
+
+  const timeHours = rate>0 ? (units / rate) : 0;
+  const totalMinutes = Math.round(timeHours*60);
+  const hh = Math.floor(totalMinutes/60);
+  const mm = totalMinutes % 60;
+
+  document.getElementById('qcTime').textContent = units>0 ? (hh+'h '+String(mm).padStart(2,'0')+'m') : '—';
+  document.getElementById('qcRateUsed').textContent = rate + ' u/h';
+  document.getElementById('qcUnitsEcho').textContent = units || 0;
 }
 
 // ====== Boot ======
@@ -1278,12 +1305,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
     updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility();
 
-    // Pro unlock
+    // Pro unlock & QuickCalc live
     var qcRateEl=document.getElementById('qcRate'); 
     if(qcRateEl){ 
-      qcRateEl.addEventListener('input', updCalcGate); 
-      qcRateEl.addEventListener('change', updCalcGate);
+      qcRateEl.addEventListener('input', ()=>{ updCalcGate(); recalcQuick(); }); 
+      qcRateEl.addEventListener('change', ()=>{ updCalcGate(); recalcQuick(); });
     }
+    var qcUnitsEl=document.getElementById('qcUnits');
+    if(qcUnitsEl){ qcUnitsEl.addEventListener('input', recalcQuick); qcUnitsEl.addEventListener('change', recalcQuick); }
+    // also recalc when customer changes (not strictly needed but keeps UX in sync)
+    document.querySelector('#qcDD .dd-menu')?.addEventListener('click', ()=>setTimeout(recalcQuick,0));
+    document.querySelector('#qcDD .dd-toggle')?.addEventListener('click', ()=>setTimeout(recalcQuick,0));
 
     // Start button live validation
     ['oTotal','oOther'].forEach(id=>{ const el=document.getElementById(id); el && el.addEventListener('input', refreshStartButton); });
@@ -1298,6 +1330,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Countback default focus
     cbSetFocus('layers'); updateCbDisplays(); computeCbTotal();
+
+    // initial result
+    recalcQuick();
 
   } catch (err){
     console.error(err);
