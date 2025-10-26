@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warehouse QuickCalc & Tracker v2.7.21</title>
+<style>
+:root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; background:#0b0d10; color:var(--ink); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
+h1 { font-size: 20px; margin:6px 0 10px; }
+.tabs { display:flex; gap:8px; margin:6px 0 10px; position: sticky; top:0; background:var(--bg); padding-top:6px; z-index:5; }
+.tabbtn { flex:1; text-align:center; padding:10px; border:1px solid #253348; border-radius:10px; background:#0f131b; color:var(--ink); font-weight:700; cursor:pointer; }
+.tabbtn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.hidden { display:none; }
+.card { background:var(--card); border:1px solid #253348; border-radius:14px; padding:14px; margin: 10px 0; }
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+input, select, button, textarea { font-size:16px; }
+input[type="number"], input[type="time"], input[type="text"], select, textarea {
+  width:100%; background:#0f131b; color:var(--ink); border:1px solid #29364a; border-radius:10px; padding:10px; outline:none;
+}
+textarea{ min-height:90px; resize:vertical; }
+.row { display:flex; gap:10px; flex-wrap: wrap; }
+.col { flex:1; min-width:220px; }
+.btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; cursor:pointer; }
+.btn.ghost { background:transparent; border-color:#29364a; }
+.btn.ok { border-color:#2e6b3a; background:#173220; }
+.btn.warn { border-color:#8a6a15; background:#30250f; }
+.btn.bad { border-color:#7a2b2b; background:#331b1b; }
+.btn.chip { padding:8px 10px; border-radius:999px; }
+.btn.slim { padding:6px 10px; border-radius:999px; font-size:14px; }
+.pill { border-radius:12px; padding:10px 12px; background:#0f131b; border:1px solid #29364a; text-align:center; }
+.pill h3 { margin:0; font-size:13px; color:#9fb3c8; }
+.pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
+.rateBanner { position: sticky; top:48px; z-index:4; display:flex; gap:10px; margin:8px 0; }
+.rateChip { flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid #29364a; background:#0f131b; }
+.rateChip.good { border-color:#1f4830; background:#14271c; }
+.rateChip.warn { border-color:#584a1a; background:#2a230f; }
+.rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
+.timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
+.tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
+.tick .meta { color:#9fb3c8; font-size:12px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { border-bottom:1px dashed #253348; padding:8px 6px; text-align:left; }
+th { color:#9fb3c8; }
+tr.clickable { cursor:pointer; }
+td.small { font-size:12px; color:#9fb3c8; }
+.bottom-actions { margin: 20px 0 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bottom-actions .left { flex:1 1 auto; min-width:220px; }
+.bottom-actions .right { flex:0 0 auto; white-space:nowrap; }
+.safetybar { margin: 8px 0 40px; }
+.safetybar .btn { width:100%; border-style:dashed; opacity:0.8; }
+.hint { color:#9fb3c8; font-size:12px; }
+.tagbox { display:flex; flex-wrap:wrap; gap:8px; }
+.tag { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid #29364a; background:#0f131b; font-weight:700; }
+.tag button { border:0; background:transparent; color:#9fb3c8; cursor:pointer; font-size:14px; }
+.accordion .accHead { width:100%; text-align:left; padding:10px; border:1px solid #29364a; background:#0f131b; border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.accordion .accHead.ok { border-color:#1f4830; background:#14271c; }
+.accordion .accHead.warn { border-color:#584a1a; background:#2a230f; }
+.accordion .accHead.bad { border-color:#4f1f1f; background:#2a1313; }
+.accordion .accHead .left { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.accordion .accBody { display:none; padding:10px 0 0 0; }
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0f131b; border:1px solid #29364a; padding:10px 12px; border-radius:10px; display:none; z-index:30; }
+.toast.show { display:block; }
+.logwrap { padding:8px 10px; background:#0f131b; border:1px solid #29364a; border-radius:10px; margin:8px 0; }
+.logrow { display:none; }
+.logrow td { border-bottom:none; padding-top:0; }
+/* Gate: hidden by default; unlocked with 0000 */
+.gate-pro { display:none; }
+.modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:20; }
+.modal .box { width:min(560px,92vw); background:#0f131b; border:1px solid #29364a; border-radius:12px; padding:14px; }
+.modal .hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.modal .hdr h3 { margin:0; font-size:16px; color:#cfe2ff; }
+.modal .fld { margin:8px 0; }
+.modal .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+.count { font-variant-numeric: tabular-nums; font-weight:800; font-size:28px; }
+/* Custom dropdown */
+.dd { position:relative; }
+.dd-toggle { width:100%; text-align:left; padding:10px; border:1px solid #29364a; border-radius:10px; background:#0f131b; color:var(--ink); cursor:pointer; }
+.dd.open .dd-menu { display:block; }
+.dd-menu { position:absolute; z-index:12; left:0; right:0; top:110%; background:#0f131b; border:1px solid #29364a; border-radius:10px; padding:6px; display:none; max-height:280px; overflow:auto; }
+.dd-group { border:1px solid #29364a; border-radius:8px; margin:6px 0; overflow:hidden; }
+.dd-group h4 { margin:0; padding:8px 10px; background:#0b0d10; color:#cfe2ff; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
+.dd-items { display:none; padding:4px 6px; }
+.dd-items button { width:100%; text-align:left; padding:8px 10px; background:transparent; border:0; color:var(--ink); cursor:pointer; border-radius:6px; }
+.dd-items button:hover { background:#11151d; }
+.dd-other { margin:6px 0 0; display:flex; gap:6px; }
+.dd-other button { flex:1; }
+.dd-other input { flex:1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Warehouse QuickCalc & Tracker v2.7.21</h1>
+
+  <div class="tabs">
+    <button id="tabCalcBtn" class="tabbtn active" onclick="showTab('calc')">QuickCalc</button>
+    <button id="tabTrackBtn" class="tabbtn" onclick="showTab('tracker')">Tracker</button>
+    <button id="tabHistBtn" class="tabbtn" onclick="showTab('history')">History</button>
+  </div>
+
+  <div id="liveBanner" class="rateBanner hidden">
+    <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
+    <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
+    <div id="chipGap" class="rateChip"><b>Gap vs 300</b><div id="chipGapVal">—</div></div>
+  </div>
+
+  <!-- QuickCalc -->
+  <section id="tabCalc">
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Customer</label>
+          <div class="row" style="gap:6px;">
+            <div class="col">
+              <!-- Hidden native select for programmatic access -->
+              <select id="qcCustomer" class="hidden"></select>
+              <!-- Custom dropdown -->
+              <div id="qcDD" class="dd">
+                <button class="dd-toggle" type="button">Select customer…</button>
+                <div class="dd-menu"></div>
+              </div>
+            </div>
+            <div class="col">
+              <input id="qcOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <label>Units</label>
+          <input id="qcUnits" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+        </div>
+        <div class="col">
+          <label>Override Rate (u/h)</label>
+          <input id="qcRate" type="number" min="1" step="1" inputmode="numeric" placeholder="optional">
+          <div class="hint">Type <b>0000</b> to unlock Manual Time & Export/Import/Share (session only).</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tracker -->
+  <section id="tabTracker" class="hidden">
+    <div class="card" id="shiftCard">
+      <div class="row">
+        <div class="col">
+          <label>Shift Start (HH:MM)</label>
+          <!-- Right-aligned Now button -->
+          <div class="row" style="gap:6px; align-items:flex-end;">
+            <input id="tStart" type="time" placeholder="08:00" style="flex:1;">
+            <button class="btn chip" style="flex:0 0 auto; margin-left:auto;" onclick="setNow('tStart')">Now</button>
+          </div>
+          <div id="snapHint" class="hint"></div>
+        </div>
+        <div class="col">
+          <label>Shift Length (hours)</label>
+          <input id="tLen" type="number" min="1" step="0.5" value="9">
+        </div>
+        <div class="col" style="align-self:end; text-align:right;">
+          <button class="btn ok" onclick="beginShift()" id="btnBegin" style="min-width:180px;">Begin Tracking</button>
+        </div>
+      </div>
+      <div class="hint">Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (includes breaks & delays).</div>
+    </div>
+
+    <div class="card" id="activeOrderCard" style="display:none;">
+      <div class="row" style="align-items:flex-end;">
+        <div class="col">
+          <label>Customer</label>
+          <div class="row" style="gap:6px;">
+            <div class="col">
+              <select id="oCust" class="hidden"></select>
+              <div id="oDD" class="dd">
+                <button class="dd-toggle" type="button">Select customer…</button>
+                <div class="dd-menu"></div>
+              </div>
+            </div>
+            <div class="col">
+              <input id="oOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <label>Total units</label>
+          <input id="oTotal" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 1024">
+        </div>
+        <div class="col" style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <button id="btnUndo" class="btn slim" onclick="undoLast()" style="display:none;">Undo</button>
+          <span style="flex:1"></span>
+          <button id="btnB" class="btn chip" title="Start 20 min break" onclick="openBreakModal('B')" style="display:none;">B</button>
+          <button id="btnL" class="btn chip" title="Start 30 min lunch" onclick="openBreakModal('L')" style="display:none;">L</button>
+          <button class="btn" onclick="startOrder()" id="btnStart">Start</button>
+          <button class="btn ok" onclick="completeOrder()" id="btnComplete" style="display:none;">Complete</button>
+        </div>
+      </div>
+
+      <div id="orderArea" style="display:none; margin-top:10px;">
+        <div class="row">
+          <div class="col">
+            <label>Units left (log wrap)</label>
+            <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+          </div>
+          <div class="col">
+            <label id="manualLbl" class="hidden">Manual time (HH:MM)</label>
+            <div class="row" style="gap:6px;">
+              <div class="col"><input id="oManualTime" class="hidden" type="time" placeholder="12:34"></div>
+              <div class="col" style="max-width:160px;"><button class="btn" onclick="logWrap()">Log Wrap</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline" id="orderTimeline"></div>
+      </div>
+    </div>
+
+    <div class="card" id="completedCard" style="display:none;">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>
+        <tbody id="doneBody"></tbody>
+      </table>
+    </div>
+
+    <div class="bottom-actions">
+      <div class="left">
+        <button class="btn" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log Delay ⏱️</button>
+      </div>
+      <div class="right">
+        <button class="btn ok" id="btnEndShift" onclick="endShift()" style="min-width:220px;">End Shift & Archive →</button>
+      </div>
+    </div>
+    <div class="safetybar">
+      <button class="btn ghost" onclick="clearToday()">Clear today's data</button>
+    </div>
+  </section>
+
+  <!-- History -->
+  <section id="tabHistory" class="hidden">
+    <div class="card">
+      <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <h3 style="margin:0; font-size:14px; color:#9fb3c8;">History (daily archives)</h3>
+        <div>
+          <button class="btn gate-pro" onclick="exportCSV()">Export CSV (today)</button>
+          <button class="btn gate-pro" onclick="exportJSON()">Export JSON (all)</button>
+          <label id="impLabel" class="btn gate-pro" for="impFile">Import JSON</label><input id="impFile" type="file" accept="application/json" style="display:none;">
+          <button class="btn" style="background:#331b1b;border-color:#7a2b2b;" onclick="clearHistory()">Clear History</button>
+          <button class="btn gate-pro" onclick="toggleManageCustomers()">Manage Customers</button>
+        </div>
+      </div>
+      <div id="histList" style="margin-top:8px;"></div>
+    </div>
+
+    <div id="manageCustomersCard" class="card hidden">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Manage Customers</h3>
+      <div class="hint">Manually-added customers are shown below. Tap ✖ to remove.</div>
+      <div id="custTags" class="tagbox" style="margin-top:8px;"></div>
+      <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn ghost" onclick="reloadDropdowns()">Reload dropdowns</button>
+        <button class="btn bad" onclick="clearAllCustom()">Clear ALL custom customers</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Delay Modal -->
+<div id="delayModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delayTitle">
+  <div class="box">
+    <div class="hdr">
+      <h3 id="delayTitle">Log Delay</h3>
+      <button class="btn slim ghost" onclick="closeDelayModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label>Start (auto)</label>
+      <input id="delayStart" type="time" readonly>
+    </div>
+    <div class="fld">
+      <label>Cause</label>
+      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" onclick="cancelDelay()">Cancel</button>
+      <button class="btn ok" onclick="submitDelay()">Submit & Stop</button>
+    </div>
+  </div>
+</div>
+
+<!-- Break Timer Modal -->
+<div id="breakModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="breakTitle">
+  <div class="box">
+    <div class="hdr">
+      <h3 id="breakTitle">Break</h3>
+      <button class="btn slim ghost" onclick="cancelBreak()">✖</button>
+    </div>
+    <div class="fld">
+      <div class="hint">Started at <b id="breakStartLabel">--:--</b> • Target <span id="breakTargetLabel">--</span></div>
+    </div>
+    <div class="fld" style="display:flex; align-items:center; gap:10px;">
+      <div class="count" id="breakCountdown">00:00</div>
+      <label style="display:flex; align-items:center; gap:6px;"><input id="breakAlarm" type="checkbox"> Alarm at zero</label>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" onclick="cancelBreak()">Cancel</button>
+      <button class="btn ok" onclick="submitBreak()">End Break</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast">Saved</div>
+
+<script>
+// ====== State ======
+let picks = [];         // closed orders
+let tempWraps = [];     // wraps in current order
+let current = null;     // active order
+let startTime = "";     // shift start (HH:MM)
+let lastClose = "";     // last order close time
+let undoStack = [];     // undo actions for current order
+let learned = {};       // learned rates (placeholder for future)
+let historyDays = [];   // archived days
+let customCodes = [];   // user-added customer codes
+
+const KEY = 'wqt_v2721_data';
+const KEY_CODES = 'wqt_codes';
+const PRO_UNLOCK_CODE = '0000';
+let proUnlocked = false;  // Gate: Manual time + Export/Import/Share + Manage Customers
+
+// Delay draft
+let delayDraft = null; // {start:'HH:MM', cause:''}
+
+// Break draft and timer
+let breakDraft = null; // {type:'B'|'L', startHHMM, targetSec, beeping}
+let breakTickId = null;
+
+// ====== Utils ======
+function showToast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1200); }
+function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10), M=parseInt(a[1],10); if(isNaN(H)||isNaN(M)) return NaN; return H + M/60; }
+function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function fmtMMSS(totalSec){ var s=Math.max(0,Math.round(totalSec)); var m=Math.floor(s/60), r=s%60; return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0'); }
+
+// ====== Persistence ======
+function loadAll(){
+  try {
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var p=JSON.parse(raw);
+      picks=p.picks||[]; learned=p.learned||{}; historyDays=p.history||[];
+      current=p.current||null; tempWraps=p.tempWraps||[]; startTime=p.startTime||""; lastClose=p.lastClose||""; undoStack=p.undoStack||[];
+      proUnlocked = !!p.proUnlocked;
+    }
+  } catch(e){}
+}
+function saveAll(){
+  try {
+    localStorage.setItem(KEY, JSON.stringify({
+      version:'2.7.21', savedAt:new Date().toISOString(),
+      picks, learned, history:historyDays,
+      current, tempWraps, startTime, lastClose, undoStack,
+      proUnlocked
+    }));
+  } catch(e){}
+}
+setInterval(function(){ saveAll(); }, 30000);
+
+// Custom codes
+function loadCustomCodes(){ try{ var raw=localStorage.getItem(KEY_CODES); if(raw){ customCodes=JSON.parse(raw)||[]; } }catch(e){ customCodes=[]; } }
+function saveCustomCodes(){ try{ localStorage.setItem(KEY_CODES, JSON.stringify(customCodes||[])); }catch(e){} }
+
+// ====== Grouped dropdowns ======
+const DEFAULT_CODES = ["TESWIN","SAINOR","SAIEME","WAILEY","ASDERI","COOWES","COOAVO","COOWEL"];
+function upcase6(s){ return (s||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,6); }
+function isValidCode(s){ return /^[A-Z]{6}$/.test(s||''); }
+function prefix3(code){ return (code||'').slice(0,3).toUpperCase(); }
+function groupedMap(all){
+  const map={};
+  all.forEach(c=>{ const p=prefix3(c); (map[p]=map[p]||[]).push(c); });
+  Object.keys(map).forEach(k=>map[k].sort());
+  return Object.fromEntries(Object.entries(map).sort(([a],[b])=>a.localeCompare(b)));
+}
+
+function buildDropdown(ddId, selectId, otherInputId, prefix){
+  const sel = document.getElementById(selectId);
+  const dd  = document.getElementById(ddId);
+  const menu = dd.querySelector('.dd-menu');
+  const btn = dd.querySelector('.dd-toggle');
+  const otherInput = document.getElementById(otherInputId);
+
+  function setValue(val){
+    sel.value = val;
+    btn.textContent = val==='__OTHER__' ? 'Other…' : val;
+    onCustomerChange(prefix);
+    saveAll();
+    // Close only after a valid selection has been made
+    dd.classList.remove('open');
+  }
+
+  function render(){
+    menu.innerHTML = "";
+    const all = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
+    const groups = groupedMap(all);
+    Object.keys(groups).forEach(g=>{
+      const wrap = document.createElement('div'); wrap.className='dd-group';
+      const head = document.createElement('h4'); head.innerHTML = `<span>${g}</span><span>▾</span>`;
+      const items = document.createElement('div'); items.className='dd-items';
+      // stop propagation so menu doesn't close
+      head.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const open = items.style.display==='block';
+        items.style.display = open?'none':'block';
+        head.lastChild.textContent = open?'▾':'▴';
+      });
+      groups[g].forEach(code=>{
+        const it = document.createElement('button'); it.type='button'; it.textContent=code;
+        it.addEventListener('click', (e)=>{ e.stopPropagation(); setValue(code); });
+        items.appendChild(it);
+      });
+      wrap.appendChild(head); wrap.appendChild(items);
+      menu.appendChild(wrap);
+    });
+
+    // Other… row
+    const row = document.createElement('div'); row.className='dd-other';
+    const otherBtn = document.createElement('button'); otherBtn.className='btn slim'; otherBtn.textContent='Other…'; otherBtn.type='button';
+    otherBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      setValue('__OTHER__');
+      otherInput.classList.remove('hidden'); otherInput.focus();
+    });
+    row.appendChild(otherBtn);
+    menu.appendChild(row);
+
+    // Prevent outside handler from closing when clicking inside the menu
+    menu.addEventListener('click', (e)=> e.stopPropagation());
+  }
+
+  // Toggle open/close, scroll to top on open
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    dd.classList.toggle('open');
+    if(dd.classList.contains('open')) { menu.scrollTop = 0; }
+  });
+
+  // Outside click closes
+  document.addEventListener('click', (e)=>{
+    if(!dd.contains(e.target)) dd.classList.remove('open');
+  });
+
+  render();
+  btn.textContent = sel.value ? (sel.value==='__OTHER__' ? 'Other…' : sel.value) : 'Select customer…';
+  dd.__reload = render;
+}
+
+function reloadDropdowns(){
+  const uniq = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
+  const qcSel = document.getElementById('qcCustomer');
+  const oSel  = document.getElementById('oCust');
+  function refill(sel){
+    sel.innerHTML='';
+    uniq.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    const other=document.createElement('option'); other.value='__OTHER__'; other.textContent='Other…'; sel.appendChild(other);
+  }
+  refill(qcSel); refill(oSel);
+
+  if(document.getElementById('qcDD').__reload) document.getElementById('qcDD').__reload();
+  if(document.getElementById('oDD').__reload)  document.getElementById('oDD').__reload();
+}
+
+function onCustomerChange(prefix){
+  const sel   = document.getElementById(prefix==='qc' ? 'qcCustomer' : 'oCust');
+  const input = document.getElementById(prefix==='qc' ? 'qcOther'    : 'oOther');
+  if(!sel || !input) return;
+  if(sel.value==='__OTHER__'){ input.classList.remove('hidden'); input.focus(); }
+  else { input.classList.add('hidden'); }
+  saveAll();
+}
+
+function onOtherInput(prefix){
+  const sel   = document.getElementById(prefix==='qc' ? 'qcCustomer' : 'oCust');
+  const input = document.getElementById(prefix==='qc' ? 'qcOther'    : 'oOther');
+  const dd    = document.getElementById(prefix==='qc' ? 'qcDD'       : 'oDD');
+  if(!sel || !input) return;
+  input.value = upcase6(input.value);
+  const code = input.value;
+  if(isValidCode(code)){
+    if(customCodes.indexOf(code)===-1){
+      customCodes.push(code); saveCustomCodes();
+    }
+    reloadDropdowns();
+    sel.value = code;
+    input.classList.add('hidden');
+    if(dd && dd.querySelector('.dd-toggle')) dd.querySelector('.dd-toggle').textContent = code;
+    showToast('Added '+code);
+    saveAll();
+  }
+}
+
+// ====== Gate ======
+function applyProGate(){
+  ['oManualTime','manualLbl'].forEach(id=>{ var el=document.getElementById(id); if(el) el.classList.toggle('hidden', !proUnlocked); });
+  document.querySelectorAll('.gate-pro').forEach(el=> el.style.display = proUnlocked ? '' : 'none');
+  saveAll();
+}
+function updCalcGate(){
+  var overrideRaw = (document.getElementById('qcRate').value||'').trim();
+  if(overrideRaw === PRO_UNLOCK_CODE && !proUnlocked){ proUnlocked = true; applyProGate(); showToast('Manual Time & Export/Import unlocked for this session'); }
+}
+
+// ====== Tabs ======
+function showTab(which){
+  ['tabCalc','tabTracker','tabHistory'].forEach(id=>document.getElementById(id).classList.toggle('hidden', id!=='tab'+which.charAt(0).toUpperCase()+which.slice(1)));
+  ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(which==='calc') document.getElementById('tabCalcBtn').classList.add('active');
+  if(which==='tracker') document.getElementById('tabTrackBtn').classList.add('active');
+  if(which==='history') document.getElementById('tabHistBtn').classList.add('active');
+  document.getElementById('liveBanner').classList.toggle('hidden', which!=='tracker');
+  updateDelayBtn(); updateEndShiftVisibility();
+  saveAll();
+}
+
+// ====== Tracker core ======
+function setNow(id){ var el=document.getElementById(id); var now=nowHHMM(); if(id==='tStart'){ el.value=now; startTime=now; document.getElementById('snapHint').textContent='Start set to '+now; updateSummary(); } else { el.value=now; } saveAll(); }
+
+function beginShift(){
+  var typed=document.getElementById('tStart').value;
+  if(typed && !startTime) startTime=typed;
+  document.getElementById('shiftCard').style.display='none';
+  document.getElementById('activeOrderCard').style.display='block';
+  document.getElementById('completedCard').style.display='block';
+  renderDone(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); saveAll();
+}
+
+function startOrder(){
+  var sel=document.getElementById('oCust'); var name=sel.value;
+  if(name==='__OTHER__'){ return alert('Select a customer code'); }
+  var total=parseInt(document.getElementById('oTotal').value||'0',10);
+  if(!name || (!total && total!==0)) return alert('Enter customer and total units');
+  current={name:name, total:total, start: nowHHMM(), breaks: []};
+  tempWraps=[]; undoStack=[{type:'start'}];
+  document.getElementById('orderArea').style.display='block';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='inline-block');
+  document.getElementById('btnStart').style.display='none';
+  document.getElementById('btnComplete').style.display='inline-block';
+  renderTimeline(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); saveAll();
+}
+
+function logWrap(){
+  if(!current) return alert('Start an order first');
+  var left=parseInt(document.getElementById('oLeft').value||'0',10);
+  if(left<0 || left>current.total) return alert('Units left must be between 0 and total');
+  var prevLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
+  if(left>prevLeft) return alert('Units left cannot increase vs previous wrap');
+  var done=prevLeft-left; if(done<=0) return alert('No progress since last wrap');
+  var tManual=(document.getElementById('oManualTime').value||'').trim();
+  var t=(proUnlocked && tManual)? tManual : nowHHMM();
+  tempWraps.push({left,done,t}); undoStack.push({type:'wrap'});
+  document.getElementById('oLeft').value=''; renderTimeline(); updateSummary(); saveAll();
+}
+
+function undoLast(){
+  if(!current){ showToast('Nothing to undo'); return; }
+  var last=undoStack.pop(); if(!last){ showToast('Nothing to undo'); return; }
+  if(last.type==='wrap'){ tempWraps.pop(); renderTimeline(); updateSummary(); saveAll(); return; }
+  if(last.type==='break'){ current.breaks.pop(); renderTimeline(); updateSummary(); saveAll(); return; }
+  if(last.type==='delay' && current.__lastDelay){ current.breaks = current.breaks.filter(b=>b!==current.__lastDelay); current.__lastDelay=null; renderTimeline(); updateSummary(); saveAll(); return; }
+  if(last.type==='start'){
+    current=null; tempWraps=[];
+    document.getElementById('orderArea').style.display='none';
+    ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('btnStart').style.display='inline-block';
+    document.getElementById('btnComplete').style.display='none';
+    showToast('Order start undone'); updateDelayBtn(); updateEndShiftVisibility(); updateSummary(); saveAll(); return;
+  }
+}
+
+function completeOrder(){
+  if(!current) return alert('Start an order first');
+  var tManual=(document.getElementById('oManualTime').value||'').trim();
+  var close=(proUnlocked && tManual)? tManual : nowHHMM();
+  if(!startTime) return alert('Add shift start first');
+  var lastLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
+  var finalDone=lastLeft;
+  var palletsCount=tempWraps.length + (finalDone>0?1:0);
+  var unitsDone=current.total;
+  var exclMins=current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
+  var order={name:current.name, units:unitsDone, pallets:palletsCount, close, start:current.start, excl:exclMins, log:{wraps: tempWraps.slice(0), breaks: current.breaks.slice(0)}};
+  picks.push(order); lastClose=close;
+  current=null; tempWraps=[]; undoStack=[];
+  document.getElementById('orderArea').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  renderDone(); updateSummary(); updateDelayBtn(); saveAll(); showToast('Shift order closed at '+close);
+  updateEndShiftVisibility();
+}
+
+// ====== Delay logging ======
+function updateDelayBtn(){ document.getElementById('btnDelay').style.display = current ? 'inline-block' : 'none'; }
+function openDelayModal(){
+  if(!current) return alert('Start an order to log a delay');
+  delayDraft = { start: nowHHMM(), cause: '' };
+  document.getElementById('delayStart').value = delayDraft.start;
+  document.getElementById('delayCause').value = '';
+  document.getElementById('delayModal').style.display='flex';
+}
+function closeDelayModal(){ document.getElementById('delayModal').style.display='none'; }
+function cancelDelay(){ delayDraft=null; closeDelayModal(); }
+function submitDelay(){
+  if(!current || !delayDraft){ closeDelayModal(); return; }
+  var end = nowHHMM();
+  var minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
+  var cause = (document.getElementById('delayCause').value||'').trim();
+  var entry = {type:'D', start: delayDraft.start, end, minutes, cause};
+  current.breaks.push(entry);
+  current.__lastDelay = entry;
+  undoStack.push({type:'delay'});
+  delayDraft=null;
+  closeDelayModal();
+  renderTimeline(); updateSummary(); showToast('Delay logged ('+minutes+'m)'); saveAll();
+}
+
+// ====== Break timer modal ======
+function openBreakModal(kind){
+  if(!current) return alert('Start an order first');
+  var mins = (kind==='B')?20:30;
+  var start = nowHHMM();
+  breakDraft = {type:kind, startHHMM:start, targetSec: mins*60, beeping:false};
+  document.getElementById('breakTitle').textContent = (kind==='B'?'Break':'Lunch');
+  document.getElementById('breakStartLabel').textContent = start;
+  document.getElementById('breakTargetLabel').textContent = mins+' min target';
+  document.getElementById('breakCountdown').textContent = fmtMMSS(breakDraft.targetSec);
+  document.getElementById('breakAlarm').checked = false;
+  document.getElementById('breakModal').style.display='flex';
+  if(breakTickId) clearInterval(breakTickId);
+  breakTickId = setInterval(function(){
+    if(!breakDraft) return;
+    breakDraft.targetSec = Math.max(0, breakDraft.targetSec - 1);
+    document.getElementById('breakCountdown').textContent = fmtMMSS(breakDraft.targetSec);
+    if(breakDraft.targetSec===0 && !breakDraft.beeping && document.getElementById('breakAlarm').checked){
+      breakDraft.beeping = true; tryBeep();
+    }
+  },1000);
+}
+function tryBeep(){
+  try{
+    var ctx = new (window.AudioContext||window.webkitAudioContext)();
+    var o = ctx.createOscillator(); var g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+    o.type='sine'; o.frequency.value=880; g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.02);
+    o.start();
+    setTimeout(function(){ g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.1); o.stop(); ctx.close(); }, 1200);
+    if(navigator.vibrate) navigator.vibrate(200);
+  }catch(e){ /* ignore */ }
+}
+function submitBreak(){
+  if(!current || !breakDraft){ return cancelBreak(); }
+  var end = nowHHMM();
+  var minutes = Math.max(1, Math.round((hm(end)-hm(breakDraft.startHHMM))*60));
+  var entry = {type: breakDraft.type, start: breakDraft.startHHMM, end, minutes};
+  current.breaks.push(entry); undoStack.push({type:'break'});
+  cancelBreak();
+  renderTimeline(); updateSummary(); showToast((entry.type==='B'?'Break':'Lunch')+' logged ('+minutes+'m)'); saveAll();
+}
+function cancelBreak(){
+  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+  breakDraft=null;
+  document.getElementById('breakModal').style.display='none';
+}
+
+// ====== Timeline (active order only) ======
+function renderTimeline(){
+  var tl=document.getElementById('orderTimeline'); tl.innerHTML='';
+  if(!current){ return; }
+  tl.innerHTML += '<div class="tick"><span>⏳ Order started for <b>'+current.name+'</b></span><span class="meta">Start: '+current.start+' • Total: '+current.total+' u</span></div>';
+  current.breaks.forEach(function(b,i){
+    if(b.type==='D'){
+      tl.innerHTML += '<div class="tick"><span>⏱️ Delay'+(b.cause?': '+b.cause.replace(/</g,'&lt;'):'')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+    }else{
+      tl.innerHTML += '<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+    }
+  });
+  tempWraps.forEach(function(w,i){
+    tl.innerHTML += '<div class="tick"><span>📦 Wrap '+(i+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>';
+  });
+}
+
+// ====== Completed orders & history ======
+function renderDone(){
+  var tb=document.getElementById('doneBody'); tb.innerHTML='';
+  picks.forEach(function(o,i){
+    var s=hm(o.start), e=hm(o.close);
+    var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+    var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+    var tr = document.createElement('tr'); tr.className='clickable'; tr.dataset.idx=i;
+    tr.innerHTML = '<td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td>';
+    tb.appendChild(tr);
+    var logTr = document.createElement('tr'); logTr.className='logrow'; logTr.id='logrow_'+i;
+    var logTd = document.createElement('td'); logTd.colSpan=7;
+    var html = '<div class="logwrap"><div class="hint">Order log</div>';
+    (o.log?.breaks||[]).forEach(function(b){
+      if(b.type==='D'){
+        html += '<div class="tick"><span>⏱️ Delay'+(b.cause?': '+b.cause.replace(/</g,'&lt;'):'')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+      } else {
+        html += '<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+      }
+    });
+    (o.log?.wraps||[]).forEach(function(w,wi){ html += '<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; });
+    html += '</div>';
+    logTd.innerHTML = html;
+    logTr.appendChild(logTd);
+    tb.appendChild(logTr);
+    tr.addEventListener('click', function(){
+      var row=document.getElementById('logrow_'+i);
+      row.style.display = (row.style.display==='table-row') ? 'none' : 'table-row';
+    });
+  });
+  document.getElementById('completedCard').style.display = picks.length? 'block':'none';
+}
+
+// ====== Live banner (includes in-progress wraps) ======
+function currentOrderUnitsDone(){
+  if(!current) return 0;
+  if(tempWraps.length===0) return 0;
+  var left = tempWraps[tempWraps.length-1].left;
+  return current.total - left;
+}
+function updateSummary(){
+  var closedUnits=picks.reduce((a,b)=>a+b.units,0);
+  var progress=currentOrderUnitsDone();
+  var totalUnits = closedUnits + progress;
+  var s=hm(startTime);
+  var endHHMM = current ? nowHHMM() : lastClose;
+  var e=hm(endHHMM);
+  var live=(!isNaN(s)&&!isNaN(e)&&e>s)? Math.round(totalUnits/(e-s)) : 0;
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var dayAvg=shiftLen>0? Math.round(totalUnits/shiftLen):0;
+
+  var chipRate=document.getElementById('chipRate'); var chipVal=document.getElementById('chipRateVal'); chipVal.textContent=live? (live+' u/h'):'—';
+  chipRate.classList.remove('good','warn','bad');
+  if(live>=300) chipRate.classList.add('good');
+  else if(live>=249) chipRate.classList.add('warn');
+  else chipRate.classList.add('bad');
+
+  document.getElementById('chipTotalVal').textContent=totalUnits;
+  var deltaLiveAvg = dayAvg - 300;
+  var sign = deltaLiveAvg>0? '+' : '';
+  document.getElementById('chipGapVal').textContent = sign + deltaLiveAvg;
+
+  updateEndShiftVisibility();
+}
+
+// ====== End Shift & History ======
+function updateEndShiftVisibility(){
+  var btn=document.getElementById('btnEndShift');
+  var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden');
+  var show=trackerVisible && !current && picks.length>0;
+  btn.style.display=show?'inline-block':'none';
+}
+function endShift(){
+  if(current){ return alert('Complete or undo the current order before ending the shift.'); }
+  if(!picks.length){ return alert('No completed orders to archive.'); }
+  var dateStr=todayISO();
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var totalUnits=picks.reduce((a,b)=>a+b.units,0);
+  var tS=hm(startTime), tE=hm(lastClose);
+  var liveRate=(!isNaN(tS)&&!isNaN(tE)&&tE>tS)?Math.round(totalUnits/(tE-tS)):0;
+  var dayRate=shiftLen>0?Math.round(totalUnits/shiftLen):0;
+  var snapshot={date:dateStr,start:startTime||'',end:lastClose||'',shiftLen,totalUnits,liveRate,dayRate,picks:picks.slice(0)};
+  historyDays.push(snapshot); saveAll(); renderHistory();
+
+  // Reset session
+  picks=[]; lastClose=''; current=null; tempWraps=[]; undoStack=[];
+  document.getElementById('orderArea').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+  startTime='';
+  renderDone(); updateSummary(); showToast('Shift archived to History'); showTab('history'); updateEndShiftVisibility(); saveAll();
+}
+
+function clearToday(){
+  if(!confirm("Are you sure you want to clear today's data? This clears the current shift (active orders & completed orders) but keeps History and custom customers.")) return;
+  picks=[]; current=null; tempWraps=[]; undoStack=[]; lastClose=''; startTime='';
+  document.getElementById('orderArea').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+  renderDone(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); saveAll();
+  showToast("Today's data cleared");
+}
+
+function renderHistory(){
+  var host=document.getElementById('histList'); host.innerHTML='';
+  if(!historyDays.length){ host.innerHTML='<div class="hint">No archived days yet.</div>'; return; }
+  var days=historyDays.slice(0).reverse();
+  days.forEach(function(d,di){
+    var head=document.createElement('button'); var boxState=d.dayRate>=300?'ok':(d.dayRate>=249?'warn':'bad');
+    head.className='accHead '+boxState;
+    head.innerHTML='<div class="left"><span class="tag">'+new Date(d.date+'T12:00:00').toDateString().slice(0,15)+'</span><span>Units: <b>'+d.totalUnits+'</b></span><span>Day Avg: <b>'+d.dayRate+'</b> u/h</span><span>Live: <b>'+d.liveRate+'</b> u/h</span></div><span class="chev">▾</span>';
+    var body=document.createElement('div'); body.className='accBody';
+    var table=document.createElement('table');
+    table.innerHTML='<thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>';
+    var tbody=document.createElement('tbody');
+
+    (d.picks||[]).forEach(function(o,i){
+      var s=hm(o.start), e=hm(o.close);
+      var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+      var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+      var tr=document.createElement('tr'); tr.className='clickable'; tr.dataset.idx=i;
+      tr.innerHTML='<td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td>';
+      var logTr=document.createElement('tr'); logTr.className='logrow'; logTr.id='hlog_'+di+'_'+i;
+      var td=document.createElement('td'); td.colSpan=7;
+      var html='<div class="logwrap"><div class="hint">Order log</div>';
+      (o.log?.breaks||[]).forEach(function(b){
+        if(b.type==='D'){
+          html+='<div class="tick"><span>⏱️ Delay'+(b.cause?': '+b.cause.replace(/</g,'&lt;'):'')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+        } else {
+          html+='<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+        }
+      });
+      (o.log?.wraps||[]).forEach(function(w,wi){ html+='<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; });
+      html+='</div>';
+      td.innerHTML=html; logTr.appendChild(td);
+
+      tbody.appendChild(tr); tbody.appendChild(logTr);
+      tr.addEventListener('click', function(){
+        var row=document.getElementById('hlog_'+di+'_'+i);
+        row.style.display = (row.style.display==='table-row') ? 'none' : 'table-row';
+      });
+    });
+
+    table.appendChild(tbody); body.appendChild(table);
+    var wrap=document.createElement('div'); wrap.className='accordion'; wrap.appendChild(head); wrap.appendChild(body); host.appendChild(wrap);
+    head.addEventListener('click', function(){ var open=body.style.display==='block'; body.style.display=open?'none':'block'; head.querySelector('.chev').textContent=open?'▾':'▴'; });
+  });
+}
+
+// ====== Manage Customers (gated) ======
+function toggleManageCustomers(){
+  var card=document.getElementById('manageCustomersCard');
+  if(!card) return;
+  var open = card.classList.contains('hidden');
+  card.classList.toggle('hidden', !open);
+  if(open) renderCustomTags();
+}
+function renderCustomTags(){
+  var box=document.getElementById('custTags'); if(!box) return;
+  box.innerHTML='';
+  (customCodes||[]).forEach((code,idx)=>{
+    var tag=document.createElement('span'); tag.className='tag';
+    tag.innerHTML = code + ' <button title="Remove" onclick="removeCustomCode(\\''+code+'\\')">✖</button>';
+    box.appendChild(tag);
+  });
+}
+function removeCustomCode(code){
+  customCodes = (customCodes||[]).filter(c=>c!==code);
+  saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('Removed '+code);
+}
+function clearAllCustom(){
+  if(!confirm('Remove ALL custom customers?')) return;
+  customCodes=[]; saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('All custom customers cleared');
+}
+
+// ====== Boot ======
+document.addEventListener('DOMContentLoaded', function(){
+  loadCustomCodes();
+  loadAll();
+
+  // Build dropdowns
+  buildDropdown('qcDD','qcCustomer','qcOther','qc');
+  buildDropdown('oDD','oCust','oOther','o');
+  reloadDropdowns();
+
+  applyProGate();
+  renderHistory(); renderDone();
+
+  if(startTime){ document.getElementById('tStart').value = startTime; document.getElementById('snapHint').textContent='Start set to '+startTime; }
+  if(current || picks.length>0){
+    document.getElementById('shiftCard').style.display='none';
+    document.getElementById('activeOrderCard').style.display = current ? 'block' : 'none';
+    document.getElementById('completedCard').style.display = picks.length? 'block':'none';
+    if(current){
+      document.getElementById('orderArea').style.display='block';
+      ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='inline-block');
+      document.getElementById('btnStart').style.display='none';
+      document.getElementById('btnComplete').style.display='inline-block';
+      renderTimeline();
+    }
+    showTab('tracker');
+  } else {
+    showTab('calc');
+  }
+
+  updateSummary(); updateDelayBtn(); updateEndShiftVisibility();
+
+  var qcRateEl=document.getElementById('qcRate'); if(qcRateEl) qcRateEl.addEventListener('input', updCalcGate);
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.id==='qcOther') onOtherInput('qc');
+    if(e.target && e.target.id==='oOther')  onOtherInput('o');
+  });
+
+  setInterval(function(){
+    if(!document.getElementById('tabTracker').classList.contains('hidden')) updateSummary();
+  }, 600);
+
+  var stEl=document.getElementById('tStart'); if(stEl) stEl.addEventListener('change', function(){ startTime=stEl.value; updateSummary(); saveAll(); });
+});
+</script>
+</body>
+</html>
