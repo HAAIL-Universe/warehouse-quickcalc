@@ -98,8 +98,8 @@ td.small { font-size:12px; color:#9fb3c8; }
 .cbBox { flex:1; border:1px solid #29364a; border-radius:10px; padding:8px; }
 .cbBox h4 { margin:0 0 6px; font-size:12px; color:#9fb3c8; }
 .cbVal { font-weight:800; font-size:22px; min-height:28px; }
-.cbPad { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-width:240px; }
-.cbPad button { padding:12px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; }
+.cbPad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; }
+.cbPad button { padding:16px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; }
 .cbChips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .cbSummary { margin-left:auto; text-align:right; font-weight:800; }
 </style>
@@ -145,7 +145,7 @@ td.small { font-size:12px; color:#9fb3c8; }
           </div>
         </div>
         <div style="flex:1; min-width:240px; display:flex; gap:8px;">
-          <div class="cbPad" style="flex:0 0 240px;">
+          <div class="cbPad" style="flex:1;">
             <button onclick="cbTap('7')">7</button>
             <button onclick="cbTap('8')">8</button>
             <button onclick="cbTap('9')">9</button>
@@ -158,10 +158,6 @@ td.small { font-size:12px; color:#9fb3c8; }
             <button onclick="cbTap('0')">0</button>
             <button onclick="cbBack()">⌫</button>
             <button onclick="cbReset()">Reset</button>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
-            <button class="btn" onclick="cbNextField()">Next →</button>
-          </div>
         </div>
       </div>
       <div class="hint" id="cbHint">(Layers × U/Layer) + Extras</div>
@@ -197,12 +193,6 @@ td.small { font-size:12px; color:#9fb3c8; }
       </div>
       <!-- Live result -->
       <div class="row" style="margin-top:10px;">
-        <div class="col">
-          <div class="pill">
-            <h3>Time Needed</h3>
-            <p id="qcTime">—</p>
-          </div>
-        </div>
         <div class="col">
           <div class="pill">
             <h3>Rate Used</h3>
@@ -1271,7 +1261,8 @@ function recalcQuick(){
 
   document.getElementById('qcTime').textContent = units>0 ? (hh+'h '+String(mm).padStart(2,'0')+'m') : '—';
   document.getElementById('qcRateUsed').textContent = rate + ' u/h';
-  document.getElementById('qcUnitsEcho').textContent = units || 0;
+  const uEcho = document.getElementById('qcUnitsEcho');
+if (uEcho) uEcho.textContent = units || 0;
 }
 
 // ====== Boot ======
