@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v3.3.55</title>
+<title>  Warehouse QuickCalc & Tracker   BETA</title>
 <style>
 :root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
 * { box-sizing: border-box; }
@@ -39,6 +39,8 @@ textarea{ min-height:90px; resize:vertical; }
 .rateChip.good { border-color:#1f4830; background:#14271c; }
 .rateChip.warn { border-color:#584a1a; background:#2a230f; }
 .rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
+.rateChip.green { border-color:#1f4830; background:#14271c; }
+.rateChip.amber { border-color:#584a1a; background:#2a230f; }
 .timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
 .tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
 .tick .meta { color:#9fb3c8; font-size:12px; }
@@ -99,14 +101,32 @@ td.small { font-size:12px; color:#9fb3c8; }
 .cbBox h4 { margin:0 0 6px; font-size:12px; color:#9fb3c8; }
 .cbVal { font-weight:800; font-size:22px; min-height:28px; }
 .cbPad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; }
-.cbPad button { padding:28px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; }
+.cbPad button { padding:28px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:500; font-size:22px; }
 .cbChips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .cbSummary { margin-left:auto; text-align:right; font-weight:800; }
+
+/* === Break Bar (bottom sticky) === */
+.breakbar{
+  position:sticky;
+  bottom:0;
+  z-index:25;
+  background:#0f131b;
+  border:1px solid #29364a;
+  border-radius:12px;
+  padding:10px;
+  display:none;           /* hidden until a break starts */
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+}
+.breakbar .grow{ flex:1; }
+.breakbar .title{ font-weight:800; }
+.breakbar .meta{ color:#9fb3c8; font-size:12px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Warehouse QuickCalc & Tracker v3.3.55</h1>
+  <h1>  Warehouse QuickCalc & Tracker   BETA</h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -117,8 +137,7 @@ td.small { font-size:12px; color:#9fb3c8; }
   <div id="liveBanner" class="rateBanner hidden">
     <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
     <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
-    <div id="chipGap" class="rateChip"><b>Gap vs 300</b><div id="chipGapVal">—</div></div>
-    <div id="chipElapsed" class="rateChip"><b>Elapsed</b><div id="chipElapsedVal">—</div></div>
+    <div id="chipElapsed" class="rateChip" style="display:none;"><b>Back in</b><div id="chipElapsedVal">—</div></div>
   </div>
 
   <!-- QuickCalc -->
@@ -247,6 +266,8 @@ td.small { font-size:12px; color:#9fb3c8; }
           <button id="btnL" class="btn chip" type="button" title="Start 30 min lunch" onclick="openBreakModal('L')" style="display:none;">L</button>
           <button class="btn" type="button" onclick="startOrder()" id="btnStart" disabled>Start</button>
           <button class="btn ok" type="button" onclick="completeOrder()" id="btnComplete" style="display:none;">Complete</button>
+          <button class="btn warn" id="btnCloseInline" type="button"
+                  onclick="openCloseEarlyModal()" style="display:none;">Close Early…</button>
         </div>
       </div>
 
@@ -260,14 +281,6 @@ td.small { font-size:12px; color:#9fb3c8; }
             <div class="col" style="max-width:160px;"><button id="btnLogWrap" class="btn" type="button" onclick="logWrap()" disabled>Log Wrap</button></div>
           </div>
         </div>
-
-        <!-- NEW: early-complete reason appears only if units remain -->
-        <div id="earlyReasonBlock" class="hidden" style="margin-top:6px;">
-          <input id="earlyReason" type="text"
-                placeholder="Reason to complete early (optional after 70%)"
-                style="width:100%;">
-        </div>
-
         <div class="timeline" id="orderTimeline"></div>
       </div>
     </div>
@@ -293,6 +306,21 @@ td.small { font-size:12px; color:#9fb3c8; }
       <button class="btn ghost" type="button" onclick="clearToday()">Clear today's data</button>
     </div>
   </section>
+
+  <!-- Bottom Break Bar -->
+  <div id="breakBar" class="breakbar">
+    <div class="grow">
+      <div class="title" id="breakBarTitle">Break</div>
+      <div class="meta">
+        Started <span id="breakBarStart">--:--</span> • <span id="breakBarTarget">20 min target</span>
+      </div>
+    </div>
+    <div class="count" id="breakBarCountdown">20 min</div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" type="button" onclick="submitBreak()">Stop & Log</button>
+      <button class="btn ghost" type="button" onclick="cancelBreak()">Cancel</button>
+    </div>
+  </div>
 
   <!-- History -->
   <section id="tabHistory" class="hidden">
@@ -344,27 +372,6 @@ td.small { font-size:12px; color:#9fb3c8; }
   </div>
 </div>
 
-<!-- Break Timer Modal -->
-<div id="breakModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="breakTitle">
-  <div class="box">
-    <div class="hdr">
-      <h3 id="breakTitle">Break</h3>
-      <button class="btn slim ghost" type="button" onclick="cancelBreak()">✖</button>
-    </div>
-    <div class="fld">
-      <div class="hint">Started at <b id="breakStartLabel">--:--</b> • Target <span id="breakTargetLabel">--</span></div>
-    </div>
-    <div class="fld" style="display:flex; align-items:center; gap:10px;">
-      <div class="count" id="breakCountdown">00:00</div>
-      <label style="display:flex; align-items:center; gap:6px;"><input id="breakAlarm" type="checkbox"> Alarm at zero</label>
-    </div>
-    <div class="actions">
-      <button class="btn ghost" type="button" onclick="cancelBreak()">Cancel</button>
-      <button class="btn ok" type="button" onclick="submitBreak()">End Break</button>
-    </div>
-  </div>
-</div>
-
 <!-- Close Early Modal -->
 <div id="closeEarlyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="closeEarlyTitle">
   <div class="box">
@@ -377,9 +384,12 @@ td.small { font-size:12px; color:#9fb3c8; }
       <input id="ceRemaining" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
     </div>
     <div class="fld">
-      <label style="display:flex;align-items:center;gap:8px;">
-        <input id="ceWrapped" type="checkbox"> Wrapped last pallet
-      </label>
+      <label>Reason (required if 0 units or under 70% expected time)</label>
+      <textarea id="ceReason" placeholder="Explain why closing early…"></textarea>
+    </div>
+    <div class="fld" style="display:flex;align-items:center;gap:8px;">
+      <input id="ceWrapped" type="checkbox">
+      <label for="ceWrapped" style="margin:0;">Wrapped last pallet</label>
     </div>
     <div class="actions">
       <button class="btn ghost" type="button" onclick="closeCloseEarlyModal()">Cancel</button>
@@ -428,6 +438,22 @@ function fmtMMSS(totalSec){ var s=Math.max(0,Math.round(totalSec)); var m=Math.f
 function pad2(n){return String(n).padStart(2,'0');}
 function minutesToHHMM(x){ const h=Math.floor(x/60), m=x%60; return pad2(h)+':'+pad2(m); }
 function toInt(s){ const n=parseInt(s||'0',10); return isNaN(n)?0:n; }
+
+// Simple, safe beep (no external files)
+function tryBeep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 880;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+    o.start();
+    setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.02); o.stop(); ctx.close(); }, 350);
+  }catch(e){ /* no-op if blocked */ }
+}
 
 // ====== Persistence ======
 function loadAll(){
@@ -645,15 +671,25 @@ function showTab(which){
 // ====== Tracker core ======
 function setNow(id){ var el=document.getElementById(id); var now=nowHHMM(); if(id==='tStart'){ el.value=now; startTime=now; document.getElementById('snapHint').textContent='Start set to '+now; updateSummary(); } else { el.value=now; } saveAll(); }
 
-function beginShift(){
-  const typed=document.getElementById('tStart').value;
+function beginShift(){ 
+  const typed = document.getElementById('tStart').value;
   if(!typed){ document.getElementById('tStart').focus(); return alert('Please set shift start time'); }
-  if(!startTime) startTime=typed;
-  document.getElementById('shiftCard').style.display='none';
-  document.getElementById('activeOrderCard').style.display='block';
-  document.getElementById('completedCard').style.display='block';
-  ['btnB','btnL'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='inline-block'; });
+  if(!startTime) startTime = typed;
+
+  document.getElementById('shiftCard').style.display = 'none';
+  document.getElementById('activeOrderCard').style.display = 'block';
+  document.getElementById('completedCard').style.display = 'block';
+  ['btnB','btnL'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'inline-block'; });
+
   renderDone(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
+
+  // Keep elapsed chip hidden until an order or break starts
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) {
+    chipBox.style.display = 'none';
+    const chipVal = document.getElementById('chipElapsedVal');
+    if (chipVal) chipVal.textContent = '—';
+  }
 }
 
 function refreshStartButton(){
@@ -675,27 +711,48 @@ function refreshWrapButton(){
 }
 
 
-function startOrder(){
-  const sel=document.getElementById('oCust'); 
-  const name=sel.value;
-  const total=parseInt(document.getElementById('oTotal').value||'0',10);
-  if(!startTime){ return alert('Set shift start before starting an order.'); }
-  if(!(name && name!=='__OTHER__') && !(name==='__OTHER__' && /^[A-Z]{6}$/.test((document.getElementById('oOther').value||'').toUpperCase()))){
+function startOrder() {
+  const sel = document.getElementById('oCust'); 
+  const name = sel.value;
+  const total = parseInt(document.getElementById('oTotal').value || '0', 10);
+
+  if (!startTime) return alert('Set shift start before starting an order.');
+  if (!(name && name !== '__OTHER__') && !(name === '__OTHER__' && /^[A-Z]{6}$/.test((document.getElementById('oOther').value || '').toUpperCase()))) {
     return alert('Select a valid customer code');
   }
-  if(!(total>0)) return alert('Enter total units');
-  const finalName = (name==='__OTHER__') ? document.getElementById('oOther').value.toUpperCase() : name;
+  if (!(total > 0)) return alert('Enter total units');
 
-  current={name:finalName, total:total, start: nowHHMM(), breaks: []};
-  tempWraps=[]; undoStack=[{type:'start'}];
-  document.getElementById('orderArea').style.display='block';
+  const finalName = (name === '__OTHER__') ? document.getElementById('oOther').value.toUpperCase() : name;
+
+  current = { name: finalName, total: total, start: nowHHMM(), breaks: [] };
+  tempWraps = [];
+  undoStack = [{ type: 'start' }];
+
+  document.getElementById('orderArea').style.display = 'block';
   refreshWrapButton();
-  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='inline-block');
-  document.getElementById('btnStart').style.display='none';
-  document.getElementById('btnComplete').style.display='inline-block';
+  ['btnB', 'btnL', 'btnUndo'].forEach(id => document.getElementById(id).style.display = 'inline-block');
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnComplete').style.display = 'inline-block';
   document.getElementById('btnComplete').disabled = true;
+
   refreshCompleteButton();
-  renderTimeline(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
+  renderTimeline();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+  saveAll();
+
+  // ===== Reset & start Elapsed timer =====
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) {
+    chipBox.style.display = '';
+    const chipLabel = chipBox.querySelector('b');
+    if (chipLabel) chipLabel.textContent = 'Elapsed';
+  }
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (chipVal) chipVal.textContent = '0 min';
+  updateElapsedChip(); // begin ticking fresh
 }
 
 function logWrap(){
@@ -784,12 +841,9 @@ function canCompleteOrder(){
   const left = currentLeftForGating();
   const elapsed = minutesSinceHHMM(current.start);
   const expected = ((current.total || 0) / 300) * 60; // target: 300 u/h
-  const reason = (document.getElementById('earlyReason')?.value || '').trim();
-
   if (left <= 0) return true;                 // finished
   if (elapsed >= expected * 0.70) return true; // ≥70% expected time
-  if (reason.length >= 4) return true;         // explicit reason
-
+  if (!current) document.getElementById('chipElapsed').style.display = 'none';
   return false;
 }
 
@@ -804,25 +858,57 @@ function refreshCompleteButton(){
   btn.disabled = !canCompleteOrder();
 }
 
-function completeOrder(){
-  if(!current) return alert('Start an order first');
-  var close= nowHHMM();
-  if(!startTime) return alert('Add shift start first');
-  var lastLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
-  var palletsCount=tempWraps.length;
-  var unitsDone=current.total - (lastLeft||0);
-  var exclMins=current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
-  var order={name:current.name, units:unitsDone, pallets:palletsCount, close, start:current.start, excl:exclMins, log:{wraps: tempWraps.slice(0), breaks: current.breaks.slice(0)}};
-  picks.push(order); lastClose=close;
-  current=null; tempWraps=[]; undoStack=[];
-  document.getElementById('orderArea').style.display='none';
-  ['btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('btnStart').style.display='inline-block';
-  document.getElementById('btnStart').disabled=true;
-  document.getElementById('btnComplete').style.display='none';
-  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
-  renderDone(); updateSummary(); updateDelayBtn(); saveAll(); showToast('Order closed at '+close);
-  updateEndShiftVisibility(); updateCloseEarlyVisibility();
+function completeOrder() {
+  if (!current) return alert('Start an order first');
+  var close = nowHHMM();
+  if (!startTime) return alert('Add shift start first');
+
+  var lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
+  var palletsCount = tempWraps.length;
+  var unitsDone = current.total - (lastLeft || 0);
+  var exclMins = current.breaks.reduce((a, b) => a + (b.minutes || 0), 0);
+
+  var order = {
+    name: current.name,
+    units: unitsDone,
+    pallets: palletsCount,
+    close,
+    start: current.start,
+    excl: exclMins,
+    log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
+  };
+
+  picks.push(order);
+  lastClose = close;
+  current = null;
+  tempWraps = [];
+  undoStack = [];
+
+  // Hide active order area and reset buttons
+  document.getElementById('orderArea').style.display = 'none';
+  ['btnUndo'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('btnStart').style.display = 'inline-block';
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnComplete').style.display = 'none';
+  document.getElementById('oLeft').value = '';
+  document.getElementById('oTotal').value = '';
+
+  renderDone();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+
+  // ✅ Hide the Elapsed chip when order completes
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) {
+    chipBox.style.display = 'none';
+    const chipVal = document.getElementById('chipElapsedVal');
+    if (chipVal) chipVal.textContent = '—';
+  }
+
+  saveAll();
+  showToast('Order closed at ' + close);
 }
 
 // ====== Delay logging ======
@@ -850,54 +936,123 @@ function submitDelay(){
   renderTimeline(); updateSummary(); showToast('Delay logged ('+minutes+'m)'); saveAll();
 }
 
-// ====== Break timer modal ======
+// ====== Break timer (banner) ======
 function openBreakModal(kind){
-  var mins = (kind==='B')?20:30;
+  // Back-compat: buttons still call this; we now use the banner
+  startBreak(kind);
+}
+
+function startBreak(kind){
+  var mins = (kind==='B') ? 20 : 30;
   var start = nowHHMM();
   breakDraft = {type:kind, startHHMM:start, targetSec: mins*60, beeping:false};
-  document.getElementById('breakTitle').textContent = (kind==='B'?'Break':'Lunch');
-  document.getElementById('breakStartLabel').textContent = start;
-  document.getElementById('breakTargetLabel').textContent = mins+' min target';
-  document.getElementById('breakCountdown').textContent = fmtMMSS(breakDraft.targetSec);
-  document.getElementById('breakAlarm').checked = false;
-  document.getElementById('breakModal').style.display='flex';
+
+  // Fill banner
+  document.getElementById('breakBarTitle').textContent = (kind==='B'?'Break':'Lunch');
+  document.getElementById('breakBarStart').textContent = start;
+  document.getElementById('breakBarTarget').textContent = mins+' min target';
+  document.getElementById('breakBar').style.display = 'flex';
+
+  // Show the "Back in" chip and start ticking
+  document.getElementById('chipElapsed').style.display = '';
+  tickBreak(); // set first frame immediately
   if(breakTickId) clearInterval(breakTickId);
-  breakTickId = setInterval(function(){
-    if(!breakDraft) return;
-    var now = nowHHMM();
-    var elapsed = Math.max(0, Math.round((hm(now)-hm(breakDraft.startHHMM))*3600));
-    var remaining = Math.max(0, breakDraft.targetSec - elapsed);
-    document.getElementById('breakCountdown').textContent = fmtMMSS(remaining);
-    if(remaining===0 && !breakDraft.beeping && document.getElementById('breakAlarm').checked){
-      breakDraft.beeping = true; tryBeep();
-    }
-  },1000);
+  breakTickId = setInterval(tickBreak, 1000);
 }
-function tryBeep(){
-  try{
-    var ctx = new (window.AudioContext||window.webkitAudioContext)();
-    var o = ctx.createOscillator(); var g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
-    o.type='sine'; o.frequency.value=880; g.gain.setValueAtTime(0.001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.02);
-    o.start();
-    setTimeout(function(){ g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.1); o.stop(); ctx.close(); }, 1200);
-    if(navigator.vibrate) navigator.vibrate(200);
-  }catch(e){ /* ignore */ }
+
+function tickBreak() {
+  if (!breakDraft) return;
+
+  const now = nowHHMM();
+  const elapsedMin = Math.round((hm(now) - hm(breakDraft.startHHMM)) * 60);
+  const targetMin = Math.round(breakDraft.targetSec / 60);
+  const diff = targetMin - elapsedMin;
+
+  // Format: positive = remaining, negative = over
+  const breakDisplay = diff >= 0 ? `${diff} min` : `-${Math.abs(diff)} min over`;
+
+  // Update banner & live chip
+  const breakBar = document.getElementById('breakBarCountdown');
+  const chip = document.getElementById('chipElapsedVal');
+  const chipBox = document.getElementById('chipElapsed');
+
+  // ✅ Label switch to "Back in" while on break
+  const chipLabel = chipBox.querySelector('b');
+  if (chipLabel) chipLabel.textContent = 'Back in';
+
+  // Break timer shows while on break
+  breakBar.textContent = breakDisplay;
+  chip.textContent = breakDisplay;
+
+  // Colour state (green until 0, then amber)
+  chipBox.classList.remove('green', 'amber');
+  chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
+
+  // Single beep when we cross into overtime
+  if (diff === 0 && !breakDraft.beeping) {
+    breakDraft.beeping = true;
+    tryBeep();
+  }
 }
+
+
 function submitBreak(){
   if(!breakDraft){ return cancelBreak(); }
   var end = nowHHMM();
   var minutes = Math.max(1, Math.round((hm(end)-hm(breakDraft.startHHMM))*60));
   var entry = {type: breakDraft.type, start: breakDraft.startHHMM, end, minutes};
-  if(current){ current.breaks.push(entry); undoStack.push({type:'break'}); renderTimeline(); }
-  else { shiftBreaks.push(entry); }
-  cancelBreak();
-  updateSummary(); showToast((entry.type==='B'?'Break':'Lunch')+' logged ('+minutes+'m)'); saveAll();
-}
-function cancelBreak(){
+
+  if(current){
+    current.breaks.push(entry);
+    undoStack.push({type:'break'});
+    renderTimeline();
+  } else {
+    shiftBreaks.push(entry);
+  }
+
   if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
-  breakDraft=null;
-  document.getElementById('breakModal').style.display='none';
+  breakDraft = null;
+
+  // Hide banner
+  document.getElementById('breakBar').style.display = 'none';
+
+  // Restore chip state:
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (current) {
+    // Active order → resume "Elapsed"
+    if (chipBox) chipBox.style.display = '';
+    updateElapsedChip();
+  } else {
+    // No active order → hide
+    if (chipBox) chipBox.style.display = 'none';
+    if (chipVal) chipVal.textContent = '—';
+  }
+
+  updateSummary();
+  showToast('Break logged ('+minutes+'m)');
+  saveAll();
+}
+
+function cancelBreak(){
+  // User cancels the running timer without logging
+  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+  breakDraft = null;
+
+  // Hide banner
+  document.getElementById('breakBar').style.display = 'none';
+
+  // Restore chip state based on whether an order is active
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+
+  if (current) {
+    if (chipBox) chipBox.style.display = '';
+    updateElapsedChip(); // resume order elapsed
+  } else {
+    if (chipBox) chipBox.style.display = 'none';
+    if (chipVal) chipVal.textContent = '—';
+  }
 }
 
 // ====== Close Early ======
@@ -906,50 +1061,120 @@ function updateCloseEarlyVisibility(){
   var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden');
   btn.style.display = (trackerVisible && !!current) ? 'inline-block' : 'none';
 }
+
 function openCloseEarlyModal(){
   if(!current) return;
   document.getElementById('ceRemaining').value='';
   document.getElementById('ceWrapped').checked=false;
+  const r=document.getElementById('ceReason'); if(r) r.value='';
   document.getElementById('closeEarlyModal').style.display='flex';
 }
+
 function closeCloseEarlyModal(){ document.getElementById('closeEarlyModal').style.display='none'; }
+
 function submitCloseEarly(){
   if(!current) return closeCloseEarlyModal();
+
+  // Inputs
   var remaining = parseInt(document.getElementById('ceRemaining').value||'0',10);
-  if(isNaN(remaining) || remaining<0) return alert('Enter remaining units (0 or more).');
-  var prevLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
-  if(remaining>prevLeft) return alert('Remaining cannot exceed current left ('+prevLeft+').');
+  if (isNaN(remaining) || remaining < 0) return alert('Enter remaining units (0 or more).');
+
+  var prevLeft = tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total;
+  if (remaining > prevLeft) return alert('Remaining cannot exceed current left ('+prevLeft+').');
 
   var wrapped = !!document.getElementById('ceWrapped').checked;
-  if(wrapped){
-    if(remaining>=prevLeft) return alert('To mark a wrap, remaining must be less than '+prevLeft+'.');
-    tempWraps.push({left:remaining, done:prevLeft-remaining, t: nowHHMM()});
+  if (wrapped){
+    if (remaining >= prevLeft) return alert('To mark a wrap, remaining must be less than '+prevLeft+'.');
+    tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
   }
+
+  // Reason (textbox in modal if present; otherwise prompt once)
+  var reasonEl = document.getElementById('ceReason');
+  var reason   = (reasonEl && reasonEl.value || '').trim();
+
+  // Timing snapshot
+  var elapsed = minutesSinceHHMM(current.start); // minutes since this order started
+
+  // Live-rate snapshot (same math as updateSummary)
+  (function enforceReasonRules(){
+    var closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+    var progress    = currentOrderUnitsDone(); // from active order wraps
+    var totalUnits  = closedUnits + progress;
+
+    var s = hm(startTime), e = hm(nowHHMM());
+    var live = (!isNaN(s) && !isNaN(e) && e > s) ? Math.round(totalUnits / (e - s)) : 0; // u/h
+
+    // Expected time at live rate & at target 300 u/h
+    var expectedLiveMin = live > 0 ? ((current.total||0) / live) * 60 : Infinity;
+    var expected300Min  = ((current.total||0) / 300) * 60;
+
+    // Case A: User entered 0 remaining (i.e., finished), but much faster than live-rate expectation
+    if (remaining === 0 && elapsed < expectedLiveMin * 0.70 && (reason.length < 4)){
+      if (!reasonEl) {
+        // Fallback prompt if the input isn't added yet
+        reason = (prompt('Add a short reason — completed unusually fast vs your live rate:') || '').trim();
+      }
+      if (reason.length < 4) {
+        if (reasonEl) reasonEl.focus();
+        return      }
+    }
+
+    // Case B: User is closing with units left; still require reason if <70% of target time@300
+    if (remaining > 0 && elapsed < expected300Min * 0.70 && (reason.length < 4)){
+      if (!reasonEl) {
+        reason = (prompt('Please add a short reason to close early:') || '').trim();
+      }
+      if (reason.length < 4) {
+        if (reasonEl) reasonEl.focus();
+        return      }
+    }
+  })();
+
+  // Build order
   var close = nowHHMM();
   var palletsCount = tempWraps.length;
   var unitsDone = current.total - remaining;
+  var exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
 
-  var exclMins=current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
-  var order={name:current.name, units:unitsDone, pallets:palletsCount, close, start:current.start, excl:exclMins, log:{wraps: tempWraps.slice(0), breaks: current.breaks.slice(0)}};
-  picks.push(order); lastClose=close;
+  var order = {
+    name: current.name,
+    units: unitsDone,
+    pallets: palletsCount,
+    close,
+    start: current.start,
+    excl: exclMins,
+    earlyReason: reason || '',
+    log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
+  };
+  picks.push(order); lastClose = close;
 
-  // reset
-  current=null; tempWraps=[]; undoStack=[];
-  document.getElementById('orderArea').style.display='none';
+  // Reset UI/session
+  current = null; tempWraps = []; undoStack = [];
+  document.getElementById('orderArea').style.display = 'none';
   ['btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('btnStart').style.display='inline-block';
-  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnStart').disabled = true;
   document.getElementById('btnComplete').style.display='none';
   document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+
   closeCloseEarlyModal();
   renderDone(); updateSummary(); updateDelayBtn(); saveAll(); showToast('Order closed early');
   updateEndShiftVisibility(); updateCloseEarlyVisibility();
-}
+  // Hide elapsed chip once order is completed
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) chipBox.style.display = 'none';
+} // end submitCloseEarly
 
 // ====== Completed orders & history ======
 function renderTimeline(){
   var tl=document.getElementById('orderTimeline'); if(!tl) return;
   tl.innerHTML='';
+  if (current) {
+    const row0=document.createElement('div');
+    row0.className='tick';
+    row0.innerHTML=`<span>🟢 Order started</span><span class="meta">${current.start}</span>`;
+    tl.appendChild(row0);
+  }
   (current?.breaks||[]).forEach(function(b){
     const row=document.createElement('div'); row.className='tick';
     row.innerHTML = (b.type==='D')
@@ -983,7 +1208,15 @@ function renderDone(){
         html += '<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
       }
     });
-    (o.log?.wraps||[]).forEach(function(w,wi){ html += '<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; });
+    (o.log?.wraps||[]).forEach(function(w,wi){ 
+      html += '<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; 
+    });
+
+    // ✅ Add early close reason if present
+    if (o.earlyReason && o.earlyReason.trim().length > 0) {
+      html += `<div class="tick"><span>📝 Early Close Reason:</span><span class="meta">${o.earlyReason.replace(/</g,'&lt;')}</span></div>`;
+    }
+
     html += '</div>';
     logTd.innerHTML = html;
     logTr.appendChild(logTd);
@@ -1154,15 +1387,32 @@ function endShift(){
 function clearToday(){
   if(!confirm("Clear today's data (keeps History & custom customers)?")) return;
   picks=[]; current=null; tempWraps=[]; undoStack=[]; lastClose=''; startTime=''; shiftBreaks=[];
+
+  // Hide active order panel and show shift setup again
+  document.getElementById('activeOrderCard').style.display='none';
   document.getElementById('orderArea').style.display='none';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+
+  // Reset buttons
   ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('btnStart').style.display='inline-block';
   document.getElementById('btnStart').disabled=true;
   document.getElementById('btnComplete').style.display='none';
-  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
-  document.getElementById('completedCard').style.display='none';
-  document.getElementById('shiftCard').style.display='block';
-  renderDone(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
+
+  // Clear inputs
+  document.getElementById('oLeft').value='';
+  document.getElementById('oTotal').value='';
+  document.getElementById('oCust').value='';
+  document.querySelector('#oDD .dd-toggle').textContent='Select customer…';
+
+  // Update state/UI
+  renderDone();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+  saveAll();
   showToast("Today's data cleared");
 }
 function clearHistory(){
@@ -1271,13 +1521,51 @@ function updateSummary(){
   else chipRate.classList.add('bad');
 
   document.getElementById('chipTotalVal').textContent=totalUnits;
-  const gap = live - 300;
-  document.getElementById('chipGapVal').textContent = (gap>=0?'+':'') + gap;
 
   const elapsedMin = (!isNaN(s)&&!isNaN(e)&&e>s) ? Math.round((e - s)*60) : 0;
   const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
 
   updateEndShiftVisibility(); updateCloseEarlyVisibility();
+}
+
+function updateElapsedChip() {
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (!chipBox || !chipVal) return;
+
+  // If a break is active, tickBreak() manages the display
+  if (breakDraft) return;
+
+  // Only show elapsed while an order is active
+  if (!current || !current.start) {
+    chipBox.style.display = 'none';
+    chipVal.textContent = '—';
+    chipBox.classList.remove('green','amber');
+    return;
+  }
+
+  // Order running → show "Elapsed" from order start
+  const label = chipBox.querySelector('b');
+  if (label) label.textContent = 'Elapsed';
+
+  const now = nowHHMM();
+  const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
+
+  chipVal.textContent = `${elapsedMin} min`;
+  chipBox.classList.remove('green','amber');
+  chipBox.style.display = '';
+}
+
+function computeLiveRateSnapshot(){
+  // Same math as updateSummary’s “live” chip, but returns a number
+  var closedUnits = picks.reduce((a,b)=>a+b.units,0);
+  var progress    = currentOrderUnitsDone();
+  var totalUnits  = closedUnits + progress;
+
+  var s = hm(startTime), e = hm(nowHHMM());
+  if (isNaN(s) || isNaN(e) || e <= s) return 0;
+
+  return Math.round(totalUnits / (e - s)); // u/h
 }
 
 // ====== Countback keypad logic ======
@@ -1418,90 +1706,154 @@ if (uEcho) uEcho.textContent = units || 0;
 document.addEventListener('DOMContentLoaded', function(){
   try {
     loadCustomCodes();
-    loadAll();
+    loadAll(); // loads startTime, picks, current, history, etc.
 
     // Build dropdowns
     buildDropdown('oDD','oCust','oOther','o');
     reloadDropdowns();
 
-    // Attach custom code input listeners
+    // Input listeners
     document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
     document.getElementById('oLeft')?.addEventListener('input', refreshWrapButton);
 
     applyProGate();
-    renderHistory(); renderDone();
-    renderULayerChips();
+    renderHistory(); renderDone(); renderULayerChips();
 
-    if(startTime){ document.getElementById('tStart').value = startTime; document.getElementById('snapHint').textContent='Start set to '+startTime; }
-    if(current || picks.length>0){
-      document.getElementById('shiftCard').style.display='none';
-      document.getElementById('activeOrderCard').style.display = current ? 'block' : 'none';
-      document.getElementById('completedCard').style.display = picks.length? 'block':'none';
-      if(current){
-        document.getElementById('orderArea').style.display='block';
-        ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='inline-block');
-        document.getElementById('btnStart').style.display='none';
-        document.getElementById('btnComplete').style.display='inline-block';
-        renderTimeline();
-      } else {
-        ['btnB','btnL'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='inline-block'; });
-      }
-      showTab('tracker');
-    } else {
-      showTab('calc');
+    if(startTime){
+      document.getElementById('tStart').value = startTime;
+      document.getElementById('snapHint').textContent = 'Start set to ' + startTime;
     }
 
-    updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility();
-    document.getElementById('earlyReason')?.addEventListener('input', refreshCompleteButton);
-    // Pro unlock & QuickCalc live
-    var qcRateEl=document.getElementById('qcRate'); 
-    if(qcRateEl){ 
-      qcRateEl.addEventListener('input', ()=>{ updCalcGate(); recalcQuick(); }); 
+    // ===== AUTO-RESUME CHECK =====
+    if (startTime && (!window.archived || window.archived === false)) {
+      // Hide shift setup, show main tracker
+      document.getElementById('shiftCard').style.display = 'none';
+      document.getElementById('completedCard').style.display = 'block';
+      renderDone(); 
+      updateSummary(); 
+      updateDelayBtn();
+      updateEndShiftVisibility(); 
+      updateCloseEarlyVisibility();
+
+      const activeCard = document.getElementById('activeOrderCard');
+      const orderArea = document.getElementById('orderArea');
+
+      // --- Case A: Order in progress ---
+      if (current) {
+        if (activeCard) activeCard.style.display = 'block';
+        if (orderArea) orderArea.style.display = 'block';
+
+        // Restore form values (for visibility only)
+        document.getElementById('oCust').value = current.name || '';
+        document.getElementById('oTotal').value = current.total || '';
+        document.getElementById('snapHint').textContent = 'Order resumed @ ' + (current.start || '—');
+
+        // Restore buttons
+        ['btnB','btnL','btnUndo'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'inline-block';
+        });
+        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnComplete').style.display = 'inline-block';
+        document.getElementById('btnComplete').disabled = true;
+
+        renderTimeline();
+      }
+
+      // --- Case B: Shift active, no current order ---
+      else {
+        if (activeCard) activeCard.style.display = 'block';
+        if (orderArea) orderArea.style.display = 'none';
+        ['btnB','btnL','btnUndo'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
+        document.getElementById('btnStart').style.display = 'inline-block';
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnComplete').style.display = 'none';
+        reloadDropdowns();
+        document.getElementById('oCust').value = '';
+        document.getElementById('oTotal').value = '';
+      }
+
+      // --- Resume chip correctly ---
+      const chipBox = document.getElementById('chipElapsed');
+      const chipVal = document.getElementById('chipElapsedVal');
+
+      if (breakDraft) {
+        if (chipBox) chipBox.style.display = '';
+        tickBreak(); // show "Back in" + countdown
+      } 
+      else if (current && current.start) {
+        if (chipBox) chipBox.style.display = '';
+        updateElapsedChip(); // show elapsed for order
+      } 
+      else {
+        if (chipBox) chipBox.style.display = 'none';
+        if (chipVal) chipVal.textContent = '—';
+      }
+
+      showTab('tracker');
+      showToast('Shift restored – continue where you left off');
+    }
+
+    // Refresh summary/UI
+    updateSummary(); 
+    updateDelayBtn(); 
+    updateEndShiftVisibility(); 
+    updateCloseEarlyVisibility(); 
+    updateElapsedChip();
+
+    // === QuickCalc wiring ===
+    var qcRateEl = document.getElementById('qcRate');
+    if(qcRateEl){
+      qcRateEl.addEventListener('input', ()=>{ updCalcGate(); recalcQuick(); });
       qcRateEl.addEventListener('change', ()=>{ updCalcGate(); recalcQuick(); });
     }
-    var qcUnitsEl=document.getElementById('qcUnits');
-    if(qcUnitsEl){ qcUnitsEl.addEventListener('input', recalcQuick); qcUnitsEl.addEventListener('change', recalcQuick); }
-    // also recalc when customer changes (not strictly needed but keeps UX in sync)
+    var qcUnitsEl = document.getElementById('qcUnits');
+    if(qcUnitsEl){
+      qcUnitsEl.addEventListener('input', recalcQuick);
+      qcUnitsEl.addEventListener('change', recalcQuick);
+    }
 
-    // Start button live validation
-    ['oTotal','oOther'].forEach(id=>{ const el=document.getElementById(id); el && el.addEventListener('input', refreshStartButton); });
+    // Start button validation
+    ['oTotal','oOther'].forEach(id=>{
+      const el = document.getElementById(id);
+      el && el.addEventListener('input', refreshStartButton);
+    });
     document.querySelector('#oDD .dd-menu')?.addEventListener('click', ()=>setTimeout(refreshStartButton,0));
     document.querySelector('#oDD .dd-toggle')?.addEventListener('click', ()=>setTimeout(refreshStartButton,0));
 
+    // Live summary + timer loop
     setInterval(function(){
       if(!document.getElementById('tabTracker').classList.contains('hidden')){
         updateSummary();
-        refreshCompleteButton();  // ← belt-and-braces
+        if (breakDraft) tickBreak();
+        else if (current) updateElapsedChip();
       }
     }, 600);
 
-    var stEl=document.getElementById('tStart'); if(stEl) stEl.addEventListener('change', function(){ startTime=stEl.value; updateSummary(); saveAll(); });
+    var stEl = document.getElementById('tStart');
+    if(stEl) stEl.addEventListener('change', function(){
+      startTime = stEl.value;
+      updateSummary();
+      saveAll();
+    });
 
-    // Countback default focus
+    // Countback & keyboard input
     cbSetFocus('layers'); updateCbDisplays(); computeCbTotal();
-
-    // Keyboard entry for Countback: digits, space/enter = Next, backspace = delete
     document.addEventListener('keydown', (e) => {
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
-      if (/^[0-9]$/.test(e.key)) {
-        cbTap(e.key);
-        e.preventDefault();
-      } else if (e.key === 'Backspace') {
-        cbBack();
-        e.preventDefault();
-      } else if (e.key === ' ' || e.key === 'Enter') {
-        cbNextField();
-        e.preventDefault();
-      }
+      if (/^[0-9]$/.test(e.key)) { cbTap(e.key); e.preventDefault(); }
+      else if (e.key === 'Backspace') { cbBack(); e.preventDefault(); }
+      else if (e.key === ' ' || e.key === 'Enter') { cbNextField(); e.preventDefault(); }
     });
 
-    // initial result
     recalcQuick();
-
   } catch (err){
     console.error(err);
-    showToast('Error on load: '+(err.message||err));
+    showToast('Error on load: ' + (err.message || err));
   }
 });
 </script>
