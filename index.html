@@ -99,7 +99,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 .cbBox h4 { margin:0 0 6px; font-size:12px; color:#9fb3c8; }
 .cbVal { font-weight:800; font-size:22px; min-height:28px; }
 .cbPad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; }
-.cbPad button { padding:16px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; }
+.cbPad button { padding:28px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; }
 .cbChips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .cbSummary { margin-left:auto; text-align:right; font-weight:800; }
 </style>
@@ -118,6 +118,7 @@ td.small { font-size:12px; color:#9fb3c8; }
     <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
     <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
     <div id="chipGap" class="rateChip"><b>Gap vs 300</b><div id="chipGapVal">—</div></div>
+    <div id="chipElapsed" class="rateChip"><b>Elapsed</b><div id="chipElapsedVal">—</div></div>
   </div>
 
   <!-- QuickCalc -->
@@ -142,10 +143,13 @@ td.small { font-size:12px; color:#9fb3c8; }
           <div class="cbSummary">
             <div class="hint">Total</div>
             <div id="cbTotal" class="count">0</div>
+            <div id="cbHint" class="hint" style="margin-top:4px;text-align:right;">Typing Layers…</div>
+
           </div>
         </div>
         <div style="flex:1; min-width:240px; display:flex; gap:8px;">
-          <div class="cbPad" style="flex:1;">
+          <div style="flex:1;">
+            <div class="cbPad" style="flex:1;">
             <button onclick="cbTap('7')">7</button>
             <button onclick="cbTap('8')">8</button>
             <button onclick="cbTap('9')">9</button>
@@ -160,27 +164,11 @@ td.small { font-size:12px; color:#9fb3c8; }
             <button onclick="cbReset()">Reset</button>
         </div>
       </div>
-      <div class="hint" id="cbHint">(Layers × U/Layer) + Extras</div>
     </div>
 
     <!-- QuickCalc inputs -->
     <div class="card">
       <div class="row">
-        <div class="col">
-          <label>Customer</label>
-          <div class="row" style="gap:6px;">
-            <div class="col">
-              <select id="qcCustomer" class="hidden"></select>
-              <div id="qcDD" class="dd">
-                <button class="dd-toggle" type="button">Select customer…</button>
-                <div class="dd-menu"></div>
-              </div>
-            </div>
-            <div class="col">
-              <input id="qcOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
-            </div>
-          </div>
-        </div>
         <div class="col">
           <label>Units</label>
           <input id="qcUnits" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
@@ -188,7 +176,6 @@ td.small { font-size:12px; color:#9fb3c8; }
         <div class="col">
           <label>Override Rate (u/h)</label>
           <input id="qcRate" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="optional">
-          <div class="hint">Type <b>0000</b> to unlock Pro (Export/Import & Manage Customers) — session only.</div>
         </div>
       </div>
       <!-- Live result -->
@@ -201,8 +188,8 @@ td.small { font-size:12px; color:#9fb3c8; }
         </div>
         <div class="col">
           <div class="pill">
-            <h3>Units</h3>
-            <p id="qcUnitsEcho">0</p>
+            <h3>Time Needed</h3>
+            <p id="qcTime">—</p>
           </div>
         </div>
       </div>
@@ -270,9 +257,17 @@ td.small { font-size:12px; color:#9fb3c8; }
             <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
           </div>
           <div class="col" style="display:flex; align-items:flex-end; gap:6px;">
-            <div class="col" style="max-width:160px;"><button class="btn" type="button" onclick="logWrap()">Log Wrap</button></div>
+            <div class="col" style="max-width:160px;"><button id="btnLogWrap" class="btn" type="button" onclick="logWrap()" disabled>Log Wrap</button></div>
           </div>
         </div>
+
+        <!-- NEW: early-complete reason appears only if units remain -->
+        <div id="earlyReasonBlock" class="hidden" style="margin-top:6px;">
+          <input id="earlyReason" type="text"
+                placeholder="Reason to complete early (optional after 70%)"
+                style="width:100%;">
+        </div>
+
         <div class="timeline" id="orderTimeline"></div>
       </div>
     </div>
@@ -487,6 +482,14 @@ function groupedMap(all){
   return Object.fromEntries(Object.entries(map).sort(([a],[b])=>a.localeCompare(b)));
 }
 
+function currentLeftForGating(){
+  if(!current) return 0;
+  const raw = (document.getElementById('oLeft')?.value || '').trim();
+  if (raw !== '' && !isNaN(parseInt(raw,10))) return parseInt(raw,10);
+  if (tempWraps.length) return tempWraps[tempWraps.length-1].left;
+  return current.total; // no wraps + no input = nothing picked yet
+}
+
 function buildDropdown(ddId, selectId, otherInputId, prefix){
   const sel = document.getElementById(selectId);
   const dd  = document.getElementById(ddId);
@@ -558,17 +561,19 @@ function buildDropdown(ddId, selectId, otherInputId, prefix){
 
 function reloadDropdowns(){
   const uniq = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
-  const qcSel = document.getElementById('qcCustomer');
   const oSel  = document.getElementById('oCust');
-  function refill(sel){
-    sel.innerHTML='';
-    uniq.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-    const other=document.createElement('option'); other.value='__OTHER__'; other.textContent='Other…'; sel.appendChild(other);
+  if (oSel) {
+    oSel.innerHTML = '';
+    uniq.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      oSel.appendChild(o);
+    });
+    const other = document.createElement('option');
+    other.value = '__OTHER__'; other.textContent = 'Other…';
+    oSel.appendChild(other);
   }
-  refill(qcSel); refill(oSel);
-
-  if(document.getElementById('qcDD').__reload) document.getElementById('qcDD').__reload();
-  if(document.getElementById('oDD').__reload)  document.getElementById('oDD').__reload();
+  document.getElementById('oDD')?.__reload?.();
 }
 
 function onCustomerChange(prefix){
@@ -661,6 +666,15 @@ function refreshStartButton(){
   btn.disabled = !ok;
 }
 
+function refreshWrapButton(){
+  const btn = document.getElementById('btnLogWrap');
+  const inp = document.getElementById('oLeft');
+  if(!btn || !inp) return;
+  const raw = (inp.value||'').trim();
+  btn.disabled = (raw === '');
+}
+
+
 function startOrder(){
   const sel=document.getElementById('oCust'); 
   const name=sel.value;
@@ -675,38 +689,119 @@ function startOrder(){
   current={name:finalName, total:total, start: nowHHMM(), breaks: []};
   tempWraps=[]; undoStack=[{type:'start'}];
   document.getElementById('orderArea').style.display='block';
+  refreshWrapButton();
   ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='inline-block');
   document.getElementById('btnStart').style.display='none';
   document.getElementById('btnComplete').style.display='inline-block';
+  document.getElementById('btnComplete').disabled = true;
+  refreshCompleteButton();
   renderTimeline(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
 }
 
 function logWrap(){
   if(!current) return alert('Start an order first');
-  var left=parseInt(document.getElementById('oLeft').value||'0',10);
-  if(left<0 || left>current.total) return alert('Units left must be between 0 and total');
-  var prevLeft=tempWraps.length?tempWraps[tempWraps.length-1].left:current.total;
-  if(left>prevLeft) return alert('Units left cannot increase vs previous wrap');
-  var done=prevLeft-left; if(done<=0) return alert('No progress since last wrap');
-  var t= nowHHMM();
-  tempWraps.push({left,done,t}); undoStack.push({type:'wrap'});
-  document.getElementById('oLeft').value=''; renderTimeline(); updateSummary(); saveAll();
+  const inp = document.getElementById('oLeft');
+  const raw = (inp.value||'').trim();
+  if(raw === '') { inp.focus(); return alert('Enter units left'); }
+
+  const left = parseInt(raw, 10);
+  if(isNaN(left)) { inp.focus(); return alert('Enter a valid number'); }
+  if(left < 0 || left > current.total) { inp.focus(); return alert('Units left must be between 0 and total'); }
+
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total;
+  if(left > prevLeft) { inp.focus(); return alert('Units left cannot increase vs previous wrap'); }
+
+  const done = prevLeft - left;
+  if(done <= 0) { inp.focus(); return alert('No progress since last wrap'); }
+
+  const t = nowHHMM();
+  tempWraps.push({ left, done, t });
+  undoStack.push({ type:'wrap' });
+
+  inp.value = '';
+  refreshWrapButton();
+  renderTimeline();
+  updateSummary();
+  refreshCompleteButton();
+  saveAll();
 }
 
 function undoLast(){
   if(!current){ showToast('Nothing to undo'); return; }
   var last=undoStack.pop(); if(!last){ showToast('Nothing to undo'); return; }
-  if(last.type==='wrap'){ tempWraps.pop(); renderTimeline(); updateSummary(); saveAll(); return; }
-  if(last.type==='break'){ current.breaks.pop(); renderTimeline(); updateSummary(); saveAll(); return; }
-  if(last.type==='delay' && current.__lastDelay){ current.breaks = current.breaks.filter(b=>b!==current.__lastDelay); current.__lastDelay=null; renderTimeline(); updateSummary(); saveAll(); return; }
+
+  if(last.type==='wrap'){
+    tempWraps.pop();
+    renderTimeline();
+    updateSummary();
+    refreshCompleteButton();   // ← re-evaluate
+    saveAll();
+    return;
+  }
+  if(last.type==='break'){
+    current.breaks.pop();
+    renderTimeline();
+    updateSummary();
+    refreshCompleteButton();   // ← re-evaluate
+    saveAll();
+    return;
+  }
+  if(last.type==='delay' && current.__lastDelay){
+    current.breaks = current.breaks.filter(b=>b!==current.__lastDelay);
+    current.__lastDelay=null;
+    renderTimeline();
+    updateSummary();
+    refreshCompleteButton();   // ← re-evaluate
+    saveAll();
+    return;
+  }
   if(last.type==='start'){
     current=null; tempWraps=[];
     document.getElementById('orderArea').style.display='none';
     ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
     document.getElementById('btnStart').style.display='inline-block';
     document.getElementById('btnComplete').style.display='none';
-    showToast('Order start undone'); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); updateSummary(); saveAll(); return;
+    showToast('Order start undone');
+    updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); updateSummary();
+    refreshCompleteButton();   // ← safe
+    saveAll();
+    return;
   }
+}
+
+
+// === Option C: Early-complete gating helpers ===
+function minutesSinceHHMM(hhmm){
+  if(!hhmm) return 0;
+  const now = nowHHMM();
+  const diffMin = Math.round((hm(now) - hm(hhmm)) * 60);
+  return Math.max(0, diffMin);
+}
+
+function canCompleteOrder(){
+  if(!current) return false;
+
+  const left = currentLeftForGating();
+  const elapsed = minutesSinceHHMM(current.start);
+  const expected = ((current.total || 0) / 300) * 60; // target: 300 u/h
+  const reason = (document.getElementById('earlyReason')?.value || '').trim();
+
+  if (left <= 0) return true;                 // finished
+  if (elapsed >= expected * 0.70) return true; // ≥70% expected time
+  if (reason.length >= 4) return true;         // explicit reason
+
+  return false;
+}
+
+function refreshCompleteButton(){
+  const btn = document.getElementById('btnComplete');
+  if (!btn) return;
+
+  const left = currentLeftForGating();
+  const reasonBlock = document.getElementById('earlyReasonBlock');
+  if (reasonBlock) reasonBlock.classList.toggle('hidden', !(current && left > 0));
+
+  btn.disabled = !canCompleteOrder();
 }
 
 function completeOrder(){
@@ -1179,6 +1274,9 @@ function updateSummary(){
   const gap = live - 300;
   document.getElementById('chipGapVal').textContent = (gap>=0?'+':'') + gap;
 
+  const elapsedMin = (!isNaN(s)&&!isNaN(e)&&e>s) ? Math.round((e - s)*60) : 0;
+  const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
+
   updateEndShiftVisibility(); updateCloseEarlyVisibility();
 }
 
@@ -1187,12 +1285,26 @@ function updateSummary(){
 const CB_MAX = { layers: 2, ul: 2, extras: 2 };
 
 function getActiveCustomerCode(){
-  const sel = document.getElementById('qcCustomer');
-  const other = document.getElementById('qcOther');
-  let code = sel.value;
-  if(code==='__OTHER__') code = upcase6(other.value||'');
-  if(!code || !isValidCode(code)) return '__GEN__';
-  return code;
+  // Prefer QuickCalc customer if it exists (you currently don't render it)
+  const qcSel = document.getElementById('qcCustomer');
+  if (qcSel) {
+    const qcOther = document.getElementById('qcOther');
+    let code = qcSel.value;
+    if (code === '__OTHER__') code = upcase6((qcOther?.value)||'');
+    if (isValidCode(code)) return code;
+  }
+
+  // Otherwise use Tracker's active selector
+  const oSel = document.getElementById('oCust');
+  if (oSel) {
+    const oOther = document.getElementById('oOther');
+    let code = oSel.value;
+    if (code === '__OTHER__') code = upcase6((oOther?.value)||'');
+    if (isValidCode(code)) return code;
+  }
+
+  // Fallback: generic bucket
+  return '__GEN__';
 }
 function renderULayerChips(){
   const box = document.getElementById('cbChips'); if(!box) return;
@@ -1211,9 +1323,46 @@ function cbSetFocus(which){
   document.getElementById('cbHint').textContent = (which==='layers'?'Typing Layers…':which==='ul'?'Typing U/Layer…':'Typing Extras…');
 }
 function cbTap(d){
+  // append digit with 2-char cap
   const cap = CB_MAX[cbFocus] || 2;
   cbVals[cbFocus] = (cbVals[cbFocus]||'') + d;
   if (cbVals[cbFocus].length > cap) cbVals[cbFocus] = cbVals[cbFocus].slice(0, cap);
+
+  // Special smart-advance for LAYERS: 1–19
+  if (cbFocus === 'layers') {
+    const s = cbVals.layers;
+
+    // If first digit is 0 and a second digit exists (e.g., '08'), normalize to single-digit '8'
+    if (s.length === 2 && s[0] === '0') {
+      cbVals.layers = s[1];
+    }
+
+    // After typing first digit:
+    if (cbVals.layers.length === 1) {
+      const first = cbVals.layers[0];
+      // If first digit is 2–9, that's a complete layer count → auto-next now
+      if (first >= '2' && first <= '9') {
+        updateCbDisplays();
+        computeCbTotal();
+        cbNextField();
+        return;
+      }
+      // If first digit is '1', wait for second digit (10–19) before moving on
+    }
+
+    // After second digit with leading '1', clamp to 10–19 and next
+    if (cbVals.layers.length === 2 && cbVals.layers[0] === '1') {
+      // clamp 10–19 just in case
+      const n = Math.min(19, Math.max(10, toInt(cbVals.layers)));
+      cbVals.layers = String(n);
+      updateCbDisplays();
+      computeCbTotal();
+      cbNextField();
+      return;
+    }
+  }
+
+  // Default behavior for UL & EXTRAS (2 digits then next)
   updateCbDisplays();
   computeCbTotal();
   if (cbVals[cbFocus].length >= cap) cbNextField();
@@ -1272,13 +1421,12 @@ document.addEventListener('DOMContentLoaded', function(){
     loadAll();
 
     // Build dropdowns
-    buildDropdown('qcDD','qcCustomer','qcOther','qc');
     buildDropdown('oDD','oCust','oOther','o');
     reloadDropdowns();
 
     // Attach custom code input listeners
-    document.getElementById('qcOther')?.addEventListener('input', ()=>onOtherInput('qc'));
     document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
+    document.getElementById('oLeft')?.addEventListener('input', refreshWrapButton);
 
     applyProGate();
     renderHistory(); renderDone();
@@ -1304,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility();
-
+    document.getElementById('earlyReason')?.addEventListener('input', refreshCompleteButton);
     // Pro unlock & QuickCalc live
     var qcRateEl=document.getElementById('qcRate'); 
     if(qcRateEl){ 
@@ -1314,8 +1462,6 @@ document.addEventListener('DOMContentLoaded', function(){
     var qcUnitsEl=document.getElementById('qcUnits');
     if(qcUnitsEl){ qcUnitsEl.addEventListener('input', recalcQuick); qcUnitsEl.addEventListener('change', recalcQuick); }
     // also recalc when customer changes (not strictly needed but keeps UX in sync)
-    document.querySelector('#qcDD .dd-menu')?.addEventListener('click', ()=>setTimeout(recalcQuick,0));
-    document.querySelector('#qcDD .dd-toggle')?.addEventListener('click', ()=>setTimeout(recalcQuick,0));
 
     // Start button live validation
     ['oTotal','oOther'].forEach(id=>{ const el=document.getElementById(id); el && el.addEventListener('input', refreshStartButton); });
@@ -1323,7 +1469,10 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelector('#oDD .dd-toggle')?.addEventListener('click', ()=>setTimeout(refreshStartButton,0));
 
     setInterval(function(){
-      if(!document.getElementById('tabTracker').classList.contains('hidden')) updateSummary();
+      if(!document.getElementById('tabTracker').classList.contains('hidden')){
+        updateSummary();
+        refreshCompleteButton();  // ← belt-and-braces
+      }
     }, 600);
 
     var stEl=document.getElementById('tStart'); if(stEl) stEl.addEventListener('change', function(){ startTime=stEl.value; updateSummary(); saveAll(); });
