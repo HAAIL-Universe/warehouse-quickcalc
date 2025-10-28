@@ -1,0 +1,2275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warehouse QuickCalc & Tracker v3.3.55</title>
+<style>
+:root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; background:#0b0d10; color:var(--ink); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
+h1 { font-size: 20px; margin:6px 0 10px; }
+.tabs { display:flex; gap:8px; margin:6px 0 10px; position: sticky; top:0; background:var(--bg); padding-top:6px; z-index:15; }
+.tabbtn { flex:1; text-align:center; padding:10px; border:1px solid #253348; border-radius:10px; background:#0f131b; color:var(--ink); font-weight:700; cursor:pointer; }
+.tabbtn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.hidden { display:none; }
+.card { background:var(--card); border:1px solid #253348; border-radius:14px; padding:14px; margin: 10px 0; }
+/* Make the Live Rate chip clearly clickable */
+#chipRate { 
+  cursor: pointer; 
+  transition: transform .08s ease; 
+}
+#chipRate:active { 
+  transform: scale(0.97); 
+}
+/* QC keypad tactile press + pointer */
+.cbPad button {
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.cbPad button:active {
+  transform: scale(0.97);
+}
+.cbPad button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+input, select, button, textarea { font-size:16px; }
+input[type="number"], input[type="time"], input[type="text"], select, textarea {
+  width:100%; background:#0f131b; color:var(--ink); border:1px solid #29364a; border-radius:10px; padding:10px; outline:none;
+}
+textarea{ min-height:90px; resize:vertical; }
+.row { display:flex; gap:10px; flex-wrap: wrap; }
+.col { flex:1; min-width:220px; }
+.btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; cursor:pointer; }
+.btn.ghost { background:transparent; border-color:#29364a; }
+.btn.ok { border-color:#2e6b3a; background:#173220; }
+.btn.warn { border-color:#8a6a15; background:#30250f; }
+.btn.bad { border-color:#7a2b2b; background:#331b1b; }
+.btn.chip { padding:8px 10px; border-radius:999px; }
+.btn.slim { padding:6px 10px; border-radius:999px; font-size:14px; }
+.btn[disabled] { opacity:0.5; cursor:not-allowed; }
+.pill { border-radius:12px; padding:10px 12px; background:#0f131b; border:1px solid #29364a; text-align:center; }
+.pill h3 { margin:0; font-size:13px; color:#9fb3c8; }
+.pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
+.rateBanner { position: sticky; top:48px; z-index:10; display:flex; gap:10px; margin:8px 0; }
+.rateChip { flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid #29364a; background:#0f131b; }
+.rateChip.good { border-color:#1f4830; background:#14271c; }
+.rateChip.warn { border-color:#584a1a; background:#2a230f; }
+.rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
+.rateChip.green { border-color:#1f4830; background:#14271c; }
+.rateChip.amber { border-color:#584a1a; background:#2a230f; }
+.timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
+.tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
+.tick .meta { color:#9fb3c8; font-size:12px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { border-bottom:1px dashed #253348; padding:8px 6px; text-align:left; }
+th { color:#9fb3c8; }
+tr.clickable { cursor:pointer; }
+td.small { font-size:12px; color:#9fb3c8; }
+.bottom-actions { margin: 20px 0 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bottom-actions .left { flex:1 1 auto; min-width:220px; }
+.bottom-actions .right { flex:0 0 auto; white-space:nowrap; display:flex; gap:8px; }
+.safetybar { margin: 8px 0 40px; }
+.safetybar .btn { width:100%; border-style:dashed; opacity:0.8; }
+.hint { color:#9fb3c8; font-size:12px; }
+.tagbox { display:flex; flex-wrap:wrap; gap:8px; }
+.tag { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid #29364a; background:#0f131b; font-weight:700; }
+.tag button { border:0; background:transparent; color:#9fb3c8; cursor:pointer; font-size:14px; }
+.accordion .accHead { width:100%; text-align:left; padding:10px; border:1px solid #29364a; background:#0f131b; border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.accordion .accHead.ok { border-color:#1f4830; background:#14271c; }
+.accordion .accHead.warn { border-color:#584a1a; background:#2a230f; }
+.accordion .accHead.bad { border-color:#4f1f1f; background:#2a1313; }
+.accordion .accBody { display:none; padding:10px 0 0 0; }
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0f131b; border:1px solid #29364a; padding:10px 12px; border-radius:10px; display:none; z-index:30; }
+.toast.show { display:block; }
+.logwrap { padding:8px 10px; background:#0f131b; border:1px solid #29364a; border-radius:10px; margin:8px 0; }
+.logrow { display:none; }
+.logrow td { border-bottom:none; padding-top:0; }
+.gate-pro { display:none; }
+
+/* Modal */
+.modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:20; }
+.modal .box { width:min(560px,92vw); background:#0f131b; border:1px solid #29364a; border-radius:12px; padding:14px; }
+.modal .hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.modal .hdr h3 { margin:0; font-size:16px; color:#cfe2ff; }
+.modal .fld { margin:8px 0; }
+.modal .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+.count { font-variant-numeric: tabular-nums; font-weight:800; font-size:28px; }
+
+/* Custom dropdown */
+.dd { position:relative; }
+.dd-toggle { width:100%; text-align:left; padding:10px; border:1px solid #29364a; border-radius:10px; background:#0f131b; color:var(--ink); cursor:pointer; }
+.dd.open .dd-menu { display:block; }
+.dd-menu { position:absolute; z-index:12; left:0; right:0; top:110%; background:#0f131b; border:1px solid #29364a; border-radius:10px; padding:6px; display:none; max-height:280px; overflow:auto; }
+.dd-group { border:1px solid #29364a; border-radius:8px; margin:6px 0; overflow:hidden; }
+.dd-group h4 { margin:0; padding:8px 10px; background:#0b0d10; color:#cfe2ff; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
+.dd-items { display:none; padding:4px 6px; }
+.dd-items button { width:100%; text-align:left; padding:8px 10px; background:transparent; border:0; color:var(--ink); cursor:pointer; border-radius:6px; }
+.dd-items button:hover { background:#11151d; }
+.dd-other { margin:6px 0 0; display:flex; gap:6px; }
+.dd-other button { flex:1; }
+.dd-other input { flex:1; }
+
+/* Countback calc */
+.cbCard { margin-top:8px; padding:10px; border-radius:12px; border:1px dashed #29364a; background:#0f131b; }
+.cbRow { display:flex; gap:8px; align-items:center; }
+.cbDisplay { flex:1; display:flex; gap:8px; }
+.cbBox { flex:1; border:1px solid #29364a; border-radius:10px; padding:8px; }
+.cbBox h4 { margin:0 0 6px; font-size:12px; color:#9fb3c8; }
+.cbVal { font-weight:800; font-size:22px; min-height:28px; }
+.cbPad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; }
+.cbPad button { padding:28px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:500; font-size:22px; }
+.cbChips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.cbSummary { margin-left:auto; text-align:right; font-weight:800; }
+
+/* === Break Bar (bottom sticky) === */
+.breakbar{
+  position:sticky;
+  bottom:0;
+  z-index:25;
+  background:#0f131b;
+  border:1px solid #29364a;
+  border-radius:12px;
+  padding:10px;
+  display:none;           /* hidden until a break starts */
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+}
+.breakbar .grow{ flex:1; }
+.breakbar .title{ font-weight:800; }
+.breakbar .meta{ color:#9fb3c8; font-size:12px; }
+/* Weekly summary card tinting */
+.card.ok  { border-color:#1f4830; background:#14271c; }
+.card.warn{ border-color:#584a1a; background:#2a230f; }
+.card.bad { border-color:#4f1f1f; background:#2a1313; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Warehouse QuickCalc & Tracker v3.3.55</h1>
+
+  <div class="tabs">
+    <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
+    <button id="tabTrackBtn" class="tabbtn" type="button" onclick="showTab('tracker')">Tracker</button>
+    <button id="tabHistBtn" class="tabbtn" type="button" onclick="showTab('history')">History</button>
+  </div>
+
+  <div id="liveBanner" class="rateBanner hidden">
+    <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
+    <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
+    <div id="chipElapsed" class="rateChip" style="display:none;"><b>Back in</b><div id="chipElapsedVal">—</div></div>
+  </div>
+
+  <!-- QuickCalc -->
+  <section id="tabCalc">
+    <!-- Countback calculator (moved ABOVE QuickCalc) -->
+    <div class="cbCard">
+      <div class="cbRow" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="cbDisplay">
+          <div class="cbBox">
+            <h4>Layers</h4>
+            <div id="cbLayers" class="cbVal">0</div>
+          </div>
+          <div class="cbBox">
+            <h4>U/Layer</h4>
+            <div id="cbUL" class="cbVal">0</div>
+            <div id="cbChips" class="cbChips"></div>
+          </div>
+          <div class="cbBox">
+            <h4>Extras</h4>
+            <div id="cbExtras" class="cbVal">0</div>
+          </div>
+          <div class="cbSummary">
+            <div class="hint">Total</div>
+            <div id="cbTotal" class="count">0</div>
+            <div id="cbHint" class="hint" style="margin-top:4px;text-align:right;">Typing Layers…</div>
+
+          </div>
+        </div>
+        <div style="flex:1; min-width:240px; display:flex; gap:8px;">
+          <div style="flex:1;">
+            <div class="cbPad" style="flex:1;">
+            <button onclick="cbTap('7')">7</button>
+            <button onclick="cbTap('8')">8</button>
+            <button onclick="cbTap('9')">9</button>
+            <button onclick="cbTap('4')">4</button>
+            <button onclick="cbTap('5')">5</button>
+            <button onclick="cbTap('6')">6</button>
+            <button onclick="cbTap('1')">1</button>
+            <button onclick="cbTap('2')">2</button>
+            <button onclick="cbTap('3')">3</button>
+            <button onclick="cbTap('0')">0</button>
+            <button onclick="cbBack()">⌫</button>
+            <button onclick="cbReset()">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div> <!-- /.cbRow -->
+  </div>   <!-- /.cbCard -->
+    <!-- QuickCalc inputs -->
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Units</label>
+          <input id="qcUnits" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+        </div>
+        <div class="col">
+          <label>Override Rate (u/h)</label>
+          <input id="qcRate" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="optional">
+        </div>
+      </div>
+      <!-- Live result -->
+      <div class="row" style="margin-top:10px;">
+        <div class="col">
+          <div class="pill">
+            <h3>Rate Used</h3>
+            <p id="qcRateUsed">300 u/h</p>
+          </div>
+        </div>
+        <div class="col">
+          <div class="pill">
+            <h3>Time Needed</h3>
+            <p id="qcTime">—</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tracker -->
+  <section id="tabTracker" class="hidden">
+    <div class="card" id="shiftCard">
+      <div class="row" style="align-items:flex-end;">
+        <div class="col">
+          <div class="row" style="gap:8px; justify-content:center;">
+            <button class="btn ok" type="button" style="min-width:140px;" onclick="startShift(9)">Start 9h Shift</button>
+            <button class="btn" type="button" style="min-width:140px;" onclick="startShift(10)">Start 10h Shift</button>
+          </div>
+          <div id="snapHint" class="hint"></div>
+        </div>
+
+        <!-- keep tLen as a hidden field so the rest of the code works unchanged -->
+        <input id="tLen" type="number" value="9" style="display:none;">
+      </div>
+
+      <div class="hint">Start time is snapped to the nearest hour automatically.  
+      Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (includes breaks & delays).</div>
+    </div>
+    <div class="card" id="activeOrderCard" style="display:none;">
+      <div class="row" style="align-items:flex-end;">
+        <div class="col">
+          <label>Customer</label>
+          <div class="row" style="gap:6px;">
+            <div class="col">
+              <select id="oCust" class="hidden"></select>
+              <div id="oDD" class="dd">
+                <button class="dd-toggle" type="button">Select customer…</button>
+                <div class="dd-menu"></div>
+              </div>
+            </div>
+            <div class="col">
+              <input id="oOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <label>Total units</label>
+          <input id="oTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 1024">
+        </div>
+        <div class="col" style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <button id="btnUndo" class="btn slim" type="button" onclick="undoLast()" style="display:none;">Undo</button>
+          <span style="flex:1"></span>
+          <button id="btnB" class="btn chip" type="button" title="Start 20 min break" onclick="openBreakModal('B')" style="display:none;">B</button>
+          <button id="btnL" class="btn chip" type="button" title="Start 30 min lunch" onclick="openBreakModal('L')" style="display:none;">L</button>
+          <button class="btn" type="button" onclick="startOrder()" id="btnStart" disabled>Start</button>
+          <button class="btn ok" type="button" onclick="completeOrder()" id="btnComplete" style="display:none;">Complete</button>
+          <button class="btn warn" id="btnCloseInline" type="button"
+                  onclick="openCloseEarlyModal()" style="display:none;">Close Early…</button>
+        </div>
+      </div>
+
+      <div id="orderArea" style="display:none; margin-top:10px;">
+        <div class="row">
+          <div class="col">
+            <label>Units left (log wrap)</label>
+            <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+          </div>
+          <div class="col" style="display:flex; align-items:flex-end; gap:6px;">
+            <div class="col" style="max-width:160px;"><button id="btnLogWrap" class="btn" type="button" onclick="logWrap()" disabled>Log Wrap</button></div>
+          </div>
+        </div>
+        <div class="timeline" id="orderTimeline"></div>
+      </div>
+    </div>
+
+    <div class="card" id="completedCard" style="display:none;">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>
+        <tbody id="doneBody"></tbody>
+      </table>
+    </div>
+
+    <div class="bottom-actions">
+      <div class="left">
+        <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log Delay ⏱️</button>
+      </div>
+      <div class="right">
+        <button class="btn" type="button" id="btnCloseEarly" onclick="openCloseEarlyModal()" style="display:none;">Close Early…</button>
+        <button class="btn ok" type="button" id="btnEndShift" onclick="endShift()" style="min-width:220px;">End Shift & Archive →</button>
+      </div>
+    </div>
+    <div class="safetybar">
+      <button class="btn ghost" type="button" onclick="clearToday()">Clear today's data</button>
+    </div>
+  </section>
+
+  <!-- Bottom Break Bar -->
+  <div id="breakBar" class="breakbar">
+    <div class="grow">
+      <div class="title" id="breakBarTitle">Break</div>
+      <div class="meta">
+        Started <span id="breakBarStart">--:--</span> • <span id="breakBarTarget">20 min target</span>
+      </div>
+    </div>
+    <div class="count" id="breakBarCountdown">20 min</div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" type="button" onclick="submitBreak()">Stop & Log</button>
+      <button class="btn ghost" type="button" onclick="cancelBreak()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- History -->
+  <section id="tabHistory" class="hidden">
+    <div id="weekCard" class="card">
+      <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0; font-size:14px; color:#9fb3c8;">This Week (Sun–Sat)</h3>
+          <div class="hint" id="weekRangeHint">Week: —</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <div class="pill"><h3>Weighted Avg</h3><p id="weekWeighted">— u/h</p></div>
+          <div class="pill"><h3>Simple Mean</h3><p id="weekMean">— u/h</p></div>
+          <div class="pill"><h3>Total Units</h3><p id="weekUnits">0</p></div>
+          <div class="pill"><h3>Total Hours</h3><p id="weekHours">0.0</p></div>
+          <div class="pill"><h3>Days Counted</h3><p id="weekDays">0</p></div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:6px;">
+        Weighted Avg = total units ÷ total hours. Simple Mean = average of daily rates.
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <h3 style="margin:0; font-size:14px; color:#9fb3c8;">History (daily archives)</h3>
+        <div>
+          <button class="btn gate-pro" type="button" onclick="exportCSV()">Export CSV (today)</button>
+          <button class="btn gate-pro" type="button" onclick="exportJSON()">Export JSON (all)</button>
+          <label id="impLabel" class="btn gate-pro" for="impFile">Import JSON</label><input id="impFile" type="file" accept="application/json" style="display:none;">
+          <button class="btn" type="button" style="background:#331b1b;border-color:#7a2b2b;" onclick="clearHistory()">Clear History</button>
+          <button class="btn gate-pro" type="button" onclick="toggleManageCustomers()">Manage Customers</button>
+        </div>
+      </div>
+      <div id="histList" style="margin-top:8px;"></div>
+    </div>
+
+    <div id="manageCustomersCard" class="card hidden">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Manage Customers</h3>
+      <div class="hint">Manually-added customers are shown below. Tap ✖ to remove.</div>
+      <div id="custTags" class="tagbox" style="margin-top:8px;"></div>
+      <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn ghost" type="button" onclick="reloadDropdowns()">Reload dropdowns</button>
+        <button class="btn bad" type="button" onclick="clearAllCustom()">Clear ALL custom customers</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Delay Modal -->
+<div id="delayModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delayTitle">
+  <div class="box">
+    <div class="hdr">
+      <h3 id="delayTitle">Log Delay</h3>
+      <button class="btn slim ghost" type="button" onclick="closeDelayModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label>Start (auto)</label>
+      <input id="delayStart" type="time" readonly>
+    </div>
+    <div class="fld">
+      <label>Cause</label>
+      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitDelay()">Submit & Stop</button>
+    </div>
+  </div>
+</div>
+<!-- Live Rate Modal -->
+<div id="liveModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="liveTitle">
+  <div class="box" style="max-width:640px;">
+    <div class="hdr">
+      <h3 id="liveTitle">Live Rate – Now</h3>
+      <button class="btn slim ghost" type="button" onclick="closeLiveModal()">✖</button>
+    </div>
+    <div class="fld">
+      <div class="row">
+        <div class="col">
+          <div class="pill"><h3>Total Units</h3><p id="live_totUnits">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Elapsed</h3><p id="live_elapsed">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Live Rate</h3><p id="live_rate">— u/h</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fld">
+      <div class="logwrap">
+        <div class="hint">Formula</div>
+        <div id="live_formula" class="tick">Live = Total Units ÷ Hours</div>
+        <div class="hint" style="margin-top:6px;">
+          Colour key: <b style="color:#9fd6a5;">Green ≥ 300</b> • <b style="color:#e6cf8a;">Amber 249–299</b> • <b style="color:#e49b9b;">Red &lt; 249</b>
+        </div>
+        <div class="actions" style="justify-content:center; flex-direction:column; align-items:center; text-align:center;">
+          <button class="btn" type="button" onclick="openLiveUpdateModal()">Update with Units Remaining</button>
+          <span id="live_hint" class="hint" style="margin-top:6px;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Live Update (override Left) Modal -->
+<div id="liveUpdateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="liveUpdateTitle">
+  <div class="box" style="max-width:420px;">
+    <div class="hdr">
+      <h3 id="liveUpdateTitle">Units Remaining</h3>
+      <button class="btn slim ghost" type="button" onclick="closeLiveUpdateModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label for="liveLeftInput">How many units remain on this order?</label>
+      <input id="liveLeftInput" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+      <div class="hint" id="liveUpdateHint"></div>
+    </div>
+    <div class="actions" style="justify-content:center; gap:8px;">
+      <button class="btn ghost" type="button" onclick="closeLiveUpdateModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitLiveUpdateLeft()">Update</button>
+    </div>
+  </div>
+</div>
+<!-- Close Early Modal -->
+<div id="closeEarlyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="closeEarlyTitle">
+  <div class="box">
+    <div class="hdr">
+      <h3 id="closeEarlyTitle">Close Order Early</h3>
+      <button class="btn slim ghost" type="button" onclick="closeCloseEarlyModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label>Remaining units</label>
+      <input id="ceRemaining" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+    </div>
+    <div class="fld">
+      <label>Reason (required if 0 units or under 70% expected time)</label>
+      <textarea id="ceReason" placeholder="Explain why closing early…"></textarea>
+    </div>
+    <div class="fld" style="display:flex;align-items:center;gap:8px;">
+      <input id="ceWrapped" type="checkbox">
+      <label for="ceWrapped" style="margin:0;">Wrapped last pallet</label>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" type="button" onclick="closeCloseEarlyModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitCloseEarly()">Close Order</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast">Saved</div>
+
+<script>
+// ====== State ======
+let picks = [];         // closed orders
+let tempWraps = [];     // wraps in current order
+let current = null;     // active order
+let startTime = "";     // shift start (HH:MM)
+let lastClose = "";     // last order close time
+let undoStack = [];     // undo actions for current order
+let learned = {};       // placeholder
+let historyDays = [];   // archived days
+let customCodes = [];   // user-added customer codes
+let shiftBreaks = [];   // breaks without an active order
+let learnedUL = {};     // U/Layer frequency map (persisted via KEY_LEARN)
+
+// Countback focus & values
+let cbFocus = 'layers'; // 'layers' | 'ul' | 'extras'
+let cbVals = {layers:'', ul:'', extras:''};
+
+const KEY = 'wqt_v2722_data';
+const KEY_CODES = 'wqt_codes';
+const KEY_LEARN = 'wqt_learn_ul';
+const PRO_UNLOCK_CODE = '0000';
+let proUnlocked = false;  // Gate: Export/Import/Manage Customers
+
+// Delay / Break
+let delayDraft = null; // {start:'HH:MM', cause:''}
+let breakDraft = null; // {type:'B'|'L', startHHMM, targetSec, beeping}
+let breakTickId = null;
+
+// ====== Utils ======
+function showToast(msg){ try{ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1400);}catch(e){} }
+function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10), M=parseInt(a[1],10); if(isNaN(H)||isNaN(M)) return NaN; return H + M/60; }
+function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function fmtMMSS(totalSec){ var s=Math.max(0,Math.round(totalSec)); var m=Math.floor(s/60), r=s%60; return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0'); }
+function pad2(n){return String(n).padStart(2,'0');}
+function minutesToHHMM(x){ const h=Math.floor(x/60), m=x%60; return pad2(h)+':'+pad2(m); }
+function toInt(s){ const n=parseInt(s||'0',10); return isNaN(n)?0:n; }
+// --- Weekly helpers (Sun–Sat) ---
+function isoToDate(iso){
+  const d = new Date((iso||'') + 'T12:00:00'); // noon avoids TZ bleed
+  return isNaN(d) ? null : d;
+}
+function dateToISO(d){ return d.toISOString().slice(0,10); }
+function fmtShort(d){ return d.toDateString().slice(0,10); } // e.g., 'Sun Oct 26'
+
+function weekBoundsFor(dateIso){
+  const d = isoToDate(dateIso) || new Date();
+  const base = new Date(d); base.setHours(12,0,0,0);
+  const dow = base.getDay();            // 0 = Sun
+  const sun = new Date(base); sun.setDate(base.getDate() - dow);
+  const sat = new Date(sun);  sat.setDate(sun.getDate() + 6);
+  return { startISO: dateToISO(sun), endISO: dateToISO(sat), startDate: sun, endDate: sat };
+}
+function inRange(iso, aISO, bISO){ return iso >= aISO && iso <= bISO; }
+
+
+// Simple, safe beep (no external files)
+function tryBeep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 880;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+    o.start();
+    setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.02); o.stop(); ctx.close(); }, 350);
+  }catch(e){ /* no-op if blocked */ }
+}
+
+// ====== Persistence ======
+function loadAll(){
+  try {
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var p=JSON.parse(raw);
+      picks=p.picks||[]; learned=p.learned||{}; historyDays=p.history||[];
+      current=p.current||null; tempWraps=p.tempWraps||[]; startTime=p.startTime||""; lastClose=p.lastClose||""; undoStack=p.undoStack||[];
+      proUnlocked = !!p.proUnlocked;
+      shiftBreaks = p.shiftBreaks || [];
+    }
+    var lraw = localStorage.getItem(KEY_LEARN);
+    if(lraw){ learnedUL = JSON.parse(lraw)||{}; }
+  } catch(e){ console.error(e); }
+}
+function saveAll(){
+  try {
+    localStorage.setItem(KEY, JSON.stringify({
+      version:'3.3.55', savedAt:new Date().toISOString(),
+      picks, learned, history:historyDays,
+      current, tempWraps, startTime, lastClose, undoStack,
+      proUnlocked, shiftBreaks
+    }));
+    localStorage.setItem(KEY_LEARN, JSON.stringify(learnedUL));
+  } catch(e){ console.error(e); }
+}
+setInterval(function(){ saveAll(); }, 30000);
+
+// Custom codes
+function loadCustomCodes(){ try{ var raw=localStorage.getItem(KEY_CODES); if(raw){ customCodes=JSON.parse(raw)||[]; } }catch(e){ customCodes=[]; } }
+function saveCustomCodes(){ try{ localStorage.setItem(KEY_CODES, JSON.stringify(customCodes||[])); }catch(e){} }
+
+// ====== Grouped dropdowns ======
+const DEFAULT_CODES = [
+  'ASDAVO','ASDERI','ASDFAL','ASDLUT','ASDWAS',
+  'BOOHAY',
+  'COOAVO','COOLEA','COOWEL','COOWES',
+  'MORNOR','MORWAK',
+  'OCAPUR',
+  'SAIEME','SAINOR','SAITHA',
+  'TESDID','TESWIN',
+  'WAILEY'
+];
+function upcase6(s){ return (s||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,6); }
+function isValidCode(s){ return /^[A-Z]{6}$/.test(s||''); }
+function prefix3(code){ return (code||'').slice(0,3).toUpperCase(); }
+function groupedMap(all){
+  const map={};
+  all.forEach(c=>{ const p=prefix3(c); (map[p]=map[p]||[]).push(c); });
+  Object.keys(map).forEach(k=>map[k].sort());
+  return Object.fromEntries(Object.entries(map).sort(([a],[b])=>a.localeCompare(b)));
+}
+
+function currentLeftForGating(){
+  if(!current) return 0;
+  const raw = (document.getElementById('oLeft')?.value || '').trim();
+  if (raw !== '' && !isNaN(parseInt(raw,10))) return parseInt(raw,10);
+  if (tempWraps.length) return tempWraps[tempWraps.length-1].left;
+  return current.total; // no wraps + no input = nothing picked yet
+}
+
+function buildDropdown(ddId, selectId, otherInputId, prefix){
+  const sel = document.getElementById(selectId);
+  const dd  = document.getElementById(ddId);
+  const menu = dd.querySelector('.dd-menu');
+  const btn = dd.querySelector('.dd-toggle');
+  const otherInput = document.getElementById(otherInputId);
+
+  function setValue(val){
+    sel.value = val;
+    btn.textContent = val==='__OTHER__' ? 'Other…' : val;
+    onCustomerChange(prefix);
+    if(prefix==='o') refreshStartButton();
+    saveAll();
+    dd.classList.remove('open');
+  }
+
+  function render(){
+    menu.innerHTML = "";
+    const all = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
+    const groups = groupedMap(all);
+    Object.keys(groups).forEach(g=>{
+      const wrap = document.createElement('div'); wrap.className='dd-group';
+      const head = document.createElement('h4'); head.innerHTML = `<span>${g}</span><span>▾</span>`;
+      const items = document.createElement('div'); items.className='dd-items';
+      head.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const open = items.style.display==='block';
+        items.style.display = open?'none':'block';
+        head.lastChild.textContent = open?'▾':'▴';
+      });
+      groups[g].forEach(code=>{
+        const it = document.createElement('button'); it.type='button'; it.textContent=code;
+        it.addEventListener('click', (e)=>{ e.stopPropagation(); setValue(code); });
+        items.appendChild(it);
+      });
+      wrap.appendChild(head); wrap.appendChild(items);
+      menu.appendChild(wrap);
+    });
+
+    // Other… row
+    const row = document.createElement('div'); row.className='dd-other';
+    const otherBtn = document.createElement('button'); otherBtn.className='btn slim'; otherBtn.textContent='Other…'; otherBtn.type='button';
+    otherBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      setValue('__OTHER__');
+      otherInput.classList.remove('hidden'); otherInput.focus();
+    });
+    row.appendChild(otherBtn);
+    menu.appendChild(row);
+
+    menu.addEventListener('click', (e)=> e.stopPropagation());
+  }
+
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.dd.open').forEach(x=>{ if(x!==dd) x.classList.remove('open'); });
+    dd.classList.toggle('open');
+    if(dd.classList.contains('open')) { menu.scrollTop = 0; }
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(!dd.contains(e.target)) dd.classList.remove('open');
+  });
+
+  render();
+  btn.textContent = sel.value ? (sel.value==='__OTHER__' ? 'Other…' : sel.value) : 'Select customer…';
+  dd.__reload = render;
+}
+
+function reloadDropdowns(){
+  const uniq = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
+  const oSel  = document.getElementById('oCust');
+  if (oSel) {
+    oSel.innerHTML = '';
+    uniq.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      oSel.appendChild(o);
+    });
+    const other = document.createElement('option');
+    other.value = '__OTHER__'; other.textContent = 'Other…';
+    oSel.appendChild(other);
+  }
+  document.getElementById('oDD')?.__reload?.();
+}
+
+function onCustomerChange(prefix){
+  const sel   = document.getElementById(prefix==='qc' ? 'qcCustomer' : 'oCust');
+  const input = document.getElementById(prefix==='qc' ? 'qcOther'    : 'oOther');
+  if(!sel || !input) return;
+  if(sel.value==='__OTHER__'){ input.classList.remove('hidden'); input.focus(); }
+  else { input.classList.add('hidden'); }
+  if(prefix==='o') refreshStartButton();
+  renderULayerChips();
+  saveAll();
+}
+
+function onOtherInput(prefix){
+  const sel   = document.getElementById(prefix==='qc' ? 'qcCustomer' : 'oCust');
+  const input = document.getElementById(prefix==='qc' ? 'qcOther'    : 'oOther');
+  const dd    = document.getElementById(prefix==='qc' ? 'qcDD'       : 'oDD');
+  if(!sel || !input) return;
+  const before = input.value;
+  input.value = upcase6(input.value);
+  if(before!==input.value && prefix==='o') refreshStartButton();
+  const code = input.value;
+  if(isValidCode(code)){
+    if(customCodes.indexOf(code)===-1){
+      customCodes.push(code); saveCustomCodes();
+    }
+    reloadDropdowns();
+    sel.value = code;
+    input.classList.add('hidden');
+    if(dd && dd.querySelector('.dd-toggle')) dd.querySelector('.dd-toggle').textContent = code;
+    if(prefix==='o') refreshStartButton();
+    showToast('Added '+code);
+    renderULayerChips();
+    saveAll();
+  }
+}
+
+// ====== Pro Gate ======
+function applyProGate(){
+  document.querySelectorAll('.gate-pro').forEach(el=> el.style.display = proUnlocked ? '' : 'none');
+  saveAll();
+}
+function updCalcGate(){
+  const el = document.getElementById('qcRate');
+  const raw = (el.value||'').toString().trim();
+  if(raw.replace(/\s/g,'') === PRO_UNLOCK_CODE && !proUnlocked){
+    proUnlocked = true;
+    el.value = '';
+    el.blur();
+    applyProGate();
+    showToast('Pro unlocked for this session');
+    recalcQuick();
+  }
+}
+
+// ====== Tabs ======
+function showTab(which){
+  const id = 'tab'+which.charAt(0).toUpperCase()+which.slice(1);
+  ['tabCalc','tabTracker','tabHistory'].forEach(x=>document.getElementById(x).classList.toggle('hidden', x!==id));
+  ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(x=>document.getElementById(x).classList.remove('active'));
+  if(which==='calc') document.getElementById('tabCalcBtn').classList.add('active');
+  if(which==='tracker') document.getElementById('tabTrackBtn').classList.add('active');
+  if(which==='history') document.getElementById('tabHistBtn').classList.add('active');
+  document.getElementById('liveBanner').classList.toggle('hidden', which!=='tracker');
+  updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility();
+  saveAll();
+}
+
+// ====== Tracker core ======
+function setNow(id){ var el=document.getElementById(id); var now=nowHHMM(); if(id==='tStart'){ el.value=now; startTime=now; document.getElementById('snapHint').textContent='Start set to '+now; updateSummary(); } else { el.value=now; } saveAll(); }
+function snapToNearestHour(){
+  const d = new Date();
+  let h = d.getHours();
+  if (d.getMinutes() >= 30) h = (h + 1) % 24;
+  return String(h).padStart(2,'0') + ':00';
+}
+
+function startShift(lenHours){
+  // set hidden length so downstream math works unchanged
+  const lenEl = document.getElementById('tLen');
+  if (lenEl) lenEl.value = String(lenHours || 9);
+
+  // snap + store
+  startTime = snapToNearestHour();
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = `Shift started @ ${startTime} • ${lenEl ? lenEl.value : lenHours || 9}h`;
+
+  // kick off
+  beginShift();
+}
+
+function beginShift(){ 
+  if(!startTime) startTime = snapToNearestHour();
+
+  document.getElementById('shiftCard').style.display = 'none';
+  document.getElementById('activeOrderCard').style.display = 'block';
+  document.getElementById('completedCard').style.display = 'block';
+  ['btnB','btnL'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'inline-block'; });
+
+  renderDone(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
+
+  // Keep elapsed chip hidden until an order or break starts
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) {
+    chipBox.style.display = 'none';
+    const chipVal = document.getElementById('chipElapsedVal');
+    if (chipVal) chipVal.textContent = '—';
+  }
+}
+
+function refreshStartButton(){
+  const sel = document.getElementById('oCust');
+  const other = document.getElementById('oOther');
+  const total = parseInt(document.getElementById('oTotal').value||'0',10);
+  const hasCust = sel.value && sel.value!=='__OTHER__' || (sel.value==='__OTHER__' && /^[A-Z]{6}$/.test((other.value||'').toUpperCase()));
+  const ok = hasCust && total>0;
+  const btn = document.getElementById('btnStart');
+  btn.disabled = !ok;
+}
+
+function refreshWrapButton(){
+  const btn = document.getElementById('btnLogWrap');
+  const inp = document.getElementById('oLeft');
+  if(!btn || !inp) return;
+  const raw = (inp.value||'').trim();
+  btn.disabled = (raw === '');
+}
+
+
+function startOrder() {
+  const sel = document.getElementById('oCust'); 
+  const name = sel.value;
+  const total = parseInt(document.getElementById('oTotal').value || '0', 10);
+
+  if (!startTime) return alert('Set shift start before starting an order.');
+  if (!(name && name !== '__OTHER__') && !(name === '__OTHER__' && /^[A-Z]{6}$/.test((document.getElementById('oOther').value || '').toUpperCase()))) {
+    return alert('Select a valid customer code');
+  }
+  if (!(total > 0)) return alert('Enter total units');
+
+  const finalName = (name === '__OTHER__') ? document.getElementById('oOther').value.toUpperCase() : name;
+
+  current = { name: finalName, total: total, start: nowHHMM(), breaks: [] };
+  tempWraps = [];
+  undoStack = [{ type: 'start' }];
+
+  document.getElementById('orderArea').style.display = 'block';
+  refreshWrapButton();
+  ['btnB', 'btnL', 'btnUndo'].forEach(id => document.getElementById(id).style.display = 'inline-block');
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnComplete').style.display = 'inline-block';
+  document.getElementById('btnComplete').disabled = true;
+
+  refreshCompleteButton();
+  renderTimeline();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+  saveAll();
+
+  // ===== Reset & start Elapsed timer =====
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) {
+    chipBox.style.display = '';
+    const chipLabel = chipBox.querySelector('b');
+    if (chipLabel) chipLabel.textContent = 'Elapsed';
+  }
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (chipVal) chipVal.textContent = '0 min';
+  updateElapsedChip(); // begin ticking fresh
+}
+
+function logWrap(){
+  if(!current) return alert('Start an order first');
+  const inp = document.getElementById('oLeft');
+  const raw = (inp.value||'').trim();
+  if(raw === '') { inp.focus(); return alert('Enter units left'); }
+
+  const left = parseInt(raw, 10);
+  if(isNaN(left)) { inp.focus(); return alert('Enter a valid number'); }
+  if(left < 0 || left > current.total) { inp.focus(); return alert('Units left must be between 0 and total'); }
+
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total;
+  if(left > prevLeft) { inp.focus(); return alert('Units left cannot increase vs previous wrap'); }
+
+  const done = prevLeft - left;
+  if(done <= 0) { inp.focus(); return alert('No progress since last wrap'); }
+
+  const t = nowHHMM();
+  tempWraps.push({ left, done, t });
+  undoStack.push({ type:'wrap' });
+
+  inp.value = '';
+  refreshWrapButton();
+  renderTimeline();
+  updateSummary();
+  refreshCompleteButton();
+  saveAll();
+}
+
+function undoLast(){
+  if(!current){ showToast('Nothing to undo'); return; }
+  var last=undoStack.pop(); if(!last){ showToast('Nothing to undo'); return; }
+
+  if(last.type==='wrap'){
+    tempWraps.pop();
+    renderTimeline();
+    updateSummary();
+    refreshCompleteButton();   // ← re-evaluate
+    saveAll();
+    return;
+  }
+  if(last.type==='break'){
+    current.breaks.pop();
+    renderTimeline();
+    updateSummary();
+    refreshCompleteButton();   // ← re-evaluate
+    saveAll();
+    return;
+  }
+  if(last.type==='delay' && current.__lastDelay){
+    current.breaks = current.breaks.filter(b=>b!==current.__lastDelay);
+    current.__lastDelay=null;
+    renderTimeline();
+    updateSummary();
+    refreshCompleteButton();   // ← re-evaluate
+    saveAll();
+    return;
+  }
+  if(last.type==='start'){
+    current=null; tempWraps=[];
+    document.getElementById('orderArea').style.display='none';
+    ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('btnStart').style.display='inline-block';
+    document.getElementById('btnComplete').style.display='none';
+    showToast('Order start undone');
+    updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); updateSummary();
+    refreshCompleteButton();   // ← safe
+    saveAll();
+    return;
+  }
+}
+
+
+// === Option C: Early-complete gating helpers ===
+function minutesSinceHHMM(hhmm){
+  if(!hhmm) return 0;
+  const now = nowHHMM();
+  const diffMin = Math.round((hm(now) - hm(hhmm)) * 60);
+  return Math.max(0, diffMin);
+}
+
+function canCompleteOrder(){
+  return !!current; // no time gate
+}
+
+
+function refreshCompleteButton(){
+  const btn = document.getElementById('btnComplete');
+  if (!btn) return;
+  // no timing logic, no reason block gating
+  btn.disabled = !current;
+}
+
+// ====== Shared Helpers ======
+function confirmCloseSummary({name, unitsDone, pallets, start, close, remaining=null, earlyReason=""}){
+  const palletTxt = pallets === 1 ? '1 pallet' : (pallets + ' pallets');
+  const remainTxt = (remaining !== null) ? ` • ${remaining} remaining` : '';
+  const reasonTxt = (earlyReason && earlyReason.trim()) ? `\nReason: ${earlyReason.trim()}` : '';
+  const msg =
+`Finish ${name}?
+Units: ${unitsDone}${remainTxt}
+Pallets: ${palletTxt}
+Start → Close: ${start} → ${close}${reasonTxt}`;
+  return confirm(msg);
+}
+
+function completeOrder() {
+  if (!current) return alert('Start an order first');
+  const close = nowHHMM();
+  if (!startTime) return alert('Add shift start first');
+  // If user typed 0 in Units left but didn’t log it, treat as finished.
+  const typedLeftRaw = (document.getElementById('oLeft')?.value || '').trim();
+  const typedLeft = typedLeftRaw === '' ? null : parseInt(typedLeftRaw, 10);
+  const treatTypedZeroAsDone = (typedLeft !== null && !isNaN(typedLeft) && typedLeft === 0);
+
+  // Calculate final state
+  const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
+  let unitsDone = current.total - (lastLeft || 0);
+
+  // Infer pallets: wraps == pallets; if no wraps but work done → assume 1 pallet
+  let palletsCount = tempWraps.length;
+  let addedImplicitWrap = false;
+
+  if (palletsCount === 0) {
+    const ok = confirmCloseSummary({
+      name: current.name,
+      unitsDone: current.total,
+      pallets: 1,
+      start: current.start,
+      close
+    });
+    if (!ok) return;
+
+    // Persist an implicit single-pallet wrap so logs are consistent
+    tempWraps.push({ left: 0, done: current.total, t: close });
+    palletsCount = 1;
+    unitsDone = current.total;
+    addedImplicitWrap = true;
+
+    // If user had typed 0, clear the input now to avoid stale UI
+    if (treatTypedZeroAsDone) {
+      const oLeftEl = document.getElementById('oLeft');
+      if (oLeftEl) oLeftEl.value = '';
+    }
+  }
+ else {
+    // We have recorded wraps → pallets = wraps.length
+    const ok = confirmCloseSummary({
+      name: current.name,
+      unitsDone,
+      pallets: palletsCount,
+      start: current.start,
+      close
+    });
+    if (!ok) return;
+  }
+
+  const exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
+
+  const order = {
+    name: current.name,
+    units: unitsDone,
+    pallets: palletsCount,
+    close,
+    start: current.start,
+    excl: exclMins,
+    log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
+  };
+
+  picks.push(order);
+  lastClose = close;
+  current = null;
+  tempWraps = [];
+  undoStack = [];
+
+  // Reset UI
+  document.getElementById('orderArea').style.display = 'none';
+  ['btnUndo'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('btnStart').style.display = 'inline-block';
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnComplete').style.display = 'none';
+  document.getElementById('oLeft').value = '';
+  document.getElementById('oTotal').value = '';
+
+  renderDone();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+
+  // Hide elapsed chip
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) {
+    chipBox.style.display = 'none';
+    const chipVal = document.getElementById('chipElapsedVal');
+    if (chipVal) chipVal.textContent = '—';
+  }
+
+  saveAll();
+  showToast('Order closed at ' + close);
+}
+
+// ====== Delay logging ======
+function updateDelayBtn(){ var el=document.getElementById('btnDelay'); if(el) el.style.display = current ? 'inline-block' : 'none'; }
+function openDelayModal(){
+  if(!current) return alert('Start an order to log a delay');
+  delayDraft = { start: nowHHMM(), cause: '' };
+  document.getElementById('delayStart').value = delayDraft.start;
+  document.getElementById('delayCause').value = '';
+  document.getElementById('delayModal').style.display='flex';
+}
+function closeDelayModal(){ document.getElementById('delayModal').style.display='none'; }
+function cancelDelay(){ delayDraft=null; closeDelayModal(); }
+function submitDelay(){
+  if(!current || !delayDraft){ closeDelayModal(); return; }
+  var end = nowHHMM();
+  var minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
+  var cause = (document.getElementById('delayCause').value||'').trim();
+  var entry = {type:'D', start: delayDraft.start, end, minutes, cause};
+  current.breaks.push(entry);
+  current.__lastDelay = entry;
+  undoStack.push({type:'delay'});
+  delayDraft=null;
+  closeDelayModal();
+  renderTimeline(); updateSummary(); showToast('Delay logged ('+minutes+'m)'); saveAll();
+}
+
+// ====== Break timer (banner) ======
+function openBreakModal(kind){
+  // Back-compat: buttons still call this; we now use the banner
+  startBreak(kind);
+}
+
+function startBreak(kind){
+  var mins = (kind==='B') ? 20 : 30;
+  var start = nowHHMM();
+  breakDraft = {type:kind, startHHMM:start, targetSec: mins*60, beeping:false};
+
+  // Fill banner
+  document.getElementById('breakBarTitle').textContent = (kind==='B'?'Break':'Lunch');
+  document.getElementById('breakBarStart').textContent = start;
+  document.getElementById('breakBarTarget').textContent = mins+' min target';
+  document.getElementById('breakBar').style.display = 'flex';
+
+  // Show the "Back in" chip and start ticking
+  document.getElementById('chipElapsed').style.display = '';
+  tickBreak(); // set first frame immediately
+  if(breakTickId) clearInterval(breakTickId);
+  breakTickId = setInterval(tickBreak, 1000);
+}
+
+function tickBreak() {
+  if (!breakDraft) return;
+
+  const now = nowHHMM();
+  const elapsedMin = Math.round((hm(now) - hm(breakDraft.startHHMM)) * 60);
+  const targetMin = Math.round(breakDraft.targetSec / 60);
+  const diff = targetMin - elapsedMin;
+
+  // Format: positive = remaining, negative = over
+  const breakDisplay = diff >= 0 ? `${diff} min` : `-${Math.abs(diff)} min over`;
+
+  // Update banner & live chip
+  const breakBar = document.getElementById('breakBarCountdown');
+  const chip = document.getElementById('chipElapsedVal');
+  const chipBox = document.getElementById('chipElapsed');
+
+  // ✅ Label switch to "Back in" while on break
+  const chipLabel = chipBox.querySelector('b');
+  if (chipLabel) chipLabel.textContent = 'Back in';
+
+  // Break timer shows while on break
+  breakBar.textContent = breakDisplay;
+  chip.textContent = breakDisplay;
+
+  // Colour state (green until 0, then amber)
+  chipBox.classList.remove('green', 'amber');
+  chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
+
+  // Single beep when we cross into overtime
+  if (diff === 0 && !breakDraft.beeping) {
+    breakDraft.beeping = true;
+    tryBeep();
+  }
+}
+
+
+function submitBreak(){
+  if(!breakDraft){ return cancelBreak(); }
+  var end = nowHHMM();
+  var minutes = Math.max(1, Math.round((hm(end)-hm(breakDraft.startHHMM))*60));
+  var entry = {type: breakDraft.type, start: breakDraft.startHHMM, end, minutes};
+
+  if(current){
+    current.breaks.push(entry);
+    undoStack.push({type:'break'});
+    renderTimeline();
+  } else {
+    shiftBreaks.push(entry);
+  }
+
+  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+  breakDraft = null;
+
+  // Hide banner
+  document.getElementById('breakBar').style.display = 'none';
+
+  // Restore chip state:
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (current) {
+    // Active order → resume "Elapsed"
+    if (chipBox) chipBox.style.display = '';
+    updateElapsedChip();
+  } else {
+    // No active order → hide
+    if (chipBox) chipBox.style.display = 'none';
+    if (chipVal) chipVal.textContent = '—';
+  }
+
+  updateSummary();
+  showToast('Break logged ('+minutes+'m)');
+  saveAll();
+}
+
+function cancelBreak(){
+  // User cancels the running timer without logging
+  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+  breakDraft = null;
+
+  // Hide banner
+  document.getElementById('breakBar').style.display = 'none';
+
+  // Restore chip state based on whether an order is active
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+
+  if (current) {
+    if (chipBox) chipBox.style.display = '';
+    updateElapsedChip(); // resume order elapsed
+  } else {
+    if (chipBox) chipBox.style.display = 'none';
+    if (chipVal) chipVal.textContent = '—';
+  }
+}
+
+// ====== Close Early ======
+function updateCloseEarlyVisibility(){
+  var btn=document.getElementById('btnCloseEarly');
+  var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden');
+  btn.style.display = (trackerVisible && !!current) ? 'inline-block' : 'none';
+}
+
+function openCloseEarlyModal(){
+  if(!current) return;
+  document.getElementById('ceRemaining').value='';
+  document.getElementById('ceWrapped').checked=false;
+  const r=document.getElementById('ceReason'); if(r) r.value='';
+  document.getElementById('closeEarlyModal').style.display='flex';
+}
+
+function closeCloseEarlyModal(){ document.getElementById('closeEarlyModal').style.display='none'; }
+
+function submitCloseEarly(){
+  if(!current) return closeCloseEarlyModal();
+
+  // Inputs
+  const remaining = parseInt(document.getElementById('ceRemaining').value||'0',10);
+  if (isNaN(remaining) || remaining < 0) return alert('Enter remaining units (0 or more).');
+
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total;
+  if (remaining > prevLeft) return alert('Remaining cannot exceed current left ('+prevLeft+').');
+
+  const wrapped = !!document.getElementById('ceWrapped').checked;
+  const reasonEl = document.getElementById('ceReason');
+  let reason = (reasonEl && reasonEl.value || '').trim();
+
+  const elapsed = minutesSinceHHMM(current.start);
+
+  // Validation (unchanged)
+  let validationFail = false;
+  (function enforceReasonRules(){
+    const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+    const progress    = currentOrderUnitsDone();
+    const totalUnits  = closedUnits + progress;
+    const s = hm(startTime), e = hm(nowHHMM());
+    const live = (!isNaN(s) && !isNaN(e) && e > s) ? Math.round(totalUnits / (e - s)) : 0;
+    const expectedLiveMin = live > 0 ? ((current.total||0) / live) * 60 : Infinity;
+    const expected300Min  = ((current.total||0) / 300) * 60;
+
+    if (remaining === 0 && elapsed < expectedLiveMin * 0.70 && (reason.length < 4)){
+      if (!reasonEl) reason = (prompt('Add a short reason — completed unusually fast vs your live rate:') || '').trim();
+      if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
+    }
+    if (remaining > 0 && elapsed < expected300Min * 0.70 && (reason.length < 4)){
+      if (!reasonEl) reason = (prompt('Please add a short reason to close early:') || '').trim();
+      if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
+    }
+  })();
+  if (validationFail) return;
+
+  // Apply optional “wrapped last pallet” as a real wrap (but allow rollback)
+  let addedWrap = false;
+  if (wrapped){
+    if (remaining >= prevLeft) return alert('To mark a wrap, remaining must be less than '+prevLeft+'.');
+    tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
+    addedWrap = true;
+  }
+
+  const close = nowHHMM();
+  const palletsCount = tempWraps.length || 1; // if still zero, infer single pallet
+  const unitsDone = current.total - remaining;
+
+  // Final confirmation (handles both early with remaining and exact finish)
+  const ok = confirmCloseSummary({
+    name: current.name,
+    unitsDone,
+    pallets: palletsCount,
+    start: current.start,
+    close,
+    remaining,
+    earlyReason: reason
+  });
+
+  if (!ok){
+    // rollback the ad-hoc wrap if we added one
+    if (addedWrap) tempWraps.pop();
+    return; // keep modal open so they can tweak
+  }
+
+  const exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
+  const order = {
+    name: current.name,
+    units: unitsDone,
+    pallets: palletsCount,
+    close,
+    start: current.start,
+    excl: exclMins,
+    earlyReason: reason || '',
+    log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
+  };
+  picks.push(order);
+  lastClose = close;
+
+  // Reset session/UI
+  current = null; tempWraps = []; undoStack = [];
+  document.getElementById('orderArea').style.display = 'none';
+  ['btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display = 'inline-block';
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnComplete').style.display = 'none';
+  document.getElementById('oLeft').value = '';
+  document.getElementById('oTotal').value = '';
+
+  closeCloseEarlyModal();
+  renderDone();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+  saveAll();
+  showToast('Order closed');
+
+  // Hide elapsed chip
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) chipBox.style.display = 'none';
+}
+
+// ====== Completed orders & history ======
+function renderTimeline(){
+  var tl=document.getElementById('orderTimeline'); if(!tl) return;
+  tl.innerHTML='';
+  if (current) {
+    const row0=document.createElement('div');
+    row0.className='tick';
+    row0.innerHTML=`<span>🟢 Order started</span><span class="meta">${current.start}</span>`;
+    tl.appendChild(row0);
+  }
+  (current?.breaks||[]).forEach(function(b){
+    const row=document.createElement('div'); row.className='tick';
+    row.innerHTML = (b.type==='D')
+      ? `<span>⏱️ Delay${b.cause?': '+b.cause.replace(/</g,'&lt;'):''}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span>`
+      : `<span>☕ ${(b.type==='B')?'Break':'Lunch'}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span>`;
+    tl.appendChild(row);
+  });
+  tempWraps.forEach(function(w,wi){
+    const row=document.createElement('div'); row.className='tick';
+    row.innerHTML = `<span>📦 Wrap ${wi+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t}</span>`;
+    tl.appendChild(row);
+  });
+}
+
+function renderDone(){
+  var tb=document.getElementById('doneBody'); tb.innerHTML='';
+  picks.forEach(function(o,i){
+    var s=hm(o.start), e=hm(o.close);
+    var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+    var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+    var tr = document.createElement('tr'); tr.className='clickable'; tr.dataset.idx=i;
+    tr.innerHTML = '<td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td>';
+    tb.appendChild(tr);
+    var logTr = document.createElement('tr'); logTr.className='logrow'; logTr.id='logrow_'+i;
+    var logTd = document.createElement('td'); logTd.colSpan=7;
+    var html = '<div class="logwrap"><div class="hint">Order log</div>';
+    (o.log?.breaks||[]).forEach(function(b){
+      if(b.type==='D'){
+        html += '<div class="tick"><span>⏱️ Delay'+(b.cause?': '+b.cause.replace(/</g,'&lt;'):'')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+      } else {
+        html += '<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+      }
+    });
+    (o.log?.wraps||[]).forEach(function(w,wi){ 
+      html += '<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; 
+    });
+
+    // ✅ Add early close reason if present
+    if (o.earlyReason && o.earlyReason.trim().length > 0) {
+      html += `<div class="tick"><span>📝 Early Close Reason:</span><span class="meta">${o.earlyReason.replace(/</g,'&lt;')}</span></div>`;
+    }
+
+    html += '</div>';
+    logTd.innerHTML = html;
+    logTr.appendChild(logTd);
+    tb.appendChild(logTr);
+    tr.addEventListener('click', function(){
+      var row=document.getElementById('logrow_'+i);
+      row.style.display = (row.style.display==='table-row') ? 'none' : 'table-row';
+    });
+  });
+  document.getElementById('completedCard').style.display = picks.length? 'block':'none';
+}
+function renderWeeklySummary(){
+  try{
+    // Determine this week's Sun–Sat from "today"
+    const todayISOstr = todayISO();
+    const { startISO, endISO, startDate, endDate } = weekBoundsFor(todayISOstr);
+
+    // Filter archived days that land in this week
+    const weekDays = (historyDays||[]).filter(d => d && d.date && inRange(d.date, startISO, endISO));
+
+    // Aggregate
+    let totalUnits = 0;
+    let totalHours = 0;
+    let sumDayRates = 0;
+
+    weekDays.forEach(d=>{
+      const units = Number(d.totalUnits||0);
+      const hours = Number(d.shiftLen||0);
+      const rate  = Number(d.dayRate||0);
+      totalUnits += units;
+      totalHours += (isFinite(hours)&&hours>0) ? hours : 0;
+      sumDayRates += isFinite(rate) ? rate : 0;
+    });
+
+    const weighted = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
+    const mean     = (weekDays.length>0) ? Math.round(sumDayRates / weekDays.length) : 0;
+
+    // Fill UI
+    const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
+    const hintEl = document.getElementById('weekRangeHint');
+    if(hintEl) hintEl.textContent = `Week: ${fmtShort(startDate)} – ${fmtShort(endDate)}`;
+
+    setTxt('weekWeighted', weighted ? (weighted+' u/h') : '— u/h');
+    setTxt('weekMean',     mean     ? (mean+' u/h')     : '— u/h');
+    setTxt('weekUnits',    String(totalUnits));
+    setTxt('weekHours',    (totalHours||0).toFixed(1));
+    setTxt('weekDays',     String(weekDays.length));
+
+    // Colour the card subtly by weighted result
+    const card = document.getElementById('weekCard');
+    if(card){
+      card.classList.remove('ok','warn','bad');
+      if(weighted>=300) card.classList.add('ok');
+      else if(weighted>=249) card.classList.add('warn');
+      else card.classList.add('bad');
+    }
+  }catch(e){
+    // Keep History usable even if a record is malformed
+  }
+}
+// ====== History render ======
+function renderHistory(){
+  var host=document.getElementById('histList'); host.innerHTML='';
+  if(!historyDays.length){
+    host.innerHTML='<div class="hint">No archived days yet.</div>';
+    renderWeeklySummary();   // still show an empty week bar
+    return;
+  }
+  var days=historyDays.slice(0).reverse();
+  days.forEach(function(d,diRev){
+    const di = historyDays.length - 1 - diRev; // original index
+    var head=document.createElement('div'); var boxState=d.dayRate>=300?'ok':(d.dayRate>=249?'warn':'bad');
+    head.className='accHead '+boxState;
+
+    const leftDiv=document.createElement('div'); leftDiv.className='left';
+    leftDiv.innerHTML = `<span class="tag">${new Date(d.date+'T12:00:00').toDateString().slice(0,15)}</span>
+      <span>Units: <b>${d.totalUnits||0}</b></span>
+      <span>Day Avg: <b>${d.dayRate||0}</b> u/h</span>`;
+    head.appendChild(leftDiv);
+
+    // Pro-only delete day button
+    const del = document.createElement('button');
+    del.textContent = '✖';
+    del.className = 'btn slim ghost gate-pro';
+    del.title = 'Delete day';
+    del.onclick = (e)=>{ e.stopPropagation(); if(!confirm('Delete this archived day? This cannot be undone.')) return; historyDays.splice(di,1); saveAll(); renderHistory(); showToast('Day deleted'); };
+    head.appendChild(del);
+
+    const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▾';
+    head.appendChild(chev);
+
+    var body=document.createElement('div'); body.className='accBody';
+
+    // Orders table
+    var table=document.createElement('table');
+    table.innerHTML='<thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>';
+    var tbody=document.createElement('tbody');
+
+    (d.picks||[]).forEach(function(o,i){
+      var s=hm(o.start), e=hm(o.close);
+      var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+      var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+      var tr=document.createElement('tr'); tr.className='clickable'; tr.dataset.idx=i;
+      tr.innerHTML='<td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td>';
+      var logTr=document.createElement('tr'); logTr.className='logrow'; logTr.id='hlog_'+di+'_'+i;
+      var td=document.createElement('td'); td.colSpan=7;
+      var html='<div class="logwrap"><div class="hint">Order log</div>';
+      (o.log?.breaks||[]).forEach(function(b){
+        if(b.type==='D'){
+          html+='<div class="tick"><span>⏱️ Delay'+(b.cause?': '+b.cause.replace(/</g,'&lt;'):'')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+        } else {
+          html+='<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+        }
+      });
+      (o.log?.wraps||[]).forEach(function(w,wi){ html+='<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; });
+      html+='</div>';
+      td.innerHTML=html; logTr.appendChild(td);
+
+      tbody.appendChild(tr); tbody.appendChild(logTr);
+      tr.addEventListener('click', function(){
+        var row=document.getElementById('hlog_'+di+'_'+i);
+        row.style.display = (row.style.display==='table-row') ? 'none' : 'table-row';
+      });
+    });
+
+    table.appendChild(tbody); body.appendChild(table);
+
+    // Secondary expandable: Notes & Downtime
+    const subAcc = document.createElement('div'); subAcc.className='accordion';
+    const subHead = document.createElement('div'); subHead.className='accHead'; subHead.innerHTML='<div class="left"><span>Notes & Downtime</span></div><span class="chev">▾</span>';
+    const subBody = document.createElement('div'); subBody.className='accBody';
+
+    const notes = document.createElement('div');
+    notes.className='logwrap';
+    let notesHtml = '<div class="hint">Notes</div>';
+
+    // Shift-level breaks
+    (d.shiftBreaks||[]).forEach(b=>{
+      notesHtml += `<div class="tick"><span>☕ ${(b.type==='B')?'Break':'Lunch'}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span></div>`;
+    });
+    // Per-order breaks & delays
+    (d.picks||[]).forEach(o=>{
+      (o.log?.breaks||[]).forEach(b=>{
+        if(b.type==='B' || b.type==='L'){
+          notesHtml += `<div class="tick"><span>☕ ${(b.type==='B')?'Break':'Lunch'} (${o.name})</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span></div>`;
+        } else if(b.type==='D'){
+          notesHtml += `<div class="tick"><span>⏱️ Delay${b.cause?': '+b.cause.replace(/</g,'&lt;'):''} (${o.name})</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span></div>`;
+        }
+      });
+    });
+    // Downtimes (gaps between orders not covered by breaks)
+    (d.downtimes||[]).forEach(g=>{
+      notesHtml += `<div class="tick"><span>⏳ Downtime</span><span class="meta">${g.from} → ${g.to} • ${g.minutes}m</span></div>`;
+    });
+
+    notes.innerHTML = notesHtml;
+    subBody.appendChild(notes);
+
+    subAcc.appendChild(subHead);
+    subAcc.appendChild(subBody);
+    body.appendChild(subAcc);
+
+    var wrap=document.createElement('div'); wrap.className='accordion'; wrap.appendChild(head); wrap.appendChild(body); host.appendChild(wrap);
+
+    // Toggles
+    head.addEventListener('click', function(){ var open=body.style.display==='block'; body.style.display=open?'none':'block'; head.querySelector('.chev').textContent=open?'▾':'▴'; });
+    subHead.addEventListener('click', function(){ var open=subBody.style.display==='block'; subBody.style.display=open?'none':'block'; subHead.querySelector('.chev').textContent=open?'▾':'▴'; });
+  });
+  applyProGate();
+}
+
+// ====== End Shift & History mgmt ======
+function updateEndShiftVisibility(){
+  var btn=document.getElementById('btnEndShift');
+  var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden');
+  var show=trackerVisible && !current && picks.length>0;
+  btn.style.display=show?'inline-block':'none';
+}
+function computeDowntimes(picksArr, shiftBreaksArr){
+  function toMin(hhmm){ return Math.round(hm(hhmm)*60); }
+  function overlap(a1,a2,b1,b2){ return Math.max(0, Math.min(a2,b2)-Math.max(a1,b1)); }
+  const gaps=[];
+  const sorted = picksArr.slice().sort((a,b)=>hm(a.start)-hm(b.start));
+  for(let i=0;i<sorted.length-1;i++){
+    const endMin = toMin(sorted[i].close);
+    const nextStartMin = toMin(sorted[i+1].start);
+    let gap = nextStartMin - endMin;
+    if(gap>0){
+      let cut=0;
+      (shiftBreaksArr||[]).forEach(b=>{ cut += overlap(endMin, nextStartMin, toMin(b.start), toMin(b.end)); });
+      gap = Math.max(0, gap - cut);
+      if(gap>=1){ gaps.push({from: minutesToHHMM(endMin), to: minutesToHHMM(nextStartMin), minutes: gap}); }
+    }
+  }
+  return gaps;
+}
+function endShift(){
+  if(current){ return alert('Complete or undo the current order before ending the shift.'); }
+  if(!picks.length){ return alert('No completed orders to archive.'); }
+  var dateStr=todayISO();
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var totalUnits=picks.reduce((a,b)=>a+b.units,0);
+  var downtimes = computeDowntimes(picks, shiftBreaks);
+  var snapshot={date:dateStr,start:startTime||'',end:lastClose||'',shiftLen,totalUnits,dayRate:shiftLen>0?Math.round(totalUnits/shiftLen):0,picks:picks.slice(0),shiftBreaks:shiftBreaks.slice(0),downtimes};
+  historyDays.push(snapshot); saveAll(); renderHistory();
+  renderWeeklySummary();
+
+
+  // Reset session
+  picks=[]; lastClose=''; current=null; tempWraps=[]; undoStack=[]; shiftBreaks=[];
+  document.getElementById('orderArea').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+  startTime='';
+  renderDone(); updateSummary(); showToast('Shift archived to History'); showTab('history'); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
+}
+function clearToday(){
+  if(!confirm("Clear today's data (keeps History & custom customers)?")) return;
+  picks=[]; current=null; tempWraps=[]; undoStack=[]; lastClose=''; startTime=''; shiftBreaks=[];
+
+  // Hide active order panel and show shift setup again
+  document.getElementById('activeOrderCard').style.display='none';
+  document.getElementById('orderArea').style.display='none';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+
+  // Reset buttons
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnComplete').style.display='none';
+
+  // Clear inputs
+  document.getElementById('oLeft').value='';
+  document.getElementById('oTotal').value='';
+  document.getElementById('oCust').value='';
+  document.querySelector('#oDD .dd-toggle').textContent='Select customer…';
+
+  // Update state/UI
+  renderDone();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+  saveAll();
+  showToast("Today's data cleared");
+}
+function clearHistory(){
+  if(!confirm('Clear ALL history archives? This cannot be undone.')) return;
+  historyDays=[]; saveAll(); renderHistory(); showToast('History cleared');
+}
+
+// ====== Export / Import (gated) ======
+function exportCSV(){
+  let rows = [['#','Customer','Units','Pallets','Start','Closed','OrderRate']];
+  picks.forEach((o,i)=>{
+    var s=hm(o.start), e=hm(o.close);
+    var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+    var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+    rows.push([i+1,o.name,o.units,o.pallets,o.start,o.close,rate]);
+  });
+  let csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  let blob = new Blob([csv], {type:'text/csv'});
+  let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'today_picks.csv'; a.click();
+}
+function exportJSON(){
+  let data = {version:'3.3.55', savedAt:new Date().toISOString(), history:historyDays, current, picks, startTime, lastClose, customCodes, shiftBreaks};
+  let blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wqt_export.json'; a.click();
+}
+(function attachImport(){
+  const inp = document.getElementById('impFile');
+  if(!inp) return;
+  inp.addEventListener('change', function(){
+    const f = inp.files && inp.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = function(){
+      try {
+        const obj = JSON.parse(reader.result||'{}');
+        if(obj && obj.history && Array.isArray(obj.history)){
+          historyDays = obj.history;
+          picks = Array.isArray(obj.picks)? obj.picks: [];
+          current = obj.current || null;
+          startTime = obj.startTime || '';
+          lastClose = obj.lastClose || '';
+          if(Array.isArray(obj.customCodes)) customCodes = obj.customCodes;
+          shiftBreaks = Array.isArray(obj.shiftBreaks)? obj.shiftBreaks : [];
+          saveAll(); renderHistory(); renderDone(); reloadDropdowns(); updateSummary();
+          showToast('Import complete');
+        } else {
+          alert('Invalid JSON file');
+        }
+      } catch(e){
+        alert('Import failed: '+e.message);
+      }
+      inp.value = '';
+    };
+    reader.readAsText(f);
+  });
+})();
+
+// ====== Manage Customers (gated) ======
+function toggleManageCustomers(){
+  var card=document.getElementById('manageCustomersCard');
+  if(!card) return;
+  var open = card.classList.contains('hidden');
+  card.classList.toggle('hidden', !open);
+  if(open) renderCustomTags();
+}
+function renderCustomTags(){
+  var box=document.getElementById('custTags'); if(!box) return;
+  box.innerHTML='';
+  (customCodes||[]).forEach((code)=>{
+    var tag=document.createElement('span'); tag.className='tag';
+    var btn=document.createElement('button'); btn.textContent='✖'; btn.title='Remove'; btn.addEventListener('click', function(){ removeCustomCode(code); });
+    tag.textContent = code+' '; tag.appendChild(btn);
+    box.appendChild(tag);
+  });
+}
+function removeCustomCode(code){
+  customCodes = (customCodes||[]).filter(c=>c!==code);
+  saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('Removed '+code);
+}
+function clearAllCustom(){
+  if(!confirm('Remove ALL custom customers?')) return;
+  customCodes=[]; saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('All custom customers cleared');
+}
+
+// ====== Live banner ======
+function currentOrderUnitsDone(){
+  if(!current) return 0;
+  const raw = (document.getElementById('oLeft')?.value || '').trim();
+  if (raw !== '' && !isNaN(parseInt(raw,10))) {
+    const left = Math.max(0, Math.min(parseInt(raw,10), current.total));
+    return (current.total || 0) - left;
+  }
+  if (tempWraps.length > 0) {
+    const left = tempWraps[tempWraps.length-1].left;
+    return (current.total || 0) - left;
+  }
+  return 0;
+}
+
+function updateSummary(){
+  var closedUnits=picks.reduce((a,b)=>a+b.units,0);
+  var progress=currentOrderUnitsDone();
+  var totalUnits = closedUnits + progress;
+  var s=hm(startTime);
+  var endHHMM = current ? nowHHMM() : lastClose;
+  var e=hm(endHHMM);
+  var live=(!isNaN(s)&&!isNaN(e)&&e>s)? Math.round(totalUnits/(e-s)) : 0;
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var dayAvg=shiftLen>0? Math.round(totalUnits/shiftLen):0;
+
+  var chipRate=document.getElementById('chipRate'); var chipVal=document.getElementById('chipRateVal'); chipVal.textContent=live? (live+' u/h'):'—';
+  chipRate.classList.remove('good','warn','bad');
+  if(live>=300) chipRate.classList.add('good');
+  else if(live>=249) chipRate.classList.add('warn');
+  else chipRate.classList.add('bad');
+
+  document.getElementById('chipTotalVal').textContent=totalUnits;
+
+  const elapsedMin = (!isNaN(s)&&!isNaN(e)&&e>s) ? Math.round((e - s)*60) : 0;
+  const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
+
+  updateEndShiftVisibility(); updateCloseEarlyVisibility();
+}
+
+function updateElapsedChip() {
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (!chipBox || !chipVal) return;
+
+  // If a break is active, tickBreak() manages the display
+  if (breakDraft) return;
+
+  // Only show elapsed while an order is active
+  if (!current || !current.start) {
+    chipBox.style.display = 'none';
+    chipVal.textContent = '—';
+    chipBox.classList.remove('green','amber');
+    return;
+  }
+
+  // Order running → show "Elapsed" from order start
+  const label = chipBox.querySelector('b');
+  if (label) label.textContent = 'Elapsed';
+
+  const now = nowHHMM();
+  const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
+
+  chipVal.textContent = `${elapsedMin} min`;
+  chipBox.classList.remove('green','amber');
+  chipBox.style.display = '';
+}
+
+function computeLiveRateSnapshot(){
+  // Same math as updateSummary’s “live” chip, but returns a number
+  var closedUnits = picks.reduce((a,b)=>a+b.units,0);
+  var progress    = currentOrderUnitsDone();
+  var totalUnits  = closedUnits + progress;
+
+  var s = hm(startTime), e = hm(nowHHMM());
+  if (isNaN(s) || isNaN(e) || e <= s) return 0;
+
+  return Math.round(totalUnits / (e - s)); // u/h
+}
+// --- Live modal state ---
+let liveModalTick = null;
+let liveOverrideLeft = null; // preview-only remaining units; NOT persisted
+
+function computeLiveSnapshot() {
+  // Always “now” → matches the chip’s intent
+  const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+  const progress    = currentOrderUnitsDone(); // in-progress order contribution
+  const totalUnits  = closedUnits + progress;
+
+  const s = hm(startTime);
+  const e = hm(nowHHMM());          // <— live end point
+  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
+
+  const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
+  const elapsedMin = hours > 0 ? Math.round(hours * 60) : 0;
+
+  return { totalUnits, hours, elapsedMin, live };
+}
+
+function fmtElapsed(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return `${h}h ${String(m).padStart(2,'0')}m`;
+}
+
+function paintRatePill(el, rate){
+  if(!el) return;
+  el.parentElement?.classList?.remove('good','warn','bad');
+  if(rate >= 300) el.parentElement?.classList?.add('good');
+  else if(rate >= 249) el.parentElement?.classList?.add('warn');
+  else el.parentElement?.classList?.add('bad');
+}
+
+function renderLiveModalOnce() {
+  // Base snapshot
+  const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+
+  // Progress: either real-time or preview using override "left"
+  let progress = currentOrderUnitsDone();
+  if (current && liveOverrideLeft !== null && !isNaN(liveOverrideLeft)) {
+    const max = current.total || 0;
+    const left = Math.max(0, Math.min(liveOverrideLeft, max));
+    progress = (current.total || 0) - left;
+  }
+
+  const totalUnits = closedUnits + progress;
+
+  const s = hm(startTime);
+  const e = hm(nowHHMM());
+  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
+  const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
+  const elapsedMin = hours > 0 ? Math.round(hours * 60) : 0;
+
+  const totEl = document.getElementById('live_totUnits');
+  const elEl  = document.getElementById('live_elapsed');
+  const rEl   = document.getElementById('live_rate');
+  const fEl   = document.getElementById('live_formula');
+
+  if (totEl) totEl.textContent = String(totalUnits);
+  if (elEl)  elEl.textContent  = hours ? fmtElapsed(elapsedMin) : '—';
+  if (rEl)   rEl.textContent   = (live || 0) + ' u/h';
+  if (fEl)   fEl.textContent   = hours
+      ? `Live = ${totalUnits} ÷ ${hours.toFixed(2)} h = ${live} u/h`
+      : 'Live = Total Units ÷ Hours';
+
+  paintRatePill(rEl, live);
+
+  // Preview hint
+  const hint = document.getElementById('live_hint');
+  if (hint) hint.textContent = (liveOverrideLeft !== null) ? 'Preview only — not saved.' : '';
+}
+function openLiveUpdateModal(){
+  if (!current) { alert('No active order to update. Start an order first.'); return; }
+
+  const max = current.total || 0;
+  const suggested = tempWraps.length ? tempWraps[tempWraps.length-1].left : max;
+
+  const modal = document.getElementById('liveUpdateModal');
+  const input = document.getElementById('liveLeftInput');
+  const hint  = document.getElementById('liveUpdateHint');
+
+  if (hint)  hint.textContent = `Enter a whole number between 0 and ${max}`;
+  if (input) {
+    input.value = suggested;
+    input.min = 0;
+    input.max = String(max);
+  }
+
+  if (modal) {
+    modal.style.display = 'flex';
+    setTimeout(()=> input?.focus(), 0);
+  }
+}
+
+function closeLiveUpdateModal(){
+  const modal = document.getElementById('liveUpdateModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function submitLiveUpdateLeft(){
+  if (!current) return closeLiveUpdateModal();
+
+  const max = current.total || 0;
+  const raw = (document.getElementById('liveLeftInput').value || '').trim();
+  const val = parseInt(raw, 10);
+
+  if (isNaN(val) || val < 0 || val > max) {
+    alert(`Enter a whole number between 0 and ${max}`);
+    return;
+  }
+
+  // Preview-only override for the Live modal
+  liveOverrideLeft = val;
+  renderLiveModalOnce();
+  closeLiveUpdateModal();
+}
+
+function livePromptLeft(){
+  if (!current) { alert('No active order to preview. Start an order first.'); return; }
+  const max = current.total || 0;
+  // suggest last 'left' if any, else the total
+  const suggested = tempWraps.length ? tempWraps[tempWraps.length-1].left : max;
+
+  const val = prompt(`How many units remain on ${current.name}? (0–${max})`, String(suggested));
+  if (val === null) return; // cancelled
+
+  const left = parseInt(val, 10);
+  if (isNaN(left) || left < 0 || left > max) {
+    alert('Enter a whole number between 0 and ' + max);
+    return;
+  }
+
+  // Set preview-only override and rerender
+  liveOverrideLeft = left;
+  renderLiveModalOnce();
+}
+
+function closeLiveModal(){
+  const m = document.getElementById('liveModal');
+  if(!m) return;
+  m.style.display = 'none';
+  if (liveModalTick) { clearInterval(liveModalTick); liveModalTick = null; }
+  liveOverrideLeft = null;   // clear preview when closing
+}
+
+// ====== Countback keypad logic ======
+// IMPORTANT: max 2 digits per field + auto-advance
+const CB_MAX = { layers: 2, ul: 2, extras: 2 };
+
+function getActiveCustomerCode(){
+  // Prefer QuickCalc customer if it exists (you currently don't render it)
+  const qcSel = document.getElementById('qcCustomer');
+  if (qcSel) {
+    const qcOther = document.getElementById('qcOther');
+    let code = qcSel.value;
+    if (code === '__OTHER__') code = upcase6((qcOther?.value)||'');
+    if (isValidCode(code)) return code;
+  }
+
+  // Otherwise use Tracker's active selector
+  const oSel = document.getElementById('oCust');
+  if (oSel) {
+    const oOther = document.getElementById('oOther');
+    let code = oSel.value;
+    if (code === '__OTHER__') code = upcase6((oOther?.value)||'');
+    if (isValidCode(code)) return code;
+  }
+
+  // Fallback: generic bucket
+  return '__GEN__';
+}
+function renderULayerChips(){
+  const box = document.getElementById('cbChips'); if(!box) return;
+  box.innerHTML='';
+  const code = getActiveCustomerCode();
+  const freq = learnedUL[code] || {};
+  const entries = Object.entries(freq).filter(([v,c])=>c>=2).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  entries.forEach(([v])=>{
+    const b=document.createElement('button'); b.className='btn slim'; b.type='button'; b.textContent=v+'/layer';
+    b.addEventListener('click', ()=>{ cbVals.ul = String(v); updateCbDisplays(); computeCbTotal(); });
+    box.appendChild(b);
+  });
+}
+function cbSetFocus(which){
+  cbFocus = which;
+  document.getElementById('cbHint').textContent = (which==='layers'?'Typing Layers…':which==='ul'?'Typing U/Layer…':'Typing Extras…');
+}
+function cbTap(d){
+  // append digit with 2-char cap
+  const cap = CB_MAX[cbFocus] || 2;
+  cbVals[cbFocus] = (cbVals[cbFocus]||'') + d;
+  if (cbVals[cbFocus].length > cap) cbVals[cbFocus] = cbVals[cbFocus].slice(0, cap);
+
+  // Special smart-advance for LAYERS: 1–19
+  if (cbFocus === 'layers') {
+    const s = cbVals.layers;
+
+    // If first digit is 0 and a second digit exists (e.g., '08'), normalize to single-digit '8'
+    if (s.length === 2 && s[0] === '0') {
+      cbVals.layers = s[1];
+    }
+
+    // After typing first digit:
+    if (cbVals.layers.length === 1) {
+      const first = cbVals.layers[0];
+      // If first digit is 2–9, that's a complete layer count → auto-next now
+      if (first >= '2' && first <= '9') {
+        updateCbDisplays();
+        computeCbTotal();
+        cbNextField();
+        return;
+      }
+      // If first digit is '1', wait for second digit (10–19) before moving on
+    }
+
+    // After second digit with leading '1', clamp to 10–19 and next
+    if (cbVals.layers.length === 2 && cbVals.layers[0] === '1') {
+      // clamp 10–19 just in case
+      const n = Math.min(19, Math.max(10, toInt(cbVals.layers)));
+      cbVals.layers = String(n);
+      updateCbDisplays();
+      computeCbTotal();
+      cbNextField();
+      return;
+    }
+  }
+
+  // Default behavior for UL & EXTRAS (2 digits then next)
+  updateCbDisplays();
+  computeCbTotal();
+  if (cbVals[cbFocus].length >= cap) cbNextField();
+}
+function cbBack(){
+  const s = cbVals[cbFocus]||'';
+  cbVals[cbFocus] = s.slice(0,-1);
+  updateCbDisplays();
+  computeCbTotal();
+}
+function cbReset(){
+  cbVals = {layers:'', ul:'', extras:''};
+  cbSetFocus('layers');
+  updateCbDisplays();
+  computeCbTotal();
+}
+function cbNextField(){
+  if (cbFocus === 'layers') cbSetFocus('ul');
+  else if (cbFocus === 'ul') cbSetFocus('extras');
+  else cbSetFocus('extras');
+}
+function updateCbDisplays(){
+  document.getElementById('cbLayers').textContent = cbVals.layers || '0';
+  document.getElementById('cbUL').textContent     = cbVals.ul     || '0';
+  document.getElementById('cbExtras').textContent = cbVals.extras || '0';
+}
+function computeCbTotal(){
+  const L = toInt(cbVals.layers), U = toInt(cbVals.ul), E = toInt(cbVals.extras);
+  const total = (L*U)+E;
+  document.getElementById('cbTotal').textContent = total;
+  return total;
+}
+
+// ====== QuickCalc live result ======
+function recalcQuick(){
+  const DEFAULT_RATE = 300;
+  const units = toInt(document.getElementById('qcUnits').value);
+  const rawRate = (document.getElementById('qcRate').value||'').trim();
+  const rate = /^\d+$/.test(rawRate) && parseInt(rawRate,10)>0 ? parseInt(rawRate,10) : DEFAULT_RATE;
+
+  const timeHours = rate>0 ? (units / rate) : 0;
+  const totalMinutes = Math.round(timeHours*60);
+  const hh = Math.floor(totalMinutes/60);
+  const mm = totalMinutes % 60;
+
+  document.getElementById('qcTime').textContent = units>0 ? (hh+'h '+String(mm).padStart(2,'0')+'m') : '—';
+  document.getElementById('qcRateUsed').textContent = rate + ' u/h';
+  const uEcho = document.getElementById('qcUnitsEcho');
+if (uEcho) uEcho.textContent = units || 0;
+}
+function openLiveModal(){
+  const m = document.getElementById('liveModal');
+  if(!m) return;
+
+  m.style.display = 'flex';
+  // fresh preview state each open
+  liveOverrideLeft = null;
+
+  renderLiveModalOnce();
+
+  if (liveModalTick) clearInterval(liveModalTick);
+  // keep the numbers live while the modal is open
+  liveModalTick = setInterval(renderLiveModalOnce, 600);
+}
+
+// ====== Boot ======
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    loadCustomCodes();
+    loadAll(); // loads startTime, picks, current, history, etc.
+
+    // Build dropdowns
+    buildDropdown('oDD','oCust','oOther','o');
+    reloadDropdowns();
+
+    // Input listeners
+    document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
+    document.getElementById('oLeft')?.addEventListener('input', refreshWrapButton);
+    // Close Live Update when clicking backdrop
+    document.getElementById('liveUpdateModal')?.addEventListener('click', (e)=>{
+      if (e.target && e.target.id === 'liveUpdateModal') closeLiveUpdateModal();
+    });
+    applyProGate();
+    renderHistory(); renderWeeklySummary(); renderDone(); renderULayerChips();
+
+    // Open modal on Live Rate chip click
+    document.getElementById('chipRate')?.addEventListener('click', openLiveModal);
+
+    // Close modal when clicking backdrop (outside .box)
+    document.getElementById('liveModal')?.addEventListener('click', (e)=>{
+      if (e.target && e.target.id === 'liveModal') closeLiveModal();
+    });
+
+    // ===== AUTO-RESUME CHECK =====
+    if (startTime && (!window.archived || window.archived === false)) {
+      // Hide shift setup, show main tracker
+      document.getElementById('shiftCard').style.display = 'none';
+      document.getElementById('completedCard').style.display = 'block';
+      renderDone(); 
+      updateSummary(); 
+      updateDelayBtn();
+      updateEndShiftVisibility(); 
+      updateCloseEarlyVisibility();
+
+      const activeCard = document.getElementById('activeOrderCard');
+      const orderArea = document.getElementById('orderArea');
+
+      // --- Case A: Order in progress ---
+      if (current) {
+        if (activeCard) activeCard.style.display = 'block';
+        if (orderArea) orderArea.style.display = 'block';
+
+        // Restore form values (for visibility only)
+        document.getElementById('oCust').value = current.name || '';
+        document.getElementById('oTotal').value = current.total || '';
+        document.getElementById('snapHint').textContent = 'Order resumed @ ' + (current.start || '—');
+        // Sync visible dropdown label with the resumed code & persist if new
+        {
+          const ddToggle = document.querySelector('#oDD .dd-toggle');
+          if (ddToggle && current?.name) ddToggle.textContent = current.name;
+
+          if (current?.name && !DEFAULT_CODES.includes(current.name) && !customCodes.includes(current.name)) {
+            customCodes.push(current.name);
+            saveCustomCodes();
+            reloadDropdowns();
+          }
+        }
+        // Restore buttons
+        ['btnB','btnL','btnUndo'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'inline-block';
+        });
+        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnComplete').style.display = 'inline-block';
+        document.getElementById('btnComplete').disabled = false;
+        renderTimeline();
+      }
+
+      // --- Case B: Shift active, no current order ---
+      else {
+        if (activeCard) activeCard.style.display = 'block';
+        if (orderArea) orderArea.style.display = 'none';
+        ['btnB','btnL','btnUndo'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
+        document.getElementById('btnStart').style.display = 'inline-block';
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnComplete').style.display = 'none';
+        reloadDropdowns();
+        document.getElementById('oCust').value = '';
+        document.getElementById('oTotal').value = '';
+      }
+
+      // --- Resume chip correctly ---
+      const chipBox = document.getElementById('chipElapsed');
+      const chipVal = document.getElementById('chipElapsedVal');
+
+      if (breakDraft) {
+        if (chipBox) chipBox.style.display = '';
+        tickBreak(); // show "Back in" + countdown
+      } 
+      else if (current && current.start) {
+        if (chipBox) chipBox.style.display = '';
+        updateElapsedChip(); // show elapsed for order
+      } 
+      else {
+        if (chipBox) chipBox.style.display = 'none';
+        if (chipVal) chipVal.textContent = '—';
+      }
+
+      showTab('tracker');
+      showToast('Shift restored – continue where you left off');
+    }
+
+    // Refresh summary/UI
+    updateSummary(); 
+    updateDelayBtn(); 
+    updateEndShiftVisibility(); 
+    updateCloseEarlyVisibility(); 
+    updateElapsedChip();
+
+    // === QuickCalc wiring ===
+    var qcRateEl = document.getElementById('qcRate');
+    if(qcRateEl){
+      qcRateEl.addEventListener('input', ()=>{ updCalcGate(); recalcQuick(); });
+      qcRateEl.addEventListener('change', ()=>{ updCalcGate(); recalcQuick(); });
+    }
+    var qcUnitsEl = document.getElementById('qcUnits');
+    if(qcUnitsEl){
+      qcUnitsEl.addEventListener('input', recalcQuick);
+      qcUnitsEl.addEventListener('change', recalcQuick);
+    }
+
+    // Start button validation
+    ['oTotal','oOther'].forEach(id=>{
+      const el = document.getElementById(id);
+      el && el.addEventListener('input', refreshStartButton);
+    });
+    document.querySelector('#oDD .dd-menu')?.addEventListener('click', ()=>setTimeout(refreshStartButton,0));
+    document.querySelector('#oDD .dd-toggle')?.addEventListener('click', ()=>setTimeout(refreshStartButton,0));
+
+    // Live summary + timer loop
+    setInterval(function(){
+      if(!document.getElementById('tabTracker').classList.contains('hidden')){
+        updateSummary();
+        if (breakDraft) tickBreak();
+        else if (current) updateElapsedChip();
+      }
+    }, 600);
+
+    // Countback & keyboard input
+    cbSetFocus('layers'); updateCbDisplays(); computeCbTotal();
+    document.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+      if (/^[0-9]$/.test(e.key)) { cbTap(e.key); e.preventDefault(); }
+      else if (e.key === 'Backspace') { cbBack(); e.preventDefault(); }
+      else if (e.key === ' ' || e.key === 'Enter') { cbNextField(); e.preventDefault(); }
+    });
+
+    recalcQuick();
+  } catch (err){
+    console.error(err);
+    showToast('Error on load: ' + (err.message || err));
+  }
+});
+</script>
+</body>
+</html>
