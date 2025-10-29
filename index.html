@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v3.3.55</title>
+<title>Warehouse QuickCalc & Tracker v3.3.55 (Patched)</title>
 <style>
 :root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
 * { box-sizing: border-box; }
@@ -16,25 +16,14 @@ h1 { font-size: 20px; margin:6px 0 10px; }
 .hidden { display:none; }
 .card { background:var(--card); border:1px solid #253348; border-radius:14px; padding:14px; margin: 10px 0; }
 /* Make the Live Rate chip clearly clickable */
-#chipRate { 
-  cursor: pointer; 
-  transition: transform .08s ease; 
-}
-#chipRate:active { 
-  transform: scale(0.97); 
-}
+#chipRate { cursor: pointer; transition: transform .08s ease; }
+#chipRate:active { transform: scale(0.97); }
 /* QC keypad tactile press + pointer */
-.cbPad button {
-  cursor: pointer;
-  transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
-}
-.cbPad button:active {
-  transform: scale(0.97);
-}
-.cbPad button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+.cbPad button { cursor: pointer; transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease; }
+.cbPad button:active { transform: scale(0.97); }
+.cbPad button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Elapsed chip disabled when on break */
+#chipElapsed.disabled{ pointer-events:none; opacity:0.6; filter:saturate(0.7); }
 
 label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
 input, select, button, textarea { font-size:16px; }
@@ -135,7 +124,7 @@ td.small { font-size:12px; color:#9fb3c8; }
   border:1px solid #29364a;
   border-radius:12px;
   padding:10px;
-  display:none;           /* hidden until a break starts */
+  display:none;
   align-items:center;
   gap:10px;
   margin-top:10px;
@@ -147,11 +136,40 @@ td.small { font-size:12px; color:#9fb3c8; }
 .card.ok  { border-color:#1f4830; background:#14271c; }
 .card.warn{ border-color:#584a1a; background:#2a230f; }
 .card.bad { border-color:#4f1f1f; background:#2a1313; }
+/* Progress header (replaces form once order starts) */
+.progHead { display:none; gap:10px; align-items:center; }
+.progMeta { flex: 1 1 auto; }
+.progTitle { font-weight:800; font-size:16px; }
+.progSub { color: var(--muted); font-size:12px; margin-top:2px; }
+.progBar {
+  position: relative; height: 12px; background:#0f131b; border:1px solid #29364a;
+  border-radius:999px; overflow:hidden; margin-top:8px;
+}
+.progFill { position:absolute; left:0; top:0; bottom:0; width:0%;
+  background: linear-gradient(90deg, #2f6bff, #1b6e36);
+}
+.progPct { margin-left:10px; font-weight:700; min-width:56px; text-align:right; }
+
+/* ─────────────────────────────
+   Compact, Full-Width Weekly Pills (SCOPED)
+   ───────────────────────────── */
+#weekCard { padding: 10px 12px; border-radius: 12px; }
+#weekCard .week-row { display:flex; gap:8px; flex-wrap:nowrap; justify-content:space-between; width:100%; }
+#weekCard .pill { flex:1 1 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); min-width: 0; }
+#weekCard .pill h3 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 3px; white-space: nowrap; }
+#weekCard .pill p  { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0; }
+
+/* Collapsible week card (single source of truth) */
+#weekHeader { display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding-right:6px; }
+#weekHeader:focus { outline: 2px solid var(--line); outline-offset: 2px; }
+#weekCard .chev { font-weight:700; transition: transform .18s ease-in-out, opacity .18s ease-in-out; opacity:.8; }
+#weekCard.collapsed .chev { transform: rotate(-90deg); opacity:.6; }
+#weekCard.collapsed #weekContent { display:none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Warehouse QuickCalc & Tracker v3.3.55</h1>
+  <h1>Warehouse QuickCalc & Tracker v3.3.6</h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -188,29 +206,28 @@ td.small { font-size:12px; color:#9fb3c8; }
             <div class="hint">Total</div>
             <div id="cbTotal" class="count">0</div>
             <div id="cbHint" class="hint" style="margin-top:4px;text-align:right;">Typing Layers…</div>
-
           </div>
         </div>
         <div style="flex:1; min-width:240px; display:flex; gap:8px;">
           <div style="flex:1;">
             <div class="cbPad" style="flex:1;">
-            <button onclick="cbTap('7')">7</button>
-            <button onclick="cbTap('8')">8</button>
-            <button onclick="cbTap('9')">9</button>
-            <button onclick="cbTap('4')">4</button>
-            <button onclick="cbTap('5')">5</button>
-            <button onclick="cbTap('6')">6</button>
-            <button onclick="cbTap('1')">1</button>
-            <button onclick="cbTap('2')">2</button>
-            <button onclick="cbTap('3')">3</button>
-            <button onclick="cbTap('0')">0</button>
-            <button onclick="cbBack()">⌫</button>
-            <button onclick="cbReset()">Reset</button>
+              <button onclick="cbTap('7')">7</button>
+              <button onclick="cbTap('8')">8</button>
+              <button onclick="cbTap('9')">9</button>
+              <button onclick="cbTap('4')">4</button>
+              <button onclick="cbTap('5')">5</button>
+              <button onclick="cbTap('6')">6</button>
+              <button onclick="cbTap('1')">1</button>
+              <button onclick="cbTap('2')">2</button>
+              <button onclick="cbTap('3')">3</button>
+              <button onclick="cbTap('0')">0</button>
+              <button onclick="cbBack()">⌫</button>
+              <button onclick="cbReset()">Reset</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div> <!-- /.cbRow -->
-  </div>   <!-- /.cbCard -->
     <!-- QuickCalc inputs -->
     <div class="card">
       <div class="row">
@@ -258,39 +275,54 @@ td.small { font-size:12px; color:#9fb3c8; }
       </div>
 
       <div class="hint">Start time is snapped to the nearest hour automatically.  
-      Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (includes breaks & delays).</div>
+      Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (includes breaks &amp; delays).</div>
     </div>
+
     <div class="card" id="activeOrderCard" style="display:none;">
-      <div class="row" style="align-items:flex-end;">
-        <div class="col">
-          <label>Customer</label>
-          <div class="row" style="gap:6px;">
-            <div class="col">
-              <select id="oCust" class="hidden"></select>
-              <div id="oDD" class="dd">
-                <button class="dd-toggle" type="button">Select customer…</button>
-                <div class="dd-menu"></div>
+
+      <!-- ✨ Header form (shown before Start) -->
+      <div id="orderHeaderForm">
+        <div class="row" style="align-items:flex-end;">
+          <div class="col">
+            <label>Customer</label>
+            <div class="row" style="gap:6px;">
+              <div class="col">
+                <select id="oCust" class="hidden"></select>
+                <div id="oDD" class="dd">
+                  <button class="dd-toggle" type="button">Select customer…</button>
+                  <div class="dd-menu"></div>
+                </div>
+              </div>
+              <div class="col">
+                <input id="oOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
               </div>
             </div>
-            <div class="col">
-              <input id="oOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
-            </div>
+          </div>
+          <div class="col">
+            <label>Total units</label>
+            <input id="oTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 1024">
+          </div>
+          <div class="col" style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+            <button id="btnUndo" class="btn slim" type="button" onclick="undoLast()" style="display:none;">Undo</button>
+            <span style="flex:1"></span>
+            <button id="btnB" class="btn chip" type="button" title="Start 20 min break" onclick="openBreakModal('B')" style="display:none;">B</button>
+            <button id="btnL" class="btn chip" type="button" title="Start 30 min lunch" onclick="openBreakModal('L')" style="display:none;">L</button>
+            <button class="btn" type="button" onclick="startOrder()" id="btnStart" disabled>Start</button>
+            <button class="btn ok" type="button" onclick="completeOrder()" id="btnComplete" style="display:none;">Complete</button>
           </div>
         </div>
-        <div class="col">
-          <label>Total units</label>
-          <input id="oTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 1024">
+      </div>
+
+      <!-- ✅ Progress header (shown after Start) -->
+      <div id="orderHeaderProgress" class="progHead" style="display:none;">
+        <div class="progMeta">
+          <div class="progTitle" id="progTitle">—</div>
+          <div class="progSub" id="progSub">Order #: — • Started —:—</div>
+          <div class="progBar">
+            <div class="progFill" id="progFill" style="width:0%"></div>
+          </div>
         </div>
-        <div class="col" style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-          <button id="btnUndo" class="btn slim" type="button" onclick="undoLast()" style="display:none;">Undo</button>
-          <span style="flex:1"></span>
-          <button id="btnB" class="btn chip" type="button" title="Start 20 min break" onclick="openBreakModal('B')" style="display:none;">B</button>
-          <button id="btnL" class="btn chip" type="button" title="Start 30 min lunch" onclick="openBreakModal('L')" style="display:none;">L</button>
-          <button class="btn" type="button" onclick="startOrder()" id="btnStart" disabled>Start</button>
-          <button class="btn ok" type="button" onclick="completeOrder()" id="btnComplete" style="display:none;">Complete</button>
-          <button class="btn warn" id="btnCloseInline" type="button"
-                  onclick="openCloseEarlyModal()" style="display:none;">Close Early…</button>
-        </div>
+        <div class="progPct" id="progPct">0%</div>
       </div>
 
       <div id="orderArea" style="display:none; margin-top:10px;">
@@ -321,7 +353,7 @@ td.small { font-size:12px; color:#9fb3c8; }
       </div>
       <div class="right">
         <button class="btn" type="button" id="btnCloseEarly" onclick="openCloseEarlyModal()" style="display:none;">Close Early…</button>
-        <button class="btn ok" type="button" id="btnEndShift" onclick="endShift()" style="min-width:220px;">End Shift & Archive →</button>
+        <button class="btn ok" type="button" id="btnEndShift" onclick="endShift()" style="min-width:220px;">End Shift &amp; Archive →</button>
       </div>
     </div>
     <div class="safetybar">
@@ -346,24 +378,35 @@ td.small { font-size:12px; color:#9fb3c8; }
 
   <!-- History -->
   <section id="tabHistory" class="hidden">
-    <div id="weekCard" class="card">
-      <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0; font-size:14px; color:#9fb3c8;">This Week (Sun–Sat)</h3>
-          <div class="hint" id="weekRangeHint">Week: —</div>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <div class="pill"><h3>Weighted Avg</h3><p id="weekWeighted">— u/h</p></div>
-          <div class="pill"><h3>Simple Mean</h3><p id="weekMean">— u/h</p></div>
-          <div class="pill"><h3>Total Units</h3><p id="weekUnits">0</p></div>
-          <div class="pill"><h3>Total Hours</h3><p id="weekHours">0.0</p></div>
-          <div class="pill"><h3>Days Counted</h3><p id="weekDays">0</p></div>
-        </div>
+    <div class="card" id="weekCard">
+      <div id="weekHeader" class="row-between" role="button" tabindex="0" aria-expanded="false" aria-controls="weekContent">
+        <div class="card-h">This Week (Sun–Sat)</div>
+        <div id="weekChevron" class="chev">▼</div>
       </div>
-      <div class="hint" style="margin-top:6px;">
-        Weighted Avg = total units ÷ total hours. Simple Mean = average of daily rates.
+      <div id="weekContent">
+        <div class="sub" id="weekRangeHint">Week: …</div>
+
+        <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+          <div class="week-row">
+            <div class="pill"><h3>Weighted Avg</h3><p id="weekWeighted">— u/h</p></div>
+            <div class="pill"><h3>Simple Mean</h3><p id="weekMean">— u/h</p></div>
+            <div class="pill"><h3>Total Units</h3><p id="weekUnits">0</p></div>
+            <div class="pill"><h3>Days Counted</h3><p id="weekDays">0</p></div>
+          </div>
+          <div class="week-row">
+            <div class="pill"><h3>Total Hours</h3><p id="weekHours">0.0</p></div>
+            <div class="pill"><h3>Overtime (15m blocks)</h3><p id="weekOvertime">0.0 h</p></div>
+          </div>
+        </div>
+
+        <div class="footnote">Weighted Avg = total units ÷ total hours.</div>
       </div>
     </div>
+
+    <div class="hint" style="margin-top:6px;">
+      Weighted Avg = total units ÷ total hours. Simple Mean = average of daily rates.
+    </div>
+
     <div class="card">
       <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
         <h3 style="margin:0; font-size:14px; color:#9fb3c8;">History (daily archives)</h3>
@@ -465,6 +508,41 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
   </div>
 </div>
+<!-- Elapsed / ETA Modal -->
+<div id="elapsedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="elapsedTitle" style="display:none;">
+  <div class="box" style="max-width:520px;">
+    <div class="hdr">
+      <h3 id="elapsedTitle">Order Timer</h3>
+      <button class="btn slim ghost" type="button" onclick="closeElapsedModal()">✖</button>
+    </div>
+    <div class="fld">
+      <div class="row">
+        <div class="col">
+          <div class="pill"><h3>Order Start</h3><p id="el_start">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Elapsed</h3><p id="el_elapsed">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Remaining</h3><p id="el_remaining">—</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="fld">
+      <div class="row">
+        <div class="col">
+          <div class="pill"><h3>Current Order Rate</h3><p id="el_rate">— u/h</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Predicted Time Left</h3><p id="el_timeleft">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>ETA (finish)</h3><p id="el_eta">—</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Close Early Modal -->
 <div id="closeEarlyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="closeEarlyTitle">
   <div class="box">
@@ -501,7 +579,6 @@ let current = null;     // active order
 let startTime = "";     // shift start (HH:MM)
 let lastClose = "";     // last order close time
 let undoStack = [];     // undo actions for current order
-let learned = {};       // placeholder
 let historyDays = [];   // archived days
 let customCodes = [];   // user-added customer codes
 let shiftBreaks = [];   // breaks without an active order
@@ -523,6 +600,9 @@ let breakDraft = null; // {type:'B'|'L', startHHMM, targetSec, beeping}
 let breakTickId = null;
 
 // ====== Utils ======
+function hasActiveOrder(){
+  return !!(current && current.start && current.name && (current.total|0) > 0);
+}
 function showToast(msg){ try{ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1400);}catch(e){} }
 function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10), M=parseInt(a[1],10); if(isNaN(H)||isNaN(M)) return NaN; return H + M/60; }
 function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
@@ -549,8 +629,77 @@ function weekBoundsFor(dateIso){
 }
 function inRange(iso, aISO, bISO){ return iso >= aISO && iso <= bISO; }
 
+let elapsedModalTick = null;
 
-// Simple, safe beep (no external files)
+/* Utility: add minutes to now → HH:MM */
+function addMinutesToNow(mins){
+  const d = new Date();
+  d.setMinutes(d.getMinutes() + Math.max(0, Math.round(mins)));
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+/* Toggle clickability/visual state of the Elapsed chip */
+function setElapsedChipClickable(on){
+  const chipBox = document.getElementById('chipElapsed');
+  if(!chipBox) return;
+  chipBox.classList.toggle('disabled', !on);
+}
+
+/* Open only when an order is running and not on break */
+function openElapsedModal(){
+  if (!current || breakDraft) return;
+  const m = document.getElementById('elapsedModal');
+  if(!m) return;
+  m.style.display = 'flex';
+  renderElapsedModalOnce();
+  if (elapsedModalTick) clearInterval(elapsedModalTick);
+  elapsedModalTick = setInterval(renderElapsedModalOnce, 600);
+}
+
+/* Close & cleanup */
+function closeElapsedModal(){
+  const m = document.getElementById('elapsedModal');
+  if(!m) return;
+  m.style.display = 'none';
+  if (elapsedModalTick) { clearInterval(elapsedModalTick); elapsedModalTick = null; }
+}
+
+/* One-frame render based on live snapshot + current order */
+function renderElapsedModalOnce(){
+  if (!current){ closeElapsedModal(); return; }
+
+  // Progress on the active order
+  const doneNow = currentOrderUnitsDone();
+  const total   = current.total || 0;
+  const remainingUnits = Math.max(0, total - doneNow);
+
+  // Elapsed since THIS order started
+  const now = nowHHMM();
+  const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
+
+  // Current ORDER rate (units/hour)
+  let orderRate = 0;
+  if (elapsedMin > 0) {
+    orderRate = (doneNow / (elapsedMin / 60)); // u/h
+  }
+
+  // Time left & ETA based on CURRENT ORDER rate
+  let minsLeft = null;
+  let etaStr = '—';
+  if (orderRate > 0 && remainingUnits > 0){
+    minsLeft = Math.round((remainingUnits / orderRate) * 60);
+    etaStr   = addMinutesToNow(minsLeft);
+  }
+
+  const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
+  setTxt('el_start', current.start || '—');
+  setTxt('el_elapsed', `${Math.floor(elapsedMin/60)}h ${String(elapsedMin%60).padStart(2,'0')}m`);
+  setTxt('el_remaining', String(remainingUnits));
+  setTxt('el_rate', `${Math.round(orderRate)} u/h`);
+  setTxt('el_timeleft', (minsLeft===null) ? '—' : `${Math.floor(minsLeft/60)}h ${String(minsLeft%60).padStart(2,'0')}m`);
+  setTxt('el_eta', etaStr);
+}
+
 function tryBeep(){
   try{
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -563,7 +712,7 @@ function tryBeep(){
     g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
     o.start();
     setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.02); o.stop(); ctx.close(); }, 350);
-  }catch(e){ /* no-op if blocked */ }
+  }catch(e){ /* no-op */ }
 }
 
 // ====== Persistence ======
@@ -572,7 +721,7 @@ function loadAll(){
     var raw=localStorage.getItem(KEY);
     if(raw){
       var p=JSON.parse(raw);
-      picks=p.picks||[]; learned=p.learned||{}; historyDays=p.history||[];
+      picks=p.picks||[]; historyDays=p.history||[];
       current=p.current||null; tempWraps=p.tempWraps||[]; startTime=p.startTime||""; lastClose=p.lastClose||""; undoStack=p.undoStack||[];
       proUnlocked = !!p.proUnlocked;
       shiftBreaks = p.shiftBreaks || [];
@@ -585,7 +734,7 @@ function saveAll(){
   try {
     localStorage.setItem(KEY, JSON.stringify({
       version:'3.3.55', savedAt:new Date().toISOString(),
-      picks, learned, history:historyDays,
+      picks, history:historyDays,
       current, tempWraps, startTime, lastClose, undoStack,
       proUnlocked, shiftBreaks
     }));
@@ -619,14 +768,6 @@ function groupedMap(all){
   return Object.fromEntries(Object.entries(map).sort(([a],[b])=>a.localeCompare(b)));
 }
 
-function currentLeftForGating(){
-  if(!current) return 0;
-  const raw = (document.getElementById('oLeft')?.value || '').trim();
-  if (raw !== '' && !isNaN(parseInt(raw,10))) return parseInt(raw,10);
-  if (tempWraps.length) return tempWraps[tempWraps.length-1].left;
-  return current.total; // no wraps + no input = nothing picked yet
-}
-
 function buildDropdown(ddId, selectId, otherInputId, prefix){
   const sel = document.getElementById(selectId);
   const dd  = document.getElementById(ddId);
@@ -643,43 +784,6 @@ function buildDropdown(ddId, selectId, otherInputId, prefix){
     dd.classList.remove('open');
   }
 
-  function render(){
-    menu.innerHTML = "";
-    const all = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
-    const groups = groupedMap(all);
-    Object.keys(groups).forEach(g=>{
-      const wrap = document.createElement('div'); wrap.className='dd-group';
-      const head = document.createElement('h4'); head.innerHTML = `<span>${g}</span><span>▾</span>`;
-      const items = document.createElement('div'); items.className='dd-items';
-      head.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        const open = items.style.display==='block';
-        items.style.display = open?'none':'block';
-        head.lastChild.textContent = open?'▾':'▴';
-      });
-      groups[g].forEach(code=>{
-        const it = document.createElement('button'); it.type='button'; it.textContent=code;
-        it.addEventListener('click', (e)=>{ e.stopPropagation(); setValue(code); });
-        items.appendChild(it);
-      });
-      wrap.appendChild(head); wrap.appendChild(items);
-      menu.appendChild(wrap);
-    });
-
-    // Other… row
-    const row = document.createElement('div'); row.className='dd-other';
-    const otherBtn = document.createElement('button'); otherBtn.className='btn slim'; otherBtn.textContent='Other…'; otherBtn.type='button';
-    otherBtn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      setValue('__OTHER__');
-      otherInput.classList.remove('hidden'); otherInput.focus();
-    });
-    row.appendChild(otherBtn);
-    menu.appendChild(row);
-
-    menu.addEventListener('click', (e)=> e.stopPropagation());
-  }
-
   btn.addEventListener('click', (e)=>{
     e.stopPropagation();
     document.querySelectorAll('.dd.open').forEach(x=>{ if(x!==dd) x.classList.remove('open'); });
@@ -690,6 +794,52 @@ function buildDropdown(ddId, selectId, otherInputId, prefix){
   document.addEventListener('click', (e)=>{
     if(!dd.contains(e.target)) dd.classList.remove('open');
   });
+
+  function render(){
+    const uniq = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
+    const groups = groupedMap(uniq);
+
+    menu.innerHTML = '';
+
+    Object.entries(groups).forEach(([pref, codes])=>{
+      const group = document.createElement('div');
+      group.className = 'dd-group';
+
+      const h = document.createElement('h4');
+      h.innerHTML = `${pref}<span>▾</span>`;
+      const items = document.createElement('div');
+      items.className = 'dd-items';
+
+      codes.forEach(code=>{
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = code;
+        b.addEventListener('click', ()=> setValue(code));
+        items.appendChild(b);
+      });
+
+      h.addEventListener('click', ()=> {
+        items.style.display = (items.style.display === 'block') ? 'none' : 'block';
+      });
+
+      group.appendChild(h);
+      group.appendChild(items);
+      menu.appendChild(group);
+    });
+
+    const other = document.createElement('div');
+    other.className = 'dd-other';
+    const btnOther = document.createElement('button');
+    btnOther.type = 'button';
+    btnOther.textContent = 'Other…';
+    btnOther.addEventListener('click', ()=>{
+      setValue('__OTHER__');
+      otherInput?.classList.remove('hidden');
+      otherInput?.focus();
+    });
+    other.appendChild(btnOther);
+    menu.appendChild(other);
+  }
 
   render();
   btn.textContent = sel.value ? (sel.value==='__OTHER__' ? 'Other…' : sel.value) : 'Select customer…';
@@ -714,8 +864,8 @@ function reloadDropdowns(){
 }
 
 function onCustomerChange(prefix){
-  const sel   = document.getElementById(prefix==='qc' ? 'qcCustomer' : 'oCust');
-  const input = document.getElementById(prefix==='qc' ? 'qcOther'    : 'oOther');
+  const sel   = document.getElementById('oCust');
+  const input = document.getElementById('oOther');
   if(!sel || !input) return;
   if(sel.value==='__OTHER__'){ input.classList.remove('hidden'); input.focus(); }
   else { input.classList.add('hidden'); }
@@ -725,9 +875,9 @@ function onCustomerChange(prefix){
 }
 
 function onOtherInput(prefix){
-  const sel   = document.getElementById(prefix==='qc' ? 'qcCustomer' : 'oCust');
-  const input = document.getElementById(prefix==='qc' ? 'qcOther'    : 'oOther');
-  const dd    = document.getElementById(prefix==='qc' ? 'qcDD'       : 'oDD');
+  const sel   = document.getElementById('oCust');
+  const input = document.getElementById('oOther');
+  const dd    = document.getElementById('oDD');
   if(!sel || !input) return;
   const before = input.value;
   input.value = upcase6(input.value);
@@ -773,14 +923,17 @@ function showTab(which){
   ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(x=>document.getElementById(x).classList.remove('active'));
   if(which==='calc') document.getElementById('tabCalcBtn').classList.add('active');
   if(which==='tracker') document.getElementById('tabTrackBtn').classList.add('active');
-  if(which==='history') document.getElementById('tabHistBtn').classList.add('active');
+  if(which==='history') {
+    document.getElementById('tabHistBtn').classList.add('active');
+    renderWeeklySummary();            // re-compute the numbers
+    initWeekCardToggle();             // ensure header click is bound & state applied
+  }
   document.getElementById('liveBanner').classList.toggle('hidden', which!=='tracker');
   updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility();
   saveAll();
 }
 
 // ====== Tracker core ======
-function setNow(id){ var el=document.getElementById(id); var now=nowHHMM(); if(id==='tStart'){ el.value=now; startTime=now; document.getElementById('snapHint').textContent='Start set to '+now; updateSummary(); } else { el.value=now; } saveAll(); }
 function snapToNearestHour(){
   const d = new Date();
   let h = d.getHours();
@@ -789,16 +942,13 @@ function snapToNearestHour(){
 }
 
 function startShift(lenHours){
-  // set hidden length so downstream math works unchanged
   const lenEl = document.getElementById('tLen');
   if (lenEl) lenEl.value = String(lenHours || 9);
 
-  // snap + store
   startTime = snapToNearestHour();
   const hint = document.getElementById('snapHint');
   if (hint) hint.textContent = `Shift started @ ${startTime} • ${lenEl ? lenEl.value : lenHours || 9}h`;
 
-  // kick off
   beginShift();
 }
 
@@ -812,7 +962,6 @@ function beginShift(){
 
   renderDone(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
 
-  // Keep elapsed chip hidden until an order or break starts
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) {
     chipBox.style.display = 'none';
@@ -838,7 +987,6 @@ function refreshWrapButton(){
   const raw = (inp.value||'').trim();
   btn.disabled = (raw === '');
 }
-
 
 function startOrder() {
   const sel = document.getElementById('oCust'); 
@@ -872,7 +1020,6 @@ function startOrder() {
   updateCloseEarlyVisibility();
   saveAll();
 
-  // ===== Reset & start Elapsed timer =====
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) {
     chipBox.style.display = '';
@@ -881,7 +1028,7 @@ function startOrder() {
   }
   const chipVal = document.getElementById('chipElapsedVal');
   if (chipVal) chipVal.textContent = '0 min';
-  updateElapsedChip(); // begin ticking fresh
+  updateElapsedChip();
 }
 
 function logWrap(){
@@ -920,7 +1067,7 @@ function undoLast(){
     tempWraps.pop();
     renderTimeline();
     updateSummary();
-    refreshCompleteButton();   // ← re-evaluate
+    refreshCompleteButton();
     saveAll();
     return;
   }
@@ -928,7 +1075,7 @@ function undoLast(){
     current.breaks.pop();
     renderTimeline();
     updateSummary();
-    refreshCompleteButton();   // ← re-evaluate
+    refreshCompleteButton();
     saveAll();
     return;
   }
@@ -937,7 +1084,7 @@ function undoLast(){
     current.__lastDelay=null;
     renderTimeline();
     updateSummary();
-    refreshCompleteButton();   // ← re-evaluate
+    refreshCompleteButton();
     saveAll();
     return;
   }
@@ -949,14 +1096,12 @@ function undoLast(){
     document.getElementById('btnComplete').style.display='none';
     showToast('Order start undone');
     updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); updateSummary();
-    refreshCompleteButton();   // ← safe
+    refreshCompleteButton();
     saveAll();
     return;
   }
 }
 
-
-// === Option C: Early-complete gating helpers ===
 function minutesSinceHHMM(hhmm){
   if(!hhmm) return 0;
   const now = nowHHMM();
@@ -964,15 +1109,11 @@ function minutesSinceHHMM(hhmm){
   return Math.max(0, diffMin);
 }
 
-function canCompleteOrder(){
-  return !!current; // no time gate
-}
-
+function canCompleteOrder(){ return !!current; }
 
 function refreshCompleteButton(){
   const btn = document.getElementById('btnComplete');
   if (!btn) return;
-  // no timing logic, no reason block gating
   btn.disabled = !current;
 }
 
@@ -993,72 +1134,43 @@ function completeOrder() {
   if (!current) return alert('Start an order first');
   const close = nowHHMM();
   if (!startTime) return alert('Add shift start first');
-  // If user typed 0 in Units left but didn’t log it, treat as finished.
   const typedLeftRaw = (document.getElementById('oLeft')?.value || '').trim();
   const typedLeft = typedLeftRaw === '' ? null : parseInt(typedLeftRaw, 10);
   const treatTypedZeroAsDone = (typedLeft !== null && !isNaN(typedLeft) && typedLeft === 0);
 
-  // Calculate final state
   const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
   let unitsDone = current.total - (lastLeft || 0);
 
-  // Infer pallets: wraps == pallets; if no wraps but work done → assume 1 pallet
   let palletsCount = tempWraps.length;
-  let addedImplicitWrap = false;
-
   if (palletsCount === 0) {
     const ok = confirmCloseSummary({
-      name: current.name,
-      unitsDone: current.total,
-      pallets: 1,
-      start: current.start,
-      close
+      name: current.name, unitsDone: current.total, pallets: 1, start: current.start, close
     });
     if (!ok) return;
-
-    // Persist an implicit single-pallet wrap so logs are consistent
     tempWraps.push({ left: 0, done: current.total, t: close });
     palletsCount = 1;
     unitsDone = current.total;
-    addedImplicitWrap = true;
-
-    // If user had typed 0, clear the input now to avoid stale UI
     if (treatTypedZeroAsDone) {
       const oLeftEl = document.getElementById('oLeft');
       if (oLeftEl) oLeftEl.value = '';
     }
-  }
- else {
-    // We have recorded wraps → pallets = wraps.length
+  } else {
     const ok = confirmCloseSummary({
-      name: current.name,
-      unitsDone,
-      pallets: palletsCount,
-      start: current.start,
-      close
+      name: current.name, unitsDone, pallets: palletsCount, start: current.start, close
     });
     if (!ok) return;
   }
 
   const exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
-
   const order = {
-    name: current.name,
-    units: unitsDone,
-    pallets: palletsCount,
-    close,
-    start: current.start,
-    excl: exclMins,
+    name: current.name, units: unitsDone, pallets: palletsCount, close, start: current.start, excl: exclMins,
     log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
   };
 
   picks.push(order);
   lastClose = close;
-  current = null;
-  tempWraps = [];
-  undoStack = [];
+  current = null; tempWraps = []; undoStack = [];
 
-  // Reset UI
   document.getElementById('orderArea').style.display = 'none';
   ['btnUndo'].forEach(id => document.getElementById(id).style.display = 'none');
   document.getElementById('btnStart').style.display = 'inline-block';
@@ -1073,7 +1185,6 @@ function completeOrder() {
   updateEndShiftVisibility();
   updateCloseEarlyVisibility();
 
-  // Hide elapsed chip
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) {
     chipBox.style.display = 'none';
@@ -1086,7 +1197,11 @@ function completeOrder() {
 }
 
 // ====== Delay logging ======
-function updateDelayBtn(){ var el=document.getElementById('btnDelay'); if(el) el.style.display = current ? 'inline-block' : 'none'; }
+function updateDelayBtn(){
+  const el = document.getElementById('btnDelay');
+  if (!el) return;
+  el.style.display = hasActiveOrder() ? 'inline-block' : 'none';
+}
 function openDelayModal(){
   if(!current) return alert('Start an order to log a delay');
   delayDraft = { start: nowHHMM(), cause: '' };
@@ -1111,25 +1226,20 @@ function submitDelay(){
 }
 
 // ====== Break timer (banner) ======
-function openBreakModal(kind){
-  // Back-compat: buttons still call this; we now use the banner
-  startBreak(kind);
-}
+function openBreakModal(kind){ startBreak(kind); }
 
 function startBreak(kind){
   var mins = (kind==='B') ? 20 : 30;
   var start = nowHHMM();
   breakDraft = {type:kind, startHHMM:start, targetSec: mins*60, beeping:false};
 
-  // Fill banner
   document.getElementById('breakBarTitle').textContent = (kind==='B'?'Break':'Lunch');
   document.getElementById('breakBarStart').textContent = start;
   document.getElementById('breakBarTarget').textContent = mins+' min target';
   document.getElementById('breakBar').style.display = 'flex';
 
-  // Show the "Back in" chip and start ticking
   document.getElementById('chipElapsed').style.display = '';
-  tickBreak(); // set first frame immediately
+  tickBreak();
   if(breakTickId) clearInterval(breakTickId);
   breakTickId = setInterval(tickBreak, 1000);
 }
@@ -1142,33 +1252,26 @@ function tickBreak() {
   const targetMin = Math.round(breakDraft.targetSec / 60);
   const diff = targetMin - elapsedMin;
 
-  // Format: positive = remaining, negative = over
   const breakDisplay = diff >= 0 ? `${diff} min` : `-${Math.abs(diff)} min over`;
 
-  // Update banner & live chip
   const breakBar = document.getElementById('breakBarCountdown');
   const chip = document.getElementById('chipElapsedVal');
   const chipBox = document.getElementById('chipElapsed');
 
-  // ✅ Label switch to "Back in" while on break
   const chipLabel = chipBox.querySelector('b');
   if (chipLabel) chipLabel.textContent = 'Back in';
 
-  // Break timer shows while on break
   breakBar.textContent = breakDisplay;
   chip.textContent = breakDisplay;
 
-  // Colour state (green until 0, then amber)
   chipBox.classList.remove('green', 'amber');
   chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
 
-  // Single beep when we cross into overtime
   if (diff === 0 && !breakDraft.beeping) {
     breakDraft.beeping = true;
     tryBeep();
   }
 }
-
 
 function submitBreak(){
   if(!breakDraft){ return cancelBreak(); }
@@ -1187,18 +1290,14 @@ function submitBreak(){
   if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
   breakDraft = null;
 
-  // Hide banner
   document.getElementById('breakBar').style.display = 'none';
 
-  // Restore chip state:
   const chipBox = document.getElementById('chipElapsed');
   const chipVal = document.getElementById('chipElapsedVal');
   if (current) {
-    // Active order → resume "Elapsed"
     if (chipBox) chipBox.style.display = '';
     updateElapsedChip();
   } else {
-    // No active order → hide
     if (chipBox) chipBox.style.display = 'none';
     if (chipVal) chipVal.textContent = '—';
   }
@@ -1209,20 +1308,16 @@ function submitBreak(){
 }
 
 function cancelBreak(){
-  // User cancels the running timer without logging
   if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
   breakDraft = null;
-
-  // Hide banner
   document.getElementById('breakBar').style.display = 'none';
 
-  // Restore chip state based on whether an order is active
   const chipBox = document.getElementById('chipElapsed');
   const chipVal = document.getElementById('chipElapsedVal');
 
   if (current) {
     if (chipBox) chipBox.style.display = '';
-    updateElapsedChip(); // resume order elapsed
+    updateElapsedChip();
   } else {
     if (chipBox) chipBox.style.display = 'none';
     if (chipVal) chipVal.textContent = '—';
@@ -1231,9 +1326,10 @@ function cancelBreak(){
 
 // ====== Close Early ======
 function updateCloseEarlyVisibility(){
-  var btn=document.getElementById('btnCloseEarly');
-  var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden');
-  btn.style.display = (trackerVisible && !!current) ? 'inline-block' : 'none';
+  const btn = document.getElementById('btnCloseEarly');
+  if (!btn) return;
+  const trackerVisible = !document.getElementById('tabTracker').classList.contains('hidden');
+  btn.style.display = (trackerVisible && hasActiveOrder()) ? 'inline-block' : 'none';
 }
 
 function openCloseEarlyModal(){
@@ -1249,7 +1345,6 @@ function closeCloseEarlyModal(){ document.getElementById('closeEarlyModal').styl
 function submitCloseEarly(){
   if(!current) return closeCloseEarlyModal();
 
-  // Inputs
   const remaining = parseInt(document.getElementById('ceRemaining').value||'0',10);
   if (isNaN(remaining) || remaining < 0) return alert('Enter remaining units (0 or more).');
 
@@ -1262,7 +1357,6 @@ function submitCloseEarly(){
 
   const elapsed = minutesSinceHHMM(current.start);
 
-  // Validation (unchanged)
   let validationFail = false;
   (function enforceReasonRules(){
     const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
@@ -1284,7 +1378,6 @@ function submitCloseEarly(){
   })();
   if (validationFail) return;
 
-  // Apply optional “wrapped last pallet” as a real wrap (but allow rollback)
   let addedWrap = false;
   if (wrapped){
     if (remaining >= prevLeft) return alert('To mark a wrap, remaining must be less than '+prevLeft+'.');
@@ -1293,41 +1386,27 @@ function submitCloseEarly(){
   }
 
   const close = nowHHMM();
-  const palletsCount = tempWraps.length || 1; // if still zero, infer single pallet
+  const palletsCount = tempWraps.length || 1;
   const unitsDone = current.total - remaining;
 
-  // Final confirmation (handles both early with remaining and exact finish)
   const ok = confirmCloseSummary({
-    name: current.name,
-    unitsDone,
-    pallets: palletsCount,
-    start: current.start,
-    close,
-    remaining,
-    earlyReason: reason
+    name: current.name, unitsDone, pallets: palletsCount, start: current.start, close, remaining, earlyReason: reason
   });
 
   if (!ok){
-    // rollback the ad-hoc wrap if we added one
     if (addedWrap) tempWraps.pop();
-    return; // keep modal open so they can tweak
+    return;
   }
 
   const exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
   const order = {
-    name: current.name,
-    units: unitsDone,
-    pallets: palletsCount,
-    close,
-    start: current.start,
-    excl: exclMins,
+    name: current.name, units: unitsDone, pallets: palletsCount, close, start: current.start, excl: exclMins,
     earlyReason: reason || '',
     log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
   };
   picks.push(order);
   lastClose = close;
 
-  // Reset session/UI
   current = null; tempWraps = []; undoStack = [];
   document.getElementById('orderArea').style.display = 'none';
   ['btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
@@ -1346,7 +1425,6 @@ function submitCloseEarly(){
   saveAll();
   showToast('Order closed');
 
-  // Hide elapsed chip
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) chipBox.style.display = 'none';
 }
@@ -1398,7 +1476,6 @@ function renderDone(){
       html += '<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; 
     });
 
-    // ✅ Add early close reason if present
     if (o.earlyReason && o.earlyReason.trim().length > 0) {
       html += `<div class="tick"><span>📝 Early Close Reason:</span><span class="meta">${o.earlyReason.replace(/</g,'&lt;')}</span></div>`;
     }
@@ -1416,31 +1493,39 @@ function renderDone(){
 }
 function renderWeeklySummary(){
   try{
-    // Determine this week's Sun–Sat from "today"
     const todayISOstr = todayISO();
     const { startISO, endISO, startDate, endDate } = weekBoundsFor(todayISOstr);
 
-    // Filter archived days that land in this week
     const weekDays = (historyDays||[]).filter(d => d && d.date && inRange(d.date, startISO, endISO));
 
-    // Aggregate
+    const floorToQuarter = (mins)=> Math.max(0, Math.floor(mins/15)*15);
+    const num = (v)=> Number.isFinite(+v) ? +v : 0;
+
     let totalUnits = 0;
     let totalHours = 0;
     let sumDayRates = 0;
+    let overtimeMin = 0;
 
     weekDays.forEach(d=>{
-      const units = Number(d.totalUnits||0);
-      const hours = Number(d.shiftLen||0);
-      const rate  = Number(d.dayRate||0);
+      const units = num(d.totalUnits);
+      const hours = num(d.shiftLen);
+      const rate  = num(d.dayRate);
+
+      const workedMin    = num(d.workedMin) || num(d.elapsedMin) || Math.round(hours*60);
+      const scheduledMin = num(d.scheduledMin) || Math.round((hours || 9)*60);
+
       totalUnits += units;
-      totalHours += (isFinite(hours)&&hours>0) ? hours : 0;
-      sumDayRates += isFinite(rate) ? rate : 0;
+      if (hours > 0) totalHours += hours;
+      if (rate  > 0) sumDayRates += rate;
+
+      const delta = workedMin - scheduledMin;
+      if (delta > 0) overtimeMin += floorToQuarter(delta);
     });
 
     const weighted = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
     const mean     = (weekDays.length>0) ? Math.round(sumDayRates / weekDays.length) : 0;
+    const overtimeH = (overtimeMin/60);
 
-    // Fill UI
     const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
     const hintEl = document.getElementById('weekRangeHint');
     if(hintEl) hintEl.textContent = `Week: ${fmtShort(startDate)} – ${fmtShort(endDate)}`;
@@ -1450,8 +1535,8 @@ function renderWeeklySummary(){
     setTxt('weekUnits',    String(totalUnits));
     setTxt('weekHours',    (totalHours||0).toFixed(1));
     setTxt('weekDays',     String(weekDays.length));
+    setTxt('weekOvertime', overtimeH.toFixed(2) + ' h');
 
-    // Colour the card subtly by weighted result
     const card = document.getElementById('weekCard');
     if(card){
       card.classList.remove('ok','warn','bad');
@@ -1460,20 +1545,21 @@ function renderWeeklySummary(){
       else card.classList.add('bad');
     }
   }catch(e){
-    // Keep History usable even if a record is malformed
+    console.warn('renderWeeklySummary error', e);
   }
 }
+
 // ====== History render ======
 function renderHistory(){
   var host=document.getElementById('histList'); host.innerHTML='';
   if(!historyDays.length){
     host.innerHTML='<div class="hint">No archived days yet.</div>';
-    renderWeeklySummary();   // still show an empty week bar
+    renderWeeklySummary();
     return;
   }
   var days=historyDays.slice(0).reverse();
   days.forEach(function(d,diRev){
-    const di = historyDays.length - 1 - diRev; // original index
+    const di = historyDays.length - 1 - diRev;
     var head=document.createElement('div'); var boxState=d.dayRate>=300?'ok':(d.dayRate>=249?'warn':'bad');
     head.className='accHead '+boxState;
 
@@ -1483,7 +1569,6 @@ function renderHistory(){
       <span>Day Avg: <b>${d.dayRate||0}</b> u/h</span>`;
     head.appendChild(leftDiv);
 
-    // Pro-only delete day button
     const del = document.createElement('button');
     del.textContent = '✖';
     del.className = 'btn slim ghost gate-pro';
@@ -1496,7 +1581,6 @@ function renderHistory(){
 
     var body=document.createElement('div'); body.className='accBody';
 
-    // Orders table
     var table=document.createElement('table');
     table.innerHTML='<thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>';
     var tbody=document.createElement('tbody');
@@ -1530,7 +1614,6 @@ function renderHistory(){
 
     table.appendChild(tbody); body.appendChild(table);
 
-    // Secondary expandable: Notes & Downtime
     const subAcc = document.createElement('div'); subAcc.className='accordion';
     const subHead = document.createElement('div'); subHead.className='accHead'; subHead.innerHTML='<div class="left"><span>Notes & Downtime</span></div><span class="chev">▾</span>';
     const subBody = document.createElement('div'); subBody.className='accBody';
@@ -1539,11 +1622,9 @@ function renderHistory(){
     notes.className='logwrap';
     let notesHtml = '<div class="hint">Notes</div>';
 
-    // Shift-level breaks
     (d.shiftBreaks||[]).forEach(b=>{
       notesHtml += `<div class="tick"><span>☕ ${(b.type==='B')?'Break':'Lunch'}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span></div>`;
     });
-    // Per-order breaks & delays
     (d.picks||[]).forEach(o=>{
       (o.log?.breaks||[]).forEach(b=>{
         if(b.type==='B' || b.type==='L'){
@@ -1553,7 +1634,6 @@ function renderHistory(){
         }
       });
     });
-    // Downtimes (gaps between orders not covered by breaks)
     (d.downtimes||[]).forEach(g=>{
       notesHtml += `<div class="tick"><span>⏳ Downtime</span><span class="meta">${g.from} → ${g.to} • ${g.minutes}m</span></div>`;
     });
@@ -1572,6 +1652,9 @@ function renderHistory(){
     subHead.addEventListener('click', function(){ var open=subBody.style.display==='block'; subBody.style.display=open?'none':'block'; subHead.querySelector('.chev').textContent=open?'▾':'▴'; });
   });
   applyProGate();
+  // Force-hide controls when no active shift/order
+  document.getElementById('btnDelay').style.display = 'none';
+  document.getElementById('btnCloseEarly').style.display = 'none';
 }
 
 // ====== End Shift & History mgmt ======
@@ -1738,16 +1821,15 @@ function clearAllCustom(){
 
 // ====== Live banner ======
 function currentOrderUnitsDone(){
-  if(!current) return 0;
-  const raw = (document.getElementById('oLeft')?.value || '').trim();
-  if (raw !== '' && !isNaN(parseInt(raw,10))) {
-    const left = Math.max(0, Math.min(parseInt(raw,10), current.total));
-    return (current.total || 0) - left;
-  }
+  if (!current) return 0;
+
+  // Ignore any live input — only use logged wraps
   if (tempWraps.length > 0) {
-    const left = tempWraps[tempWraps.length-1].left;
+    const left = tempWraps[tempWraps.length - 1].left;
     return (current.total || 0) - left;
   }
+
+  // No wraps yet, so 0 progress
   return 0;
 }
 
@@ -2108,30 +2190,79 @@ function openLiveModal(){
   liveModalTick = setInterval(renderLiveModalOnce, 600);
 }
 
+function initWeekCardToggle(){
+  const card    = document.getElementById('weekCard');
+  const header  = document.getElementById('weekHeader');
+  const content = document.getElementById('weekContent');
+  const chev    = document.getElementById('weekChevron');
+  if(!card || !header || !content) return;
+
+  function apply(collapsed){
+    card.classList.toggle('collapsed', collapsed);
+    header.setAttribute('aria-expanded', String(!collapsed));
+    if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+    localStorage.setItem('weekCardCollapsed', collapsed ? '1' : '0');
+  }
+
+  // Re-apply saved state every time we call this (safe)
+  const saved = localStorage.getItem('weekCardCollapsed');
+  apply(saved === null ? true : saved === '1');
+
+  // Prevent duplicate listeners across tab switches
+  if (card.dataset.bound === '1') return;
+
+  const toggle = ()=> apply(!card.classList.contains('collapsed'));
+  header.addEventListener('click', toggle);
+  header.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+
+  card.dataset.bound = '1';
+}
+
+
 // ====== Boot ======
 document.addEventListener('DOMContentLoaded', function(){
   try {
     loadCustomCodes();
     loadAll(); // loads startTime, picks, current, history, etc.
 
+    // Hard-hide gated actions if there is no real active order
+    document.getElementById('btnDelay')?.style && (document.getElementById('btnDelay').style.display = 'none');
+    document.getElementById('btnCloseEarly')?.style && (document.getElementById('btnCloseEarly').style.display = 'none');
+
     // Build dropdowns
     buildDropdown('oDD','oCust','oOther','o');
     reloadDropdowns();
 
+    // Elapsed chip modal + backdrop
+    document.getElementById('chipElapsed')?.addEventListener('click', openElapsedModal);
+    document.getElementById('elapsedModal')?.addEventListener('click', (e)=>{
+      if (e.target && e.target.id === 'elapsedModal') closeElapsedModal();
+    });
+
     // Input listeners
     document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
     document.getElementById('oLeft')?.addEventListener('input', refreshWrapButton);
+
     // Close Live Update when clicking backdrop
     document.getElementById('liveUpdateModal')?.addEventListener('click', (e)=>{
       if (e.target && e.target.id === 'liveUpdateModal') closeLiveUpdateModal();
     });
-    applyProGate();
-    renderHistory(); renderWeeklySummary(); renderDone(); renderULayerChips();
 
-    // Open modal on Live Rate chip click
+    applyProGate();
+
+    // History UI
+    renderHistory();
+    renderWeeklySummary();       // compute week stats once on boot
+    initWeekCardToggle();        // <-- initialize collapsible "This Week" card (no nested DOMContentLoaded)
+    renderDone();
+    renderULayerChips();
+
+    // Live Rate chip → modal
     document.getElementById('chipRate')?.addEventListener('click', openLiveModal);
 
-    // Close modal when clicking backdrop (outside .box)
+    // Live modal backdrop
     document.getElementById('liveModal')?.addEventListener('click', (e)=>{
       if (e.target && e.target.id === 'liveModal') closeLiveModal();
     });
@@ -2141,25 +2272,26 @@ document.addEventListener('DOMContentLoaded', function(){
       // Hide shift setup, show main tracker
       document.getElementById('shiftCard').style.display = 'none';
       document.getElementById('completedCard').style.display = 'block';
-      renderDone(); 
-      updateSummary(); 
+      renderDone();
+      updateSummary();
       updateDelayBtn();
-      updateEndShiftVisibility(); 
+      updateEndShiftVisibility();
       updateCloseEarlyVisibility();
 
       const activeCard = document.getElementById('activeOrderCard');
-      const orderArea = document.getElementById('orderArea');
+      const orderArea  = document.getElementById('orderArea');
 
       // --- Case A: Order in progress ---
       if (current) {
         if (activeCard) activeCard.style.display = 'block';
-        if (orderArea) orderArea.style.display = 'block';
+        if (orderArea)  orderArea.style.display  = 'block';
 
         // Restore form values (for visibility only)
-        document.getElementById('oCust').value = current.name || '';
+        document.getElementById('oCust').value  = current.name || '';
         document.getElementById('oTotal').value = current.total || '';
         document.getElementById('snapHint').textContent = 'Order resumed @ ' + (current.start || '—');
-        // Sync visible dropdown label with the resumed code & persist if new
+
+        // Sync dropdown label & persist if new
         {
           const ddToggle = document.querySelector('#oDD .dd-toggle');
           if (ddToggle && current?.name) ddToggle.textContent = current.name;
@@ -2170,30 +2302,31 @@ document.addEventListener('DOMContentLoaded', function(){
             reloadDropdowns();
           }
         }
+
         // Restore buttons
         ['btnB','btnL','btnUndo'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.style.display = 'inline-block';
         });
-        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnStart').style.display    = 'none';
         document.getElementById('btnComplete').style.display = 'inline-block';
-        document.getElementById('btnComplete').disabled = false;
+        document.getElementById('btnComplete').disabled      = false;
+
         renderTimeline();
       }
-
       // --- Case B: Shift active, no current order ---
       else {
         if (activeCard) activeCard.style.display = 'block';
-        if (orderArea) orderArea.style.display = 'none';
+        if (orderArea)  orderArea.style.display  = 'none';
         ['btnB','btnL','btnUndo'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.style.display = 'none';
         });
-        document.getElementById('btnStart').style.display = 'inline-block';
-        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnStart').style.display    = 'inline-block';
+        document.getElementById('btnStart').disabled         = true;
         document.getElementById('btnComplete').style.display = 'none';
         reloadDropdowns();
-        document.getElementById('oCust').value = '';
+        document.getElementById('oCust').value  = '';
         document.getElementById('oTotal').value = '';
       }
 
@@ -2204,14 +2337,17 @@ document.addEventListener('DOMContentLoaded', function(){
       if (breakDraft) {
         if (chipBox) chipBox.style.display = '';
         tickBreak(); // show "Back in" + countdown
-      } 
+        setElapsedChipClickable(false); // disabled on break
+      }
       else if (current && current.start) {
         if (chipBox) chipBox.style.display = '';
         updateElapsedChip(); // show elapsed for order
-      } 
+        setElapsedChipClickable(true); // clickable during active order
+      }
       else {
         if (chipBox) chipBox.style.display = 'none';
-        if (chipVal) chipVal.textContent = '—';
+        if (chipVal) chipVal.textContent   = '—';
+        setElapsedChipClickable(false); // no order
       }
 
       showTab('tracker');
@@ -2219,11 +2355,16 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     // Refresh summary/UI
-    updateSummary(); 
-    updateDelayBtn(); 
-    updateEndShiftVisibility(); 
-    updateCloseEarlyVisibility(); 
+    updateSummary();
+    updateDelayBtn();
+    updateEndShiftVisibility();
+    updateCloseEarlyVisibility();
     updateElapsedChip();
+
+    // Initial clickability if no auto-resume path triggered above
+    if (!startTime || (window.archived === true)) {
+      setElapsedChipClickable(!!current && !breakDraft);
+    }
 
     // === QuickCalc wiring ===
     var qcRateEl = document.getElementById('qcRate');
@@ -2245,12 +2386,19 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelector('#oDD .dd-menu')?.addEventListener('click', ()=>setTimeout(refreshStartButton,0));
     document.querySelector('#oDD .dd-toggle')?.addEventListener('click', ()=>setTimeout(refreshStartButton,0));
 
-    // Live summary + timer loop
+    // Live summary + timer loop (also enforce chip clickability state)
     setInterval(function(){
       if(!document.getElementById('tabTracker').classList.contains('hidden')){
         updateSummary();
-        if (breakDraft) tickBreak();
-        else if (current) updateElapsedChip();
+        if (breakDraft) {
+          tickBreak();
+          setElapsedChipClickable(false);
+        } else if (current) {
+          updateElapsedChip();
+          setElapsedChipClickable(true);
+        } else {
+          setElapsedChipClickable(false);
+        }
       }
     }, 600);
 
