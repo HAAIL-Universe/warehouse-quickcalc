@@ -161,7 +161,8 @@ td.small { font-size:12px; color:#9fb3c8; }
 
 /* Collapsible week card (single source of truth) */
 #weekHeader { display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding-right:6px; }
-#weekHeader:focus { outline: 2px solid var(--line); outline-offset: 2px; }
+#weekHeader:focus { outline: none; }
+#weekHeader:focus-visible { outline: none; }
 #weekCard .chev { font-weight:700; transition: transform .18s ease-in-out, opacity .18s ease-in-out; opacity:.8; }
 #weekCard.collapsed .chev { transform: rotate(-90deg); opacity:.6; }
 #weekCard.collapsed #weekContent { display:none; }
@@ -1130,68 +1131,81 @@ Start → Close: ${start} → ${close}${reasonTxt}`;
   return confirm(msg);
 }
 
-function completeOrder() {
+// --- DROP-IN REPLACEMENT ---
+function completeOrder(){
   if (!current) return alert('Start an order first');
-  const close = nowHHMM();
   if (!startTime) return alert('Add shift start first');
-  const typedLeftRaw = (document.getElementById('oLeft')?.value || '').trim();
-  const typedLeft = typedLeftRaw === '' ? null : parseInt(typedLeftRaw, 10);
-  const treatTypedZeroAsDone = (typedLeft !== null && !isNaN(typedLeft) && typedLeft === 0);
 
+  const close = nowHHMM();
+
+  // If user hasn't logged the last pallet to 0, add it now.
   const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
-  let unitsDone = current.total - (lastLeft || 0);
+  let addedAutoWrap = false;
+  if (lastLeft > 0) {
+    tempWraps.push({ left: 0, done: lastLeft, t: close });
+    undoStack.push({ type: 'wrap' });
+    addedAutoWrap = true;
+  }
 
-  let palletsCount = tempWraps.length;
-  if (palletsCount === 0) {
-    const ok = confirmCloseSummary({
-      name: current.name, unitsDone: current.total, pallets: 1, start: current.start, close
-    });
-    if (!ok) return;
-    tempWraps.push({ left: 0, done: current.total, t: close });
-    palletsCount = 1;
-    unitsDone = current.total;
-    if (treatTypedZeroAsDone) {
-      const oLeftEl = document.getElementById('oLeft');
-      if (oLeftEl) oLeftEl.value = '';
-    }
-  } else {
-    const ok = confirmCloseSummary({
-      name: current.name, unitsDone, pallets: palletsCount, start: current.start, close
-    });
-    if (!ok) return;
+  const palletsCount = tempWraps.length || 1;
+  const unitsDone = current.total; // all units now accounted for
+
+  // Confirm summary
+  const ok = confirmCloseSummary({
+    name:   current.name,
+    unitsDone,
+    pallets: palletsCount,
+    start:  current.start,
+    close
+  });
+  if (!ok) {
+    // Revert auto wrap if user cancelled
+    if (addedAutoWrap) { tempWraps.pop(); undoStack.pop(); }
+    return;
   }
 
   const exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
   const order = {
-    name: current.name, units: unitsDone, pallets: palletsCount, close, start: current.start, excl: exclMins,
-    log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
+    name: current.name,
+    units: unitsDone,
+    pallets: palletsCount,
+    start: current.start,
+    close,
+    excl: exclMins,
+    log: { wraps: tempWraps.slice(), breaks: current.breaks.slice() }
   };
 
+  // Persist this order
   picks.push(order);
   lastClose = close;
-  current = null; tempWraps = []; undoStack = [];
 
+  // Reset active order state/UI
+  current = null; tempWraps = []; undoStack = [];
   document.getElementById('orderArea').style.display = 'none';
-  ['btnUndo'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('btnUndo').style.display = 'none';
   document.getElementById('btnStart').style.display = 'inline-block';
   document.getElementById('btnStart').disabled = true;
   document.getElementById('btnComplete').style.display = 'none';
   document.getElementById('oLeft').value = '';
   document.getElementById('oTotal').value = '';
 
+  // Hide progress header, show form header for the next order (if you use them)
+  const hdrForm = document.getElementById('orderHeaderForm');
+  const hdrProg = document.getElementById('orderHeaderProgress');
+  if (hdrForm) hdrForm.style.display = '';
+  if (hdrProg) hdrProg.style.display = 'none';
+
+  // Hide elapsed chip when no active order
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (chipBox) chipBox.style.display = 'none';
+  if (chipVal) chipVal.textContent = '—';
+
   renderDone();
-  updateSummary();
+  updateSummary();            // ← Total Units chip now includes this order fully
   updateDelayBtn();
   updateEndShiftVisibility();
   updateCloseEarlyVisibility();
-
-  const chipBox = document.getElementById('chipElapsed');
-  if (chipBox) {
-    chipBox.style.display = 'none';
-    const chipVal = document.getElementById('chipElapsedVal');
-    if (chipVal) chipVal.textContent = '—';
-  }
-
   saveAll();
   showToast('Order closed at ' + close);
 }
