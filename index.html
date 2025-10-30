@@ -146,9 +146,33 @@ td.small { font-size:12px; color:#9fb3c8; }
   position: relative; height: 12px; background:#0f131b; border:1px solid #29364a;
   border-radius:999px; overflow:hidden; margin-top:8px;
 }
-.progFill { position:absolute; left:0; top:0; bottom:0; width:0%;
-  background: linear-gradient(90deg, #2f6bff, #1b6e36);
+/* Progress bar fill — with smooth dark gradient base */
+.progFill {
+  position:absolute; left:0; top:0; bottom:0; width:0%;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--line);
+  transition: background-color .25s ease, width .35s ease;
+  border-radius: 3px;
 }
+
+/* Pace tints overlayed on the gradient */
+.progFill.pace-ok {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--ok);
+}
+.progFill.pace-warn {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--warn);
+}
+.progFill.pace-bad {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--bad);
+}
+
 .progPct { margin-left:10px; font-weight:700; min-width:56px; text-align:right; }
 .progHead{ align-items:flex-end; }
 .progPct{ margin: 0 0 2px 10px; } /* nudge down slightly */
@@ -168,6 +192,18 @@ td.small { font-size:12px; color:#9fb3c8; }
   gap: 12px;
   margin-top: 12px;
 }
+.readonly-time {
+  background: #1a1e27;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--ink);
+  font-family: monospace;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  text-align: left;
+  user-select: none;
+}
 
 #liveModal .live-key {
   grid-column: 1 / 4;        /* span full width */
@@ -179,33 +215,18 @@ td.small { font-size:12px; color:#9fb3c8; }
   grid-column: 2;            /* keep centered */
   justify-self: center;
 }
-
 #liveModal #live_formula {
   grid-column: 1;            /* bottom-left under the button */
   justify-self: start;
   opacity: .85;
   font-size: 0.95rem;
 }
-
 /* Percentage badge inline with the progress bar */
 #orderHeaderProgress .pct-badge {
   position: relative;
   display: inline-block;
   transform: translateY(6px); /* drop ~6px so it lines up with the bar */
 }
-
-/* Put Complete button in the top-right of the panel header */
-#orderHeaderProgress .header-actions {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  display: flex;
-  gap: 8px;
-}
-#orderHeaderProgress .header-actions #btnComplete {
-  display: inline-block !important;
-}
-
 /* ─────────────────────────────
    Compact, Full-Width Weekly Pills (SCOPED)
    ───────────────────────────── */
@@ -214,7 +235,6 @@ td.small { font-size:12px; color:#9fb3c8; }
 #weekCard .pill { flex:1 1 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); min-width: 0; }
 #weekCard .pill h3 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 3px; white-space: nowrap; }
 #weekCard .pill p  { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0; }
-
 /* Collapsible week card (single source of truth) */
 #weekHeader { display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding-right:6px; }
 #weekHeader:focus { outline: none; }
@@ -222,13 +242,24 @@ td.small { font-size:12px; color:#9fb3c8; }
 #weekCard .chev { font-weight:700; transition: transform .18s ease-in-out, opacity .18s ease-in-out; opacity:.8; }
 #weekCard.collapsed .chev { transform: rotate(-90deg); opacity:.6; }
 #weekCard.collapsed #weekContent { display:none; }
+/* === Progress Bar Tint (Red–Amber–Green Plan) === */
+#orderHeaderProgress .bar .fill {
+  background: var(--line); /* neutral base before rate applied */
+  transition: background-color .25s ease, width .35s ease;
+}
+
+/* Progress Bar Tint (scoped correctly) */
+#orderHeaderProgress .progBar .progFill { background: var(--line); transition: background-color .25s ease, width .35s ease; }
+#orderHeaderProgress .progBar .progFill.pace-ok   { background: var(--ok); }
+#orderHeaderProgress .progBar .progFill.pace-warn { background: var(--warn); }
+#orderHeaderProgress .progBar .progFill.pace-bad  { background: var(--bad); }
+
 /* place Complete in the top-right of the header */
 .progHead .progActions{
   position:absolute;
   top:4px;
   right:10px;
 }
-
 /* nudge the % label down so it lines up with the bar */
 .progHead #progPct{
   position:relative;
@@ -242,7 +273,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 </head>
 <body>
 <div class="wrap">
-  <h1>Warehouse QuickCalc & Tracker v3.5    BETA</h1>
+  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.6 BETA</b></h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -384,7 +415,7 @@ td.small { font-size:12px; color:#9fb3c8; }
       <div id="orderHeaderProgress" class="progHead" style="display:none; position:relative;">
         <!-- Top-right actions -->
         <div class="progActions">
-          <button id="btnCompleteTop" class="btn slim" style="display:none;" onclick="completeOrder()">Complete</button>
+          <button id="btnWrapTop" class="btn slim" type="button" onclick="openWrapModal()" disabled>Log Wrap</button>
         </div>
         <div class="progMeta">
           <div class="progTitle">
@@ -410,16 +441,10 @@ td.small { font-size:12px; color:#9fb3c8; }
       </div>
       <!-- Active Order Area -->
       <div id="orderArea" style="display:none; margin-top:10px;">
+        <!-- Compact: keep only a hidden oLeft for internal use -->
+        <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" style="display:none;">
+        <!-- Controls row (unchanged right-side controls container) -->
         <div class="row" style="align-items:flex-end;">
-          <!-- Left: Units Left + Log Wrap -->
-          <div class="col" style="flex:1;">
-            <label>Units left (log wrap)</label>
-            <div class="row" style="gap:6px;">
-              <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413" style="flex:1;">
-              <button id="btnLogWrap" class="btn" type="button" onclick="logWrap()" disabled>Log Wrap</button>
-            </div>
-          </div>
-          <!-- Right: Undo / Breaks / Complete -->
           <div class="col" id="orderControls"
               style="flex:0 0 auto; display:flex; align-items:flex-end; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
           </div>
@@ -438,7 +463,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 
     <div class="bottom-actions">
       <div class="left">
-        <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log Delay</button>
+        <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log / Delay</button>
         <button id="btnUndo" class="btn" type="button" onclick="undoLast()" style="display:none;">Undo</button>
       </div>
       <div class="right">
@@ -529,19 +554,18 @@ td.small { font-size:12px; color:#9fb3c8; }
 <div id="delayModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delayTitle">
   <div class="box">
     <div class="hdr">
-      <h3 id="delayTitle">Log Delay</h3>
-      <button class="btn slim ghost" type="button" onclick="closeDelayModal()">✖</button>
+      <h3 id="delayTitle">Log / Delay</h3>      <button class="btn slim ghost" type="button" onclick="closeDelayModal()">✖</button>
     </div>
     <div class="fld">
       <label>Start (auto)</label>
-      <input id="delayStart" type="time" readonly>
+      <div id="delayStart" class="readonly-time">--:--</div>
     </div>
     <div class="fld">
-      <label>Cause</label>
-      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
+      <label>Note / Cause</label>      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
     </div>
     <div class="actions">
       <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
+      <button class="btn" type="button" onclick="submitNote()">Note</button>
       <button class="btn ok" type="button" onclick="submitDelay()">Submit & Stop</button>
     </div>
   </div>
@@ -668,14 +692,51 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
   </div>
 </div>
-
+<!-- Wrap Modal -->
+<div id="wrapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="wrapTitle">
+  <div class="box" style="max-width:420px;">
+    <div class="hdr">
+      <h3 id="wrapTitle">Log Wrap</h3>
+      <button class="btn slim ghost" type="button" onclick="closeWrapModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label for="wrapLeftInput">Units left on this order</label>
+      <input id="wrapLeftInput" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+      <div class="hint" id="wrapHint">Type 0 to enable Complete.</div>
+    </div>
+    <div class="actions" style="justify-content:center; gap:8px;">
+      <button class="btn ghost" type="button" onclick="closeWrapModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitWrapLeft()">Save Wrap</button>
+    </div>
+  </div>
+</div>
 <div id="toast" class="toast">Saved</div>
-
 <script>
 // ====== State ======
 let picks = [];         // closed orders
 // ---- Early restore & safety nets (v3.5) ----
-let predictive = window.predictive || { timer:null, rateUh:0 }; // guard
+// ===== Predictive config/state =====
+const PREDICT = {
+  tickMs: 1000,   // 1s
+  alpha: 0.20,    // reserved for future smoothing if you want it
+  minRate: 60,    // clamps
+  maxRate: 600
+};
+
+let predictive = {
+  timer: null,
+  lastTick: 0,
+  left: 0,
+  rateUh: 0,
+  firstWrapSeen: false
+};
+function shiftDateKey(){
+  const d = new Date();
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `predictive-first-order-done-${y}-${m}-${dd}`;
+}
+function isFirstOrderToday(){ return !localStorage.getItem(shiftDateKey()); }
+function markFirstOrderStarted(){ localStorage.setItem(shiftDateKey(), '1'); }
 
 function earlyRestore() {
   try {
@@ -684,11 +745,11 @@ function earlyRestore() {
   } catch (e) {}
 }
 earlyRestore(); // <-- run BEFORE any UI work
-
 // Persist periodically + on tab close
 window.addEventListener('beforeunload', saveAll);
 setInterval(saveAll, 1500);
-
+// Last non-zero pace we painted with (for tint fallback)
+let uiLastPaceUh = 0;
 let tempWraps = [];     // wraps in current order
 let current = null;     // active order
 let startTime = "";     // shift start (HH:MM)
@@ -805,16 +866,33 @@ function orderLiveRate() {
   return (done / mins) * 60;
 }
 
-function tintProgressByPace(rate){
+function tintProgressByPace(rateUh){
   const fill = document.getElementById('progFill');
   if (!fill) return;
-  // remove any prior classes
-  fill.classList.remove('good','warn','bad','green','amber','red');
-  // class choice aligned with your chip colors
-  if (rate >= 300) fill.classList.add('green');
-  else if (rate >= 249) fill.classList.add('amber');
-  else fill.classList.add('bad');
+
+  // Resolve a robust pace
+  let r = Math.round(Number(rateUh || 0));
+  if (r <= 0) {
+    r = Math.round(
+      (predictive?.rateUh) ||
+      (typeof orderLiveRate === 'function' && orderLiveRate()) ||
+      (typeof getLiveRateUh  === 'function' && getLiveRateUh()) ||
+      uiLastPaceUh || 280
+    );
+  }
+
+  // Remember last good pace
+  if (r > 0) uiLastPaceUh = r;
+
+  // Class bands: <249 red, 249–299 amber, 300+ green
+  let cls = 'pace-bad';
+  if (r >= 300) cls = 'pace-ok';
+  else if (r >= 249) cls = 'pace-warn';
+
+  fill.classList.remove('pace-ok','pace-warn','pace-bad');
+  fill.classList.add(cls);
 }
+
 
 function formatETA(mins){
   if (!isFinite(mins) || mins <= 0) return '—';
@@ -824,6 +902,8 @@ function formatETA(mins){
 }
 
 function updateProgressHeader() {
+  const wrapOpen = document.getElementById('wrapModal')?.style.display === 'flex';
+  if (wrapOpen) return; // skip repaint while modal is open
   if (!current) return;
 
   // ✅ define it here (this was missing)
@@ -848,7 +928,7 @@ function updateProgressHeader() {
     if (fill) fill.style.width = pct + '%';
   }
 
-  // Rate + ETA: only paint if predictive isn't already doing it
+  // Rate + ETA
   let rate = 0;
   if (!predictiveActive) {
     rate = Math.round(orderLiveRate());
@@ -865,13 +945,12 @@ function updateProgressHeader() {
       }
     }
   } else {
-    // when predictive is active, use its live rate for tinting
     rate = Math.round(predictive?.rateUh || 0);
   }
-
-  // ✅ always tint using a defined numeric pace
+  updateHeaderActions?.();
   tintProgressByPace(rate);
 }
+
 
 function showProgressHeader() {
   if (!current) return;
@@ -883,7 +962,7 @@ function showProgressHeader() {
 
   // Seed static bits
   document.getElementById('progCust').textContent    = current.name;
-  document.getElementById('progQty').textContent     = current.total;   // NEW
+  document.getElementById('progQty').textContent     = current.total;
   document.getElementById('progPallets').textContent = '0';
   document.getElementById('progLeft').textContent    = current.total;
   document.getElementById('progRate').textContent    = '—';
@@ -891,17 +970,12 @@ function showProgressHeader() {
   document.getElementById('progFill').style.width    = '0%';
   document.getElementById('progPct').textContent     = '0%';
 
-
-  // Reset dynamic bits
-  document.getElementById('progPallets').textContent = '0';
-  document.getElementById('progLeft').textContent     = current.total;
-  document.getElementById('progRate').textContent     = '—';
-  document.getElementById('progETA').textContent      = '—';
-  document.getElementById('progFill').style.width     = '0%';
-  document.getElementById('progPct').textContent      = '0%';
-
   updateProgressHeader();
+
+  // 🔹 added line
+  updateHeaderActions?.();
 }
+
 
 /* Utility: add minutes to now → HH:MM */
 function addMinutesToNow(mins){
@@ -1360,16 +1434,12 @@ function refreshStartButton(){
   btn.disabled = !ok;
 }
 
-function refreshWrapButton(){
-  const btn = document.getElementById('btnLogWrap');
-  const inp = document.getElementById('oLeft');
-  if(!btn || !inp) return;
-  const raw = (inp.value||'').trim();
-  btn.disabled = (raw === '');
-}
+
 // Restores correct UI when page loads or state changes
 function restoreActiveOrderUI() {
-  const inOrder   = !!(current && Number.isFinite(current.total));
+  const shiftOn  = !!startTime && window.archived !== true;
+  const inOrder  = !!(shiftOn && current && Number.isFinite(current.total));
+
   const hdrForm   = document.getElementById('orderHeaderForm');      // “Customer / Total units” header
   const hdrProg   = document.getElementById('orderHeaderProgress');  // progress header (bar, %)
   const orderArea = document.getElementById('orderArea');            // wrap input + timeline
@@ -1381,14 +1451,14 @@ function restoreActiveOrderUI() {
   };
 
   if (inOrder) {
-    // Swap headers (prefer fadeSwap if present)
+    // Swap headers
     if (hdrForm && hdrProg) {
       if (typeof fadeSwap === 'function') fadeSwap(hdrForm, hdrProg, 'flex');
       else { hdrForm.style.display = 'none'; hdrProg.style.display = 'flex'; }
     }
     if (orderArea) orderArea.style.display = 'block';
 
-    // Sync header fields (visual only)
+    // Sync form inputs / dropdown label
     const sel = document.getElementById('oCust');
     if (sel && current.name) sel.value = current.name;
     const tot = document.getElementById('oTotal');
@@ -1396,31 +1466,80 @@ function restoreActiveOrderUI() {
     const ddToggle = document.querySelector('#oDD .dd-toggle');
     if (ddToggle && current.name) ddToggle.textContent = current.name;
 
+    // Seed progress header fields (so name/qty persist after refresh)
+    const total    = current.total || 0;
+    const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+    const done     = total - lastLeft;
+    const pct      = total ? Math.round((done / total) * 100) : 0;
+
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('progCust', current.name || '—');
+    setTxt('progQty',  total);
+    setTxt('progLeft', lastLeft);
+    setTxt('progPallets', String(tempWraps.length));
+    setTxt('progPct', pct + '%');
+    const fill = document.getElementById('progFill'); if (fill) fill.style.width = pct + '%';
+
     // Gated controls (order-only)
-    show('btnStart',        false);
-    show('btnComplete',     true);
-    show('btnCompleteTop',  true);
-    show('btnUndo',         true);
-    show('btnB',            true);
-    show('btnL',            true);
-    show('btnDelay',        true);
-    show('btnCloseEarly',   true);
+    show('btnStart',       false);
+    show('btnUndo',        true);
+    show('btnB',           true);
+    show('btnL',           true);
+    show('btnDelay',       true);
+    show('btnCloseEarly',  true);
 
     // Elapsed chip visible during order
     const chipBox = document.getElementById('chipElapsed');
     if (chipBox) chipBox.style.display = '';
 
-    // Repaint live pieces
-    if (typeof updateProgressHeader   === 'function') updateProgressHeader();
-    if (typeof renderTimeline         === 'function') renderTimeline();
-    if (typeof refreshWrapButton      === 'function') refreshWrapButton();
-    if (typeof refreshCompleteButton  === 'function') refreshCompleteButton();
+    // Repaint dynamic pieces
+    updateProgressHeader?.();
+    renderTimeline?.();
+    refreshWrapButton?.();
+    refreshCompleteButton?.();
 
-    // Resume predictive ticker only if not running
-    const predictiveRunning = !!(window.predictive && window.predictive.timer);
-    if (!predictiveRunning && typeof predictiveReset === 'function' && typeof predictiveStart === 'function') {
-      predictiveReset(getCurrentLeft(), getLiveRateUh());
-      predictiveStart();
+    // ===== Predictive resume on refresh (per rules) =====
+    try {
+      // Stop any stale ticker first to avoid duplicates
+      predictiveStop?.();
+
+      const firstWrapSeen = Array.isArray(tempWraps) && tempWraps.length > 0;
+      const totalUnits    = current.total || 0;
+      const lastUnitsLeft = firstWrapSeen
+        ? tempWraps[tempWraps.length - 1].left
+        : totalUnits;
+
+      // Choose seed rate:
+      //  • After first wrap → current ORDER rate
+      //  • Before first wrap:
+      //      – first order of the day → 280
+      //      – later orders → shift live rate
+      let seedRate;
+      if (firstWrapSeen) {
+        seedRate = Math.round(
+          (typeof orderLiveRate === 'function' && orderLiveRate()) ||
+          (typeof getLiveRateUh  === 'function' && getLiveRateUh()) ||
+          280
+        );
+      } else {
+        seedRate = (typeof isFirstOrderToday === 'function' && isFirstOrderToday())
+          ? 280
+          : Math.round(
+              (typeof getLiveRateUh === 'function' && getLiveRateUh()) ||
+              280
+            );
+      }
+
+      // Only (re)start ticker if there are units left to project
+      if (lastUnitsLeft > 0) {
+        predictiveReset?.(lastUnitsLeft, seedRate, firstWrapSeen);
+        uiLastPaceUh = Math.round(predictive?.rateUh || 0) || seedRate;
+        predictiveStart?.();
+      } else {
+        predictiveStop?.();
+      }
+    } catch(e) {
+      // no-op: predictive helpers not present
     }
   } else {
     // No active order → show form header, hide progress + order area
@@ -1428,28 +1547,22 @@ function restoreActiveOrderUI() {
     if (orderArea) orderArea.style.display = 'none';
     if (hdrForm)   hdrForm.style.display = '';
 
-    // Buttons hidden when idle (shift may still be active)
+    // Buttons hidden when idle; Delay/Close-Early only when shift is on
     show('btnStart',        true);
-    show('btnComplete',     false);
-    show('btnCompleteTop',  false);
     show('btnUndo',         false);
     show('btnB',            false);
     show('btnL',            false);
-
-    // Delay/Close-Early depend on shift state
-    const shiftOn = !!startTime && window.archived !== true;
-    show('btnDelay',      shiftOn);
-    show('btnCloseEarly', shiftOn);
-
+    show('btnDelay',        shiftOn);
+    show('btnCloseEarly',   shiftOn);
     // Hide elapsed chip
     const chipBox = document.getElementById('chipElapsed');
     if (chipBox) chipBox.style.display = 'none';
-
     // Stop predictive if present
-    if (typeof predictiveStop === 'function') predictiveStop();
+    predictiveStop?.();
   }
+  // Always resync top controls
+  updateHeaderActions?.();
 }
-
 // ─────────────────────────────────────────────
 // startOrder: validate → lock in → swap to progress header
 // ─────────────────────────────────────────────
@@ -1471,86 +1584,85 @@ function startOrder() {
 
   const finalName = isOther ? otherVal : name;
 
+  // ===== create order state =====
   current    = { name: finalName, total, start: nowHHMM(), breaks: [] };
   tempWraps  = [];
   undoStack  = [{ type: 'start' }];
 
-  // Show order area + controls
-  document.getElementById('orderArea').style.display = 'block';
+  // ===== show order area + controls =====
+  const orderArea = document.getElementById('orderArea');
+  if (orderArea) orderArea.style.display = 'block';
+
   ['btnB','btnL','btnUndo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'inline-block';
   });
+
   const btnStart = document.getElementById('btnStart');
   if (btnStart) btnStart.style.display = 'none';
 
-  const btnComplete = document.getElementById('btnComplete');
-  if (btnComplete) { btnComplete.style.display = 'inline-block'; btnComplete.disabled = true; }
+  refreshWrapButton?.();
+  refreshCompleteButton?.();
+  renderTimeline?.();
+  updateSummary?.();
+  updateDelayBtn?.();
+  updateEndShiftVisibility?.();
+  updateCloseEarlyVisibility?.();
 
-  const topBtn = document.getElementById('btnCompleteTop');
-  if (topBtn) { topBtn.style.display = 'inline-block'; topBtn.disabled = true; }
-
-  refreshWrapButton();
-  refreshCompleteButton();
-  renderTimeline();
-  updateSummary();
-  updateDelayBtn();
-  updateEndShiftVisibility();
-  updateCloseEarlyVisibility();
-
-  // Elapsed chip visible while an order is active
+  // ===== Elapsed chip visible while an order is active =====
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) {
     chipBox.style.display = '';
-    chipBox.querySelector('b') && (chipBox.querySelector('b').textContent = 'Elapsed');
+    const b = chipBox.querySelector('b');
+    if (b) b.textContent = 'Elapsed';
   }
   const chipVal = document.getElementById('chipElapsedVal');
   if (chipVal) chipVal.textContent = '0 min';
-  updateElapsedChip();
-
-  // Swap header: hide form, show progress header (ensure flex) + seed numbers
+  updateElapsedChip?.();
+  // ===== Swap header: hide form, show progress header (ensure flex) =====
   const hdrForm = document.getElementById('orderHeaderForm');
   const hdrProg = document.getElementById('orderHeaderProgress');
   if (hdrForm) { hdrForm.style.display = 'none'; hdrForm.classList.remove('show'); }
   if (hdrProg) { hdrProg.style.display = 'flex'; hdrProg.classList.add('show'); }
-
-  // Seed progress header immediately so the bar is visible at 0%
+  // ===== Seed progress header immediately so the bar is visible at 0% =====
   const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setTxt('progCust', finalName);
-  setTxt('progQty', total);
+  setTxt('progCust', finalName || '—');
+  setTxt('progQty',  total || 0);
   setTxt('progPallets', '0');
-  setTxt('progLeft', total);
+  setTxt('progLeft', total || 0);
   setTxt('progRate', '—');
-  setTxt('progETA', '—');
+  setTxt('progETA',  '—');
   const fillEl = document.getElementById('progFill');
   if (fillEl) fillEl.style.width = '0%';
   setTxt('progPct', '0%');
-
-  // Paint first frame
-  if (typeof updateProgressHeader === 'function') updateProgressHeader();
-
-
-  // ---- Seed progress header fields & reset visuals ----
-  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setText('progCust', finalName || '—');
-  setText('progQty',  total || 0);
-  setText('progLeft', total || 0);
-  setText('progPallets', 0);
-  setText('progRate', '—');
-  setText('progETA',  '—');
-  setText('progPct',  '0%');
-
-  const fill = document.getElementById('progFill');
-  if (fill) fill.style.width = '0%';
-
-  // Paint once
-  if (typeof updateProgressHeader === 'function') updateProgressHeader();
-
-  // PREDICTIVE: baseline at start and begin creeping
-  predictiveReset(getCurrentLeft(), getLiveRateUh());
-  predictiveStart();
-
-  saveAll();
+  // ===== First paint + sync header actions =====
+  updateProgressHeader?.();
+  // ===== Predictive seed for this order =====
+  try {
+    predictiveStop?.(); // defensive
+    const isFirst = isFirstOrderToday?.() === true;
+    const seedRate = isFirst ? 280 : Math.round(getLiveRateUh?.() || 280);
+    if (isFirst) markFirstOrderStarted?.();
+    // At order start (pre-wrap), left == total
+    predictiveReset?.(current?.total || 0, seedRate, /*firstWrapSeen*/ false);
+    predictiveStart?.();
+  } catch(e) { /* no-op */ }
+  updateHeaderActions?.();
+  // ===== Predictive: seed & start per Julius rules =====
+  try {
+    // stop any previous ticker (defensive)
+    predictiveStop?.();
+    const isFirst = isFirstOrderToday?.() === true;
+    let seedRate  = isFirst ? 280 : Math.round(getLiveRateUh?.() || 280);
+    if (isFirst) markFirstOrderStarted?.();
+    // At order start (pre-wrap), left == total
+    predictiveReset?.(total || 0, seedRate, /*firstWrapSeen*/ false);
+    uiLastPaceUh = Math.round(predictive?.rateUh || 0) || seedRate;
+    predictiveStart?.();
+  } catch (e) {
+    // no-op if helpers not present
+  }
+  saveAll?.();
 }
 // --- minimal fade swap helper ---
 function fadeSwap(hideEl, showEl, showDisplay = 'block') {
@@ -1601,65 +1713,76 @@ function logWrap() {
   renderTimeline();
   updateSummary();
   refreshCompleteButton();
-
   if (typeof updateProgressHeader === 'function') updateProgressHeader();
+  // Switch predictive rule after a wrap
+  if (left === 0) {
+    predictiveStop(); // you already auto-complete via existing flow
+  } else {
+    const orderRate = Math.round(orderLiveRate?.() || getLiveRateUh?.() || 280);
+    predictiveReset(left, orderRate, true); // after first wrap use current order rate
+    uiLastPaceUh = Math.round(orderRate);
+    predictiveStart();
+  }
 
-  // PREDICTIVE: snap to the new true left and continue
-  predictiveReset(left, getLiveRateUh());
+
+  // 🔹 added line here — keeps buttons in sync (esp. Complete unlock)
+  updateHeaderActions?.();
+
+  // ✅ Auto-close when 0 left
+  if (left === 0) {
+    showToast('Order complete — closing...');
+    setTimeout(() => completeOrder(), 300);
+    return;
+  }
   saveAll();
 }
 
 function undoLast() {
   if (!current) { showToast('Nothing to undo'); return; }
-  const last = undoStack.pop(); 
+
+  const last = undoStack.pop();
   if (!last) { showToast('Nothing to undo'); return; }
+
+  // Never allow Undo to go past the order start
+  if (last.type === 'start') {
+    undoStack.push(last);                 // restore the sentinel
+    showToast('Nothing more to undo');    // user feedback
+    return;
+  }
 
   if (last.type === 'wrap') {
     tempWraps.pop();
 
   } else if (last.type === 'break') {
-    current.breaks.pop();
+    current.breaks?.pop();
 
   } else if (last.type === 'delay' && current.__lastDelay) {
-    current.breaks = current.breaks.filter(b => b !== current.__lastDelay);
+    current.breaks = (current.breaks || []).filter(b => b !== current.__lastDelay);
     current.__lastDelay = null;
-
-  } else if (last.type === 'start') {
-    // undo the whole order
-    current = null; tempWraps = [];
-    predictiveStop(); // PREDICTIVE: stop (no order)
-    document.getElementById('orderArea').style.display = 'none';
-    ['btnB','btnL','btnUndo'].forEach(id => document.getElementById(id).style.display='none');
-    document.getElementById('btnStart').style.display    = 'inline-block';
-    document.getElementById('btnComplete').style.display = 'none';
-
-    const hdrForm = document.getElementById('orderHeaderForm');
-    const hdrProg = document.getElementById('orderHeaderProgress');
-    const topBtn = document.getElementById('btnCompleteTop');
-    if (topBtn){ topBtn.style.display = 'none'; topBtn.disabled = true; }
-    if (hdrForm) hdrForm.style.display = '';
-    if (hdrProg) hdrProg.style.display = 'none';
-
-    showToast('Order start undone');
-    updateDelayBtn(); 
-    updateEndShiftVisibility(); 
-    updateCloseEarlyVisibility(); 
-    updateSummary();
-    refreshCompleteButton();
-
-    if (typeof updateProgressHeader === 'function') updateProgressHeader();
-    return;
   }
+
+  // --- Recompute + repaint ---
   if (typeof updateProgressHeader === 'function') updateProgressHeader();
+  if (typeof renderTimeline       === 'function') renderTimeline();
+  if (typeof updateSummary        === 'function') updateSummary();
+  if (typeof refreshCompleteButton=== 'function') refreshCompleteButton();
+  if (typeof refreshWrapButton    === 'function') refreshWrapButton();
+  if (typeof updateDelayBtn       === 'function') updateDelayBtn();
+  if (typeof updateEndShiftVisibility   === 'function') updateEndShiftVisibility();
+  if (typeof updateCloseEarlyVisibility === 'function') updateCloseEarlyVisibility();
 
-  // PREDICTIVE: re-baseline to latest known left (or stop if none)
+  // Predictive: re-baseline to latest known left/rate (or stop if no order)
   if (current) {
-    predictiveReset(getCurrentLeft(), getLiveRateUh());
+    const left = (typeof getCurrentLeft === 'function') ? getCurrentLeft() : (current.left ?? 0);
+    const rate = (typeof getLiveRateUh  === 'function') ? getLiveRateUh()  : 0;
+    if (typeof predictiveReset === 'function') predictiveReset(left, rate);
   } else {
-    predictiveStop();
+    if (typeof predictiveStop === 'function') predictiveStop();
   }
-  saveAll();
+
+  if (typeof saveAll === 'function') saveAll();
 }
+
 
 function refreshCompleteButton(){
   ['btnComplete', 'btnCompleteTop'].forEach(id=>{
@@ -1813,7 +1936,6 @@ function completeOrder() {
   hide('orderArea');
   hide('btnUndo');
   hide('btnComplete');
-  hide('btnCompleteTop');
 
   // Restore header form (fresh new-order panel), hide progress header
   const hdrForm = document.getElementById('orderHeaderForm');
@@ -1844,36 +1966,87 @@ function completeOrder() {
   saveAll();
 }
 
-
-
-
-// ====== Delay logging ======
 function updateDelayBtn(){
   const el = document.getElementById('btnDelay');
   if (!el) return;
-  el.style.display = hasActiveOrder() ? 'inline-block' : 'none';
+  const shiftOn = !!startTime && window.archived !== true;
+  el.style.display = shiftOn ? 'inline-block' : 'none';
 }
+
 function openDelayModal(){
-  if(!current) return alert('Start an order to log a delay');
+  const shiftOn = !!startTime && window.archived !== true;
+  if (!shiftOn) return alert('Start your shift to log notes/delays');
+
   delayDraft = { start: nowHHMM(), cause: '' };
-  document.getElementById('delayStart').value = delayDraft.start;
-  document.getElementById('delayCause').value = '';
-  document.getElementById('delayModal').style.display='flex';
+
+  const s = document.getElementById('delayStart');
+  const c = document.getElementById('delayCause');
+
+  // ✅ display readonly timestamp instead of editable input
+  if (s) s.textContent = delayDraft.start;
+  if (c) c.value = '';
+
+  document.getElementById('delayModal').style.display = 'flex';
 }
+
 function closeDelayModal(){ document.getElementById('delayModal').style.display='none'; }
 function cancelDelay(){ delayDraft=null; closeDelayModal(); }
 function submitDelay(){
-  if(!current || !delayDraft){ closeDelayModal(); return; }
-  var end = nowHHMM();
-  var minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
-  var cause = (document.getElementById('delayCause').value||'').trim();
-  var entry = {type:'D', start: delayDraft.start, end, minutes, cause};
-  current.breaks.push(entry);
-  current.__lastDelay = entry;
-  undoStack.push({type:'delay'});
-  delayDraft=null;
+  if (!delayDraft){ closeDelayModal(); return; }
+
+  const end = nowHHMM();
+  const minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
+  const cause = (document.getElementById('delayCause').value||'').trim();
+
+  if (current && Number.isFinite(current.total)) {
+    // attach to current order
+    current.breaks = current.breaks || [];
+    const entry = { type:'D', start: delayDraft.start, end, minutes, cause };
+    current.breaks.push(entry);
+    current.__lastDelay = entry;
+    undoStack.push?.({ type:'delay' });
+    renderTimeline?.(); updateSummary?.(); saveAll?.();
+  } else {
+    // shift-level delay (no active order)
+    try {
+      const key = 'shiftDelays';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.push({ type:'D', start: delayDraft.start, end, minutes, cause });
+      localStorage.setItem(key, JSON.stringify(arr));
+    } catch(e){}
+  }
+
+  delayDraft = null;
   closeDelayModal();
-  renderTimeline(); updateSummary(); showToast('Delay logged ('+minutes+'m)'); saveAll();
+  showToast?.(`Delay logged (${minutes}m)`);
+}
+
+// Save a text note (no delay timing). Works with or without an active order.
+function submitNote(){
+  const txt = (document.getElementById('delayCause').value || '').trim();
+  if (!txt) { showToast?.('Enter a note'); return; }
+
+  const t = nowHHMM();
+  if (current && Number.isFinite(current.total)) {
+    // store on the active order timeline
+    current.breaks = current.breaks || [];
+    current.breaks.push({ type:'N', t, note: txt });
+    undoStack.push?.({ type:'note' });
+    renderTimeline?.();
+    updateSummary?.();
+    saveAll?.();
+  } else {
+    // shift-level note (no active order). Persist separately.
+    try {
+      const key = 'shiftNotes';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.push({ t, note: txt });
+      localStorage.setItem(key, JSON.stringify(arr));
+    } catch(e){}
+  }
+
+  showToast?.('Note saved');
+  closeDelayModal();
 }
 
 // ====== Break timer (banner) ======
@@ -2103,27 +2276,66 @@ function submitCloseEarly(){
 
 // ====== Completed orders & history ======
 function renderTimeline(){
-  var tl=document.getElementById('orderTimeline'); if(!tl) return;
-  tl.innerHTML='';
+  const tl = document.getElementById('orderTimeline');
+  if (!tl) return;
+  tl.innerHTML = '';
+
+  // tiny escaper (local to this function)
+  const esc = s => String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+
+  // Order start
   if (current) {
-    const row0=document.createElement('div');
-    row0.className='tick';
-    row0.innerHTML=`<span>🟢 Order started</span><span class="meta">${current.start}</span>`;
+    const row0 = document.createElement('div');
+    row0.className = 'tick';
+    row0.innerHTML = `<span>🟢 Order started</span><span class="meta">${current.start || ''}</span>`;
     tl.appendChild(row0);
   }
-  (current?.breaks||[]).forEach(function(b){
-    const row=document.createElement('div'); row.className='tick';
-    row.innerHTML = (b.type==='D')
-      ? `<span>⏱️ Delay${b.cause?': '+b.cause.replace(/</g,'&lt;'):''}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span>`
-      : `<span>☕ ${(b.type==='B')?'Break':'Lunch'}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span>`;
+
+  // Breaks / Delays / Notes
+  (current?.breaks || []).forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'tick';
+
+    if (b.type === 'N') {
+      // 📝 Note — single timestamp (no duration)
+      const t   = b.t || '';
+      const txt = (b.note || '').trim();
+      row.innerHTML = `<span>📝 Note${txt ? ' — ' + esc(txt) : ''}</span><span class="meta">${t}</span>`;
+    } else if (b.type === 'D') {
+      // ⏱️ Delay — start → end • Xm (guarded)
+      const cause = b.cause ? ': ' + esc(b.cause) : '';
+      const start = b.start || '';
+      const end   = b.end   || '';
+      const mins  = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
+      const meta  = (start && end) ? `${start} → ${end}${mins ? ' • ' + mins : ''}` : (start || end || '');
+      row.innerHTML = `<span>⏱️ Delay${cause}</span><span class="meta">${meta}</span>`;
+    } else {
+      // ☕ Break / Lunch — start → end • Xm (guarded)
+      const label = (b.type === 'B') ? 'Break' : 'Lunch';
+      const start = b.start || '';
+      const end   = b.end   || '';
+      const mins  = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
+      const meta  = (start && end) ? `${start} → ${end}${mins ? ' • ' + mins : ''}` : (start || end || '');
+      row.innerHTML = `<span>☕ ${label}</span><span class="meta">${meta}</span>`;
+    }
+
     tl.appendChild(row);
   });
-  tempWraps.forEach(function(w,wi){
-    const row=document.createElement('div'); row.className='tick';
-    row.innerHTML = `<span>📦 Wrap ${wi+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t}</span>`;
+
+  // Wraps
+  tempWraps.forEach((w, i) => {
+    const row = document.createElement('div');
+    row.className = 'tick';
+    row.innerHTML = `<span>📦 Wrap ${i+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t || ''}</span>`;
     tl.appendChild(row);
   });
 }
+
 
 function renderDone(){
   var tb=document.getElementById('doneBody'); tb.innerHTML='';
@@ -2871,6 +3083,27 @@ function computeCbTotal(){
   return total;
 }
 
+function refreshWrapButton() {
+  const inp = document.getElementById('oLeft');
+  const btn = document.querySelector('#orderArea button[onclick="logWrap()"]');
+  if (!btn || !inp) return;
+
+  const val = inp.value.trim();
+  if (val === '0') {
+    btn.textContent = 'Close Order';
+    btn.classList.add('ok');
+  } else {
+    btn.textContent = 'Log Wrap';
+    btn.classList.remove('ok');
+  }
+}
+
+// 🔁 Make it react live
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('oLeft');
+  if (inp) inp.addEventListener('input', refreshWrapButton);
+});
+
 // ====== QuickCalc live result ======
 function recalcQuick(){
   const DEFAULT_RATE = 300;
@@ -2940,40 +3173,31 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── 1) Restore persisted state FIRST ────────────────────────────
     loadCustomCodes();
     loadAll(); // hydrates: startTime, current, tempWraps, picks, historyDays, etc.
-
     const hadShift = !!startTime;
     const hadOpen  = !!(current && Number.isFinite(current.total));
-
     // ── 2) Build customer dropdowns (safe post-restore) ─────────────
     buildDropdown('oDD','oCust','oOther','o');
     reloadDropdowns();
-
     // ── 3) Wire modals & inputs ─────────────────────────────────────
     document.getElementById('chipElapsed')?.addEventListener('click', openElapsedModal);
     document.getElementById('elapsedModal')?.addEventListener('click', (e)=>{
       if (e.target?.id === 'elapsedModal') closeElapsedModal();
     });
-
     document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
     document.getElementById('oLeft') ?.addEventListener('input', refreshWrapButton);
-
     document.getElementById('liveUpdateModal')?.addEventListener('click', (e)=>{
       if (e.target?.id === 'liveUpdateModal') closeLiveUpdateModal();
     });
-
     document.getElementById('chipRate')?.addEventListener('click', openLiveModal);
     document.getElementById('liveModal')?.addEventListener('click', (e)=>{
       if (e.target?.id === 'liveModal') closeLiveModal();
     });
-
     // ── 4) Pro gate & static renders that don't mutate core state ───
     applyProGate();
-
     // ── 5) Shift/Order shell visibility based on restored flags ─────
     const shift  = document.getElementById('shiftCard');
     const active = document.getElementById('activeOrderCard');
     const done   = document.getElementById('completedCard');
-
     if (hadShift && window.archived !== true) {
       if (shift)  shift.style.display  = 'none';
       if (active) active.style.display = 'block';
@@ -2985,24 +3209,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (el) el.style.display = 'none';
       });
     }
-
     // ── 6) Decide header: progress vs new-order form ────────────────
     if (hadOpen && window.archived !== true) {
       // We have an active order: ensure progress header/UI is shown
       restoreActiveOrderUI();
-
       // Seed labels (defensive)
       const ddToggle = document.querySelector('#oDD .dd-toggle');
       if (ddToggle && current?.name) ddToggle.textContent = current.name;
       const oTot = document.getElementById('oTotal');
       if (oTot && Number.isFinite(current.total)) oTot.value = String(current.total);
-
       // Elapsed chip ON
       const chip = document.getElementById('chipElapsed');
       if (chip?.style) chip.style.display = '';
       updateElapsedChip?.();
       setElapsedChipClickable?.(true);
-
       showTab('tracker'); // keep user on Tracker with live header visible
       showToast('Shift restored – continue where you left off');
     } else {
@@ -3013,20 +3233,17 @@ document.addEventListener('DOMContentLoaded', function () {
       if (hdrForm) hdrForm.style.display = 'block';
       if (hdrProg) hdrProg.style.display = 'none';
       if (area)    area.style.display    = 'none';
-
       const chip = document.getElementById('chipElapsed');
       if (chip?.style) chip.style.display = 'none';
       const v = document.getElementById('chipElapsedVal'); if (v) v.textContent = '—';
       setElapsedChipClickable?.(false);
     }
-
     // ── 7) Heavy renders AFTER state/UI decision (prevents flips) ───
     renderHistory();
     renderWeeklySummary();
     initWeekCardToggle();
     renderDone();
     renderULayerChips();
-
     // ── 8) Start button validation (order of entry agnostic) ────────
     ['oTotal','oOther'].forEach(id=>{
       const el = document.getElementById(id);
@@ -3037,14 +3254,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#oDD .dd-menu')  ?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
     document.querySelector('#oDD .dd-toggle')?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
     refreshStartButton();
-
     // ── 9) Live summary + timer loop ────────────────────────────────
     setInterval(function(){
       const trackerVisible = !document.getElementById('tabTracker')?.classList?.contains('hidden');
       if (!trackerVisible) return;
-
       updateSummary();
-
       if (breakDraft){
         tickBreak();
         setElapsedChipClickable?.(false);
@@ -3055,7 +3269,6 @@ document.addEventListener('DOMContentLoaded', function () {
         setElapsedChipClickable?.(false);
       }
     }, 600);
-
     // ── 10) QuickCalc wiring ────────────────────────────────────────
     const qcRateEl  = document.getElementById('qcRate');
     const qcUnitsEl = document.getElementById('qcUnits');
@@ -3067,7 +3280,6 @@ document.addEventListener('DOMContentLoaded', function () {
       qcUnitsEl.addEventListener('input',  recalcQuick);
       qcUnitsEl.addEventListener('change', recalcQuick);
     }
-
     // Countback & keyboard input
     cbSetFocus('layers'); updateCbDisplays(); computeCbTotal();
     document.addEventListener('keydown', (e)=>{
@@ -3077,10 +3289,8 @@ document.addEventListener('DOMContentLoaded', function () {
       else if (e.key === 'Backspace') { cbBack(); e.preventDefault(); }
       else if (e.key === ' ' || e.key === 'Enter') { cbNextField(); e.preventDefault(); }
     });
-
     // Initial compute for QuickCalc
     recalcQuick();
-
     // Final pass refresh (stable snapshot)
     updateSummary();
     updateDelayBtn();
@@ -3093,6 +3303,43 @@ document.addEventListener('DOMContentLoaded', function () {
     showToast('Error on load: ' + (err.message || err));
   }
 });
+function openWrapModal(){
+  if (!current) return;
+  const m   = document.getElementById('wrapModal');
+  const inp = document.getElementById('wrapLeftInput');
+
+  const total    = current.total || 0;
+  const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+
+  if (inp) {
+    inp.value = '';                     // <— empty on open
+    inp.placeholder = String(lastLeft); // <— show hint only
+  }
+  if (m) m.style.display = 'flex';
+  setTimeout(()=>inp?.focus(), 10);
+}
+function closeWrapModal(){
+  const m = document.getElementById('wrapModal');
+  if (m) m.style.display = 'none';
+}
+function submitWrapLeft(){
+  const inp = document.getElementById('wrapLeftInput');
+  const v   = Math.max(0, toInt(inp?.value));
+  const oLeft = document.getElementById('oLeft');
+  if (oLeft) oLeft.value = String(v);
+
+  closeWrapModal();
+
+  refreshWrapButton?.();
+  logWrap?.();
+  updateHeaderActions?.();
+  showToast?.('Wrap logged');
+}
+function updateHeaderActions(){
+  const inOrder = hasActiveOrder?.() || !!(current && Number.isFinite(current?.total));
+  const wrapBtn = document.getElementById('btnWrapTop');
+  if (wrapBtn) wrapBtn.disabled = !inOrder;
+}
 </script>
 </body>
 </html>
