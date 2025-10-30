@@ -51,7 +51,7 @@ textarea{ min-height:90px; resize:vertical; }
 .rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
 .rateChip.green { border-color:#1f4830; background:#14271c; }
 .rateChip.amber { border-color:#584a1a; background:#2a230f; }
-.timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
+.timeline { margin-top:8px; border-left:0; padding-left:0; }
 .tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
 .tick .meta { color:#9fb3c8; font-size:12px; }
 table { width:100%; border-collapse:collapse; font-size:14px; }
@@ -154,6 +154,13 @@ td.small { font-size:12px; color:#9fb3c8; }
     var(--line);
   transition: background-color .25s ease, width .35s ease;
   border-radius: 3px;
+}
+/* Completely hide the 'Left: XX' text + label but preserve for JS logic */
+#progLeft,
+#progLeftLabel,
+#orderHeaderProgress span:has(#progLeft) {
+  display: none !important;
+  visibility: hidden;
 }
 
 /* Pace tints overlayed on the gradient */
@@ -273,7 +280,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 </head>
 <body>
 <div class="wrap">
-  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.6 BETA</b></h1>
+  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.7 BETA</b></h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -426,7 +433,6 @@ td.small { font-size:12px; color:#9fb3c8; }
 
           <div class="progSub">
             <span><strong>Pallets:</strong> <span id="progPallets">0</span></span>
-            <span class="progBullet">•</span>
             <span><strong>Left:</strong> <span id="progLeft">0</span></span>
             <span class="progBullet">•</span>
             <span><strong>Rate:</strong> <span id="progRate">—</span></span>
@@ -714,6 +720,17 @@ td.small { font-size:12px; color:#9fb3c8; }
 <script>
 // ====== State ======
 let picks = [];         // closed orders
+// ETA smoothing (GPS-style)
+let etaSmooth = [];            // rolling window of recent order rates
+let lastETAmin = null;         // last computed (smoothed) ETA in minutes
+let lastRenderedETAmin = null; // last value we actually showed (for 1m threshold)
+
+function resetEtaSmoother(){
+  etaSmooth = [];
+  lastETAmin = null;
+  lastRenderedETAmin = null;
+}
+
 // ---- Early restore & safety nets (v3.5) ----
 // ===== Predictive config/state =====
 const PREDICT = {
@@ -819,6 +836,23 @@ function weekBoundsFor(dateIso){
   return { startISO: dateToISO(sun), endISO: dateToISO(sat), startDate: sun, endDate: sat };
 }
 function inRange(iso, aISO, bISO){ return iso >= aISO && iso <= bISO; }
+// GPS-style ETA: smooth input rate (rolling avg) + blend output ETA
+function calcStableETA(leftUnits, rateNowUh){
+  if (!rateNowUh || rateNowUh <= 0 || !isFinite(rateNowUh)) return null;
+
+  // keep last 5 readings
+  etaSmooth.push(rateNowUh);
+  if (etaSmooth.length > 5) etaSmooth.shift();
+  const avgRate = etaSmooth.reduce((a,b)=>a+b,0) / etaSmooth.length;
+
+  const newETAmin = (leftUnits / avgRate) * 60;       // raw ETA (mins)
+  const blended   = (lastETAmin == null)
+      ? newETAmin
+      : (lastETAmin * 0.8 + newETAmin * 0.2);         // 80/20 damping
+
+  lastETAmin = blended;
+  return blended;
+}
 
 let elapsedModalTick = null;
 function orderActiveMinutes() {
@@ -906,7 +940,11 @@ function updateProgressHeader() {
   if (wrapOpen) return; // skip repaint while modal is open
   if (!current) return;
 
-  // ✅ define it here (this was missing)
+  // ensure global ETA smoother state exists
+  window.etaSmooth = window.etaSmooth || [];
+  window.lastETAmin = (typeof window.lastETAmin === 'number') ? window.lastETAmin : null;
+  window.lastRenderedETAmin = (typeof window.lastRenderedETAmin === 'number') ? window.lastRenderedETAmin : null;
+
   const predictiveActive = !!(predictive && predictive.timer);
 
   const total    = current.total;
@@ -931,15 +969,36 @@ function updateProgressHeader() {
   // Rate + ETA
   let rate = 0;
   if (!predictiveActive) {
-    rate = Math.round(orderLiveRate());
+    rate = Math.round(orderLiveRate()); // Live rate excludes break time
     const rEl = document.getElementById('progRate');
     const eEl = document.getElementById('progETA');
 
     if (rEl) rEl.textContent = rate ? `${rate} u/h` : '—';
     if (eEl) {
       if (rate > 0) {
-        const etaMin = (lastLeft / rate) * 60;
-        eEl.textContent = addMinutesToNow(etaMin);
+        // GPS-style ETA: prefer calcStableETA if present; otherwise fall back
+        let etaMin;
+        if (typeof calcStableETA === 'function') {
+          etaMin = calcStableETA(lastLeft, rate);
+        } else {
+          // inline lightweight smoother if helper missing
+          window.etaSmooth.push(rate);
+          if (window.etaSmooth.length > 5) window.etaSmooth.shift();
+          const avgRate = window.etaSmooth.reduce((a,b)=>a+b,0) / window.etaSmooth.length;
+          const newETA  = (lastLeft / (avgRate || rate)) * 60;
+          etaMin = (window.lastETAmin == null) ? newETA : (window.lastETAmin * 0.8 + newETA * 0.2);
+          window.lastETAmin = etaMin;
+        }
+
+        // add planned/elapsed break extension (if available)
+        const ext = (typeof breakExtensionMinutes === 'function') ? (breakExtensionMinutes() || 0) : 0;
+        etaMin = (etaMin ?? 0) + ext;
+
+        // Only re-render if ETA moved by ≥ 1 minute (reduces jitter)
+        if (window.lastRenderedETAmin == null || Math.abs(etaMin - window.lastRenderedETAmin) >= 1) {
+          eEl.textContent = addMinutesToNow(etaMin);
+          window.lastRenderedETAmin = etaMin;
+        }
       } else {
         eEl.textContent = '—';
       }
@@ -947,10 +1006,10 @@ function updateProgressHeader() {
   } else {
     rate = Math.round(predictive?.rateUh || 0);
   }
+
   updateHeaderActions?.();
   tintProgressByPace(rate);
 }
-
 
 function showProgressHeader() {
   if (!current) return;
@@ -970,12 +1029,14 @@ function showProgressHeader() {
   document.getElementById('progFill').style.width    = '0%';
   document.getElementById('progPct').textContent     = '0%';
 
-  updateProgressHeader();
+  // NEW: reset ETA smoother when entering progress view (GPS-style fresh start)
+  window.etaSmooth = [];
+  window.lastETAmin = null;
+  window.lastRenderedETAmin = null;
 
-  // 🔹 added line
+  updateProgressHeader();
   updateHeaderActions?.();
 }
-
 
 /* Utility: add minutes to now → HH:MM */
 function addMinutesToNow(mins){
@@ -1846,6 +1907,14 @@ function predictiveStop(){
   if (predictive.timer) clearInterval(predictive.timer);
   predictive.timer = null;
 }
+// Minutes to add to ETA while a break/lunch is active.
+// At break start we add the full target (20/30). If you overrun, it grows with elapsed.
+function breakExtensionMinutes(){
+  if (!window.breakDraft) return 0;
+  const elapsedMin = Math.round((hm(nowHHMM()) - hm(breakDraft.startHHMM)) * 60);
+  const targetMin  = Math.round((breakDraft.targetSec || 0) / 60);
+  return Math.max(targetMin, elapsedMin);
+}
 function predictiveTick(){
   if (!current || !current.total) return;
 
@@ -2069,6 +2138,8 @@ function startBreak(kind){
 
   // PREDICTIVE: pause creeping during breaks
   predictiveStop();
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
+
 }
 
 function hasActiveOrder(){ 
@@ -2143,36 +2214,41 @@ function tickBreak() {
 
   const now = nowHHMM();
   const elapsedMin = Math.round((hm(now) - hm(breakDraft.startHHMM)) * 60);
-  const targetMin = Math.round(breakDraft.targetSec / 60);
+  const targetMin  = Math.round((breakDraft.targetSec || 0) / 60);
   const diff = targetMin - elapsedMin;
 
   const breakDisplay = diff >= 0 ? `${diff} min` : `-${Math.abs(diff)} min over`;
 
   const breakBar = document.getElementById('breakBarCountdown');
-  const chip = document.getElementById('chipElapsedVal');
-  const chipBox = document.getElementById('chipElapsed');
+  const chip     = document.getElementById('chipElapsedVal');
+  const chipBox  = document.getElementById('chipElapsed');
 
-  const chipLabel = chipBox.querySelector('b');
+  const chipLabel = chipBox?.querySelector('b');
   if (chipLabel) chipLabel.textContent = 'Back in';
 
-  breakBar.textContent = breakDisplay;
-  chip.textContent = breakDisplay;
+  if (breakBar) breakBar.textContent = breakDisplay;
+  if (chip)     chip.textContent     = breakDisplay;
 
-  chipBox.classList.remove('green', 'amber');
-  chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
+  if (chipBox) {
+    chipBox.classList.remove('green', 'amber');
+    chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
+  }
 
   if (diff === 0 && !breakDraft.beeping) {
     breakDraft.beeping = true;
-    tryBeep();
+    tryBeep?.();
   }
+
+  // Keep header ETA reflecting planned/overrun break in real time
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
 }
 
-// ====== Close Early ======
 function updateCloseEarlyVisibility(){
   const btn = document.getElementById('btnCloseEarly');
   if (!btn) return;
-  const trackerVisible = !document.getElementById('tabTracker').classList.contains('hidden');
-  btn.style.display = (trackerVisible && hasActiveOrder()) ? 'inline-block' : 'none';
+  const on = !!(current && Number.isFinite(current.total));
+  btn.style.display = on ? 'inline-block' : 'none';
+  btn.disabled = !on;
 }
 
 function openCloseEarlyModal(){
@@ -2186,44 +2262,52 @@ function openCloseEarlyModal(){
 function closeCloseEarlyModal(){ document.getElementById('closeEarlyModal').style.display='none'; }
 
 function submitCloseEarly(){
-  if(!current) return closeCloseEarlyModal();
+  if (!current) return closeCloseEarlyModal();
 
-  const remaining = parseInt(document.getElementById('ceRemaining').value||'0',10);
+  const remaining = parseInt(document.getElementById('ceRemaining').value || '0', 10);
   if (isNaN(remaining) || remaining < 0) return alert('Enter remaining units (0 or more).');
 
-  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total;
-  if (remaining > prevLeft) return alert('Remaining cannot exceed current left ('+prevLeft+').');
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
+  if (remaining > prevLeft) return alert('Remaining cannot exceed current left (' + prevLeft + ').');
 
-  const wrapped = !!document.getElementById('ceWrapped').checked;
+  const wrapped  = !!document.getElementById('ceWrapped').checked;
   const reasonEl = document.getElementById('ceReason');
-  let reason = (reasonEl && reasonEl.value || '').trim();
+  let reason     = (reasonEl && reasonEl.value || '').trim();
 
   const elapsed = minutesSinceHHMM(current.start);
 
+  // ---- Robust reason rules (no false blocks when no live-rate) ----
   let validationFail = false;
   (function enforceReasonRules(){
-    const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+    const closedUnits = picks.reduce((a,b)=>a + b.units, 0);
     const progress    = currentOrderUnitsDone();
     const totalUnits  = closedUnits + progress;
-    const s = hm(startTime), e = hm(nowHHMM());
-    const live = (!isNaN(s) && !isNaN(e) && e > s) ? Math.round(totalUnits / (e - s)) : 0;
-    const expectedLiveMin = live > 0 ? ((current.total||0) / live) * 60 : Infinity;
-    const expected300Min  = ((current.total||0) / 300) * 60;
 
-    if (remaining === 0 && elapsed < expectedLiveMin * 0.70 && (reason.length < 4)){
+    const s = hm(startTime), e = hm(nowHHMM());
+    const liveUh = (!isNaN(s) && !isNaN(e) && e > s) ? Math.round(totalUnits / (e - s)) : 0;
+
+    // If live rate exists, compute expected minutes; otherwise null (not Infinity)
+    const expectedLiveMin = (liveUh > 0) ? ((current.total || 0) / liveUh) * 60 : null;
+    const expected300Min  = ((current.total || 0) / 300) * 60;
+
+    // Completed (0 left) unusually fast vs *live* -> require short reason
+    if (remaining === 0 && Number.isFinite(expectedLiveMin) && elapsed < expectedLiveMin * 0.70) {
       if (!reasonEl) reason = (prompt('Add a short reason — completed unusually fast vs your live rate:') || '').trim();
       if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
     }
-    if (remaining > 0 && elapsed < expected300Min * 0.70 && (reason.length < 4)){
+
+    // Closing early (>0 left) very fast vs *300 u/h baseline* -> require short reason
+    if (remaining > 0 && elapsed < expected300Min * 0.70) {
       if (!reasonEl) reason = (prompt('Please add a short reason to close early:') || '').trim();
       if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
     }
   })();
   if (validationFail) return;
 
+  // Optional wrap just before closing
   let addedWrap = false;
   if (wrapped){
-    if (remaining >= prevLeft) return alert('To mark a wrap, remaining must be less than '+prevLeft+'.');
+    if (remaining >= prevLeft) return alert('To mark a wrap, remaining must be less than ' + prevLeft + '.');
     tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
     addedWrap = true;
   }
@@ -2235,13 +2319,12 @@ function submitCloseEarly(){
   const ok = confirmCloseSummary({
     name: current.name, unitsDone, pallets: palletsCount, start: current.start, close, remaining, earlyReason: reason
   });
-
   if (!ok){
     if (addedWrap) tempWraps.pop();
     return;
   }
 
-  const exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
+  const exclMins = current.breaks.reduce((a,b)=> a + (b.minutes || 0), 0);
   const order = {
     name: current.name, units: unitsDone, pallets: palletsCount, close, start: current.start, excl: exclMins,
     earlyReason: reason || '',
@@ -2250,15 +2333,15 @@ function submitCloseEarly(){
   picks.push(order);
   lastClose = close;
 
-  predictiveStop(); // PREDICTIVE: stop when closing early
+  predictiveStop(); // stop prediction when closing early
 
   current = null; tempWraps = []; undoStack = [];
   document.getElementById('orderArea').style.display = 'none';
-  ['btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('btnStart').style.display = 'inline-block';
-  document.getElementById('btnStart').disabled = true;
+  ['btnUndo'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('btnStart').style.display  = 'inline-block';
+  document.getElementById('btnStart').disabled       = true;
   document.getElementById('btnComplete').style.display = 'none';
-  document.getElementById('oLeft').value = '';
+  document.getElementById('oLeft').value  = '';
   document.getElementById('oTotal').value = '';
 
   closeCloseEarlyModal();
@@ -2273,6 +2356,7 @@ function submitCloseEarly(){
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) chipBox.style.display = 'none';
 }
+
 
 // ====== Completed orders & history ======
 function renderTimeline(){
@@ -3312,16 +3396,35 @@ function openWrapModal(){
   const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
 
   if (inp) {
-    inp.value = '';                     // <— empty on open
-    inp.placeholder = String(lastLeft); // <— show hint only
+    inp.value = '';
+    inp.placeholder = String(lastLeft);
+    // ensure only one listener (avoid dupes)
+    inp.removeEventListener('input', refreshWrapModalBtn);
+    inp.addEventListener('input', refreshWrapModalBtn);
   }
   if (m) m.style.display = 'flex';
   setTimeout(()=>inp?.focus(), 10);
+  refreshWrapModalBtn(); // set initial label
 }
+
+function refreshWrapModalBtn(){
+  const inp  = document.getElementById('wrapLeftInput');
+  const btn  = document.querySelector('#wrapModal .actions .btn.ok');
+  const hint = document.getElementById('wrapHint');
+  if (!inp || !btn) return;
+
+  const isZero = (inp.value || '').trim() === '0';
+  btn.textContent = isZero ? 'Complete' : 'Save Wrap';
+  if (hint) hint.textContent = isZero ? 'Ready to complete this order.' : 'Type 0 to enable Complete.';
+}
+
 function closeWrapModal(){
-  const m = document.getElementById('wrapModal');
+  const m   = document.getElementById('wrapModal');
+  const inp = document.getElementById('wrapLeftInput');
   if (m) m.style.display = 'none';
+  inp?.removeEventListener('input', refreshWrapModalBtn);
 }
+
 function submitWrapLeft(){
   const inp = document.getElementById('wrapLeftInput');
   const v   = Math.max(0, toInt(inp?.value));
