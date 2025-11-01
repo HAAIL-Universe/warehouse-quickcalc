@@ -316,7 +316,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 </head>
 <body>
 <div class="wrap">
-  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.8</b></h1>
+  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.7 BETA</b></h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -1413,6 +1413,9 @@ function showTab(which){
     document.getElementById(x).classList.toggle('hidden', x !== id)
   );
 
+  // Strong order-state check (coerce total → number)
+  const inOrder = !!(current && isFinite(+current.total));
+
   // ---------- tab button active state ----------
   ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(x =>
     document.getElementById(x).classList.remove('active')
@@ -1421,9 +1424,9 @@ function showTab(which){
   if (which === 'tracker') document.getElementById('tabTrackBtn').classList.add('active');
   if (which === 'history') document.getElementById('tabHistBtn').classList.add('active');
 
-  // live banner only on tracker
+  // live banner only on tracker AND only when an order is active
   const lb = document.getElementById('liveBanner');
-  if (lb) lb.classList.toggle('hidden', which !== 'tracker' || !(current && Number.isFinite(current.total)));
+  if (lb) lb.classList.toggle('hidden', which !== 'tracker' || !inOrder);
 
   // convenience handles
   const form = document.getElementById('orderHeaderForm');
@@ -1445,9 +1448,6 @@ function showTab(which){
 
   // ---------- TRACKER TAB ----------
   if (which === 'tracker') {
-    // Stronger check than !!window.current
-    const inOrder = !!(current && Number.isFinite(current.total));
-
     // Normalize header state (no animation here – just correct display)
     if (inOrder) {
       if (form) { form.style.display = 'none'; form.classList.add('fade'); form.classList.remove('show'); }
