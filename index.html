@@ -280,7 +280,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 </head>
 <body>
 <div class="wrap">
-  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.7 BETA</b></h1>
+  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.8</b></h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -512,7 +512,6 @@ td.small { font-size:12px; color:#9fb3c8; }
         <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
           <div class="week-row">
             <div class="pill"><h3>Weighted Avg</h3><p id="weekWeighted">— u/h</p></div>
-            <div class="pill"><h3>Simple Mean</h3><p id="weekMean">— u/h</p></div>
             <div class="pill"><h3>Total Units</h3><p id="weekUnits">0</p></div>
             <div class="pill"><h3>Days Counted</h3><p id="weekDays">0</p></div>
           </div>
@@ -527,7 +526,7 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
 
     <div class="hint" style="margin-top:6px;">
-      Weighted Avg = total units ÷ total hours. Simple Mean = average of daily rates.
+      Weighted Avg = total units ÷ total hours.
     </div>
 
     <div class="card">
@@ -786,6 +785,47 @@ const KEY_CODES = 'wqt_codes';
 const KEY_LEARN = 'wqt_learn_ul';
 const PRO_UNLOCK_CODE = '0000';
 let proUnlocked = false;  // Gate: Export/Import/Manage Customers
+// Persisted preference: one-time shift length (hours)
+const SHIFT_PREF = 'wqt.shiftLenH';
+function clearStartHint(){
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = '';
+}
+// --- Predictive grace (delay creep after order start) ---
+const PREDICTIVE_GRACE_MS = 30000;
+function schedulePredictiveStartAfter(ms){
+  try{
+    predictiveStop?.(); // defensive: no double tickers
+    if (window._predictiveGraceTimer) clearTimeout(window._predictiveGraceTimer);
+    window._predictiveGraceTimer = setTimeout(()=> predictiveStart?.(), Math.max(0, ms|0));
+  }catch(e){}
+}
+
+function getShiftPref(){
+  const v = localStorage.getItem(SHIFT_PREF);
+  const n = parseInt(v, 10);
+  return (n === 9 || n === 10) ? n : null;
+}
+function setShiftPref(n){
+  if (n === 9 || n === 10) localStorage.setItem(SHIFT_PREF, String(n));
+}
+// ---- Lateness logging ----
+const LATE_LOG_KEY = 'wqt.lateLog'; // { "YYYY-MM-DD": {contracted, actual, lateMin, shiftLen} }
+
+function minutesBetween(hmA, hmB){
+  const [aH,aM] = (hmA||'0:0').split(':').map(x=>parseInt(x,10)||0);
+  const [bH,bM] = (hmB||'0:0').split(':').map(x=>parseInt(x,10)||0);
+  return (bH*60 + bM) - (aH*60 + aM);
+}
+function hmToMin(hm){
+  const [h,m] = (hm||'0:0').split(':').map(x=>parseInt(x,10)||0);
+  return h*60 + m;
+}
+function minToHm(min){
+  const h = Math.floor(min/60), m = min%60;
+  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+}
+
 // ==== Local storage keys ====
 const LS = {
   CURRENT: 'wqt.current',
@@ -811,6 +851,24 @@ function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10)
 function hhmmToMinutes(hhmm){
   const v = hm(hhmm);                 // hm("18:11") → 18.1833…
   return isNaN(v) ? 0 : Math.round(v * 60);
+}
+function showStartNote(text){
+  const host = document.getElementById('orderHeaderProgress');
+  if (!host) return;
+  let note = document.getElementById('progStartNote');
+  if (!note){
+    note = document.createElement('div');
+    note.id = 'progStartNote';
+    note.className = 'hint';
+    note.style.marginTop = '6px';
+    host.appendChild(note);
+  }
+  note.textContent = text;
+}
+
+function clearStartHint(){
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = '';
 }
 
 function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
@@ -926,7 +984,64 @@ function tintProgressByPace(rateUh){
   fill.classList.remove('pace-ok','pace-warn','pace-bad');
   fill.classList.add(cls);
 }
+// Put the lateness note on the same row as the "Log / Delay" button (right side)
+function showPreOrderNote(text){
+  const delayBtn = document.getElementById('btnDelay');
+  if (!delayBtn || !delayBtn.parentElement) return;
 
+  // If ensureActionRowLayout has run, delayBtn is in #actionsRight.
+  // We want the note in the LEFT group, flush-left.
+  let container = delayBtn.parentElement;           // likely #actionsRight
+  if (container.id === 'actionsRight' && container.parentElement){
+    container = container.parentElement;            // the row wrapper
+  }
+
+  // Ensure groups exist
+  let left  = document.getElementById('actionsLeft');
+  let right = document.getElementById('actionsRight');
+  if (!left){
+    left = document.createElement('div');
+    left.id = 'actionsLeft';
+    container.insertBefore(left, container.firstChild);
+  }
+  if (!right){
+    right = document.createElement('div');
+    right.id = 'actionsRight';
+    container.appendChild(right);
+  }
+
+  // Layout the row
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'space-between';
+  container.style.gap = '12px';
+  left.style.display  = 'flex';
+  left.style.alignItems = 'center';
+  left.style.gap      = '10px';
+  right.style.display = 'flex';
+  right.style.gap     = '10px';
+
+  // Create/replace the note in LEFT group (first position)
+  let note = document.getElementById('contractNote');
+  if (!note){
+    note = document.createElement('div');
+    note.id = 'contractNote';
+    note.className = 'hint';
+  }
+  note.textContent = text;
+
+  if (note.parentElement !== left){
+    left.insertBefore(note, left.firstChild || null);
+  }
+}
+
+// Clear both the old start-hint and this pre-order note
+function clearStartHint(){
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = '';
+  const cn = document.getElementById('contractNote');
+  if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
+}
 
 function formatETA(mins){
   if (!isFinite(mins) || mins <= 0) return '—';
@@ -1441,19 +1556,33 @@ function snapToNearestHour(){
 }
 
 function startShift(lenHours){
-  const lenEl = document.getElementById('tLen');
-  if (lenEl) lenEl.value = String(lenHours || 9);
+  try {
+    // Persist one-time 9h/10h preference
+    const existing = getShiftPref();
+    const chosen = existing || (lenHours | 0);
+    if (!existing && (chosen === 9 || chosen === 10)) setShiftPref(chosen);
 
-  startTime = snapToNearestHour();
-  const hint = document.getElementById('snapHint');
-  if (hint) hint.textContent = `Shift started @ ${startTime} • ${lenEl ? lenEl.value : lenHours || 9}h`;
+    // Seed hidden length field for downstream logic
+    const applyLen = getShiftPref() || (lenHours || 9);
+    const lenEl = document.getElementById('tLen');
+    if (lenEl) lenEl.value = String(applyLen);
 
-  beginShift();
+    // Defer actual start to the contracted time picker
+    openContractedStartPicker();
+  } catch (e){
+    // Safe fallback: still route through the picker
+    const lenEl = document.getElementById('tLen');
+    if (lenEl) lenEl.value = String(lenHours || 9);
+    openContractedStartPicker();
+  }
 }
 
-// REPLACE beginShift() with this:
+
 function beginShift(){
   if (!startTime) startTime = snapToNearestHour();
+
+  // Clean any pre-shift hints/notes
+  clearStartHint?.();
 
   // Show tracker UI
   const shift = document.getElementById('shiftCard');
@@ -1483,6 +1612,97 @@ function beginShift(){
   updateEndShiftVisibility?.();
   updateCloseEarlyVisibility?.();
   saveAll();
+
+  // Lock the bottom action row layout
+  ensureActionRowLayout?.();
+}
+
+function openContractedStartPicker(){
+  const modal = document.getElementById('contractModal');
+  const list  = document.getElementById('contractHourList');
+  if (!modal || !list) return;
+
+  list.innerHTML = '';
+
+  // Hour choices — adjust if your site uses different windows
+  const HOURS = [6,7,8,9,10,11,12];
+  HOURS.forEach(h=>{
+    const hh = (h<10?'0':'') + h;
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.type = 'button';
+    btn.textContent = `${hh}:00`;
+    btn.onclick = () => applyContractedStart(h);
+    list.appendChild(btn);
+  });
+
+  modal.style.display = 'flex';
+}
+
+function closeContractModal(){
+  const modal = document.getElementById('contractModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function applyContractedStart(hh){
+  closeContractModal();
+
+  const prefLen = getShiftPref() || 9;
+  const lenEl = document.getElementById('tLen');
+  if (lenEl) lenEl.value = String(prefLen);
+
+  const contracted = (hh<10?'0':'') + hh + ':00';
+  const actual     = nowHHMM();
+  const cMin = hmToMin(contracted);
+  const aMin = hmToMin(actual);
+
+  // Effective start: contracted if on-time/early; actual if late
+  const effectiveMin = (aMin <= cMin) ? cMin : aMin;
+  const effectiveHM  = minToHm(effectiveMin);
+
+  // Live rate baseline
+  startTime = effectiveHM;
+
+  // Log lateness
+  const lateMin = aMin - cMin;
+  try {
+    const day = new Date().toISOString().slice(0,10);
+    const raw = localStorage.getItem(LATE_LOG_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    obj[day] = { contracted, actual, effective: effectiveHM, lateMin, shiftLen: prefLen };
+    localStorage.setItem(LATE_LOG_KEY, JSON.stringify(obj));
+  } catch(e) {}
+
+  // Show S2 (customer selection) view
+  beginShift();
+  if (typeof updateSummary === 'function') updateSummary();
+
+  // S2 note (same row as Log/Delay, left side)
+  let note = 'on time';
+  if (lateMin > 0)      note = `${lateMin}m late`;
+  else if (lateMin < 0) note = `${-lateMin}m early`;
+  showPreOrderNote?.(`Contracted ${contracted} • Actual ${actual} (${note})`);
+}
+
+
+function renderShiftChooser(){
+  const card = document.getElementById('shiftCard');
+  if (!card) return;
+
+  // This selects the row that currently holds the two buttons
+  const btnRow = card.querySelector('.col > .row');
+  if (!btnRow) return;
+
+  const pref = getShiftPref();
+  if (pref === 9 || pref === 10){
+    // Replace the two buttons with a single Start button using the saved preference
+    btnRow.innerHTML =
+      `<button class="btn ok" type="button" style="min-width:180px;" onclick="startShift(${pref})">Start ${pref}h Shift</button>`;
+  } else {
+    // Leave the original two-button chooser (first run)
+    // No-op: your HTML already has them
+  }
+  clearStartHint();
 }
 
 function refreshStartButton(){
@@ -1501,9 +1721,9 @@ function restoreActiveOrderUI() {
   const shiftOn  = !!startTime && window.archived !== true;
   const inOrder  = !!(shiftOn && current && Number.isFinite(current.total));
 
-  const hdrForm   = document.getElementById('orderHeaderForm');      // “Customer / Total units” header
-  const hdrProg   = document.getElementById('orderHeaderProgress');  // progress header (bar, %)
-  const orderArea = document.getElementById('orderArea');            // wrap input + timeline
+  const hdrForm   = document.getElementById('orderHeaderForm');
+  const hdrProg   = document.getElementById('orderHeaderProgress');
+  const orderArea = document.getElementById('orderArea');
 
   const show = (id, on, disp = 'inline-block') => {
     const el = document.getElementById(id);
@@ -1519,6 +1739,10 @@ function restoreActiveOrderUI() {
     }
     if (orderArea) orderArea.style.display = 'block';
 
+    // ⛔ Remove any pre-order Contracted/Actual note when an order is active
+    const cn = document.getElementById('contractNote');
+    if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
+
     // Sync form inputs / dropdown label
     const sel = document.getElementById('oCust');
     if (sel && current.name) sel.value = current.name;
@@ -1527,7 +1751,7 @@ function restoreActiveOrderUI() {
     const ddToggle = document.querySelector('#oDD .dd-toggle');
     if (ddToggle && current.name) ddToggle.textContent = current.name;
 
-    // Seed progress header fields (so name/qty persist after refresh)
+    // Seed progress header fields
     const total    = current.total || 0;
     const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
     const done     = total - lastLeft;
@@ -1559,22 +1783,15 @@ function restoreActiveOrderUI() {
     refreshWrapButton?.();
     refreshCompleteButton?.();
 
-    // ===== Predictive resume on refresh (per rules) =====
+    // ===== Predictive resume on refresh =====
     try {
-      // Stop any stale ticker first to avoid duplicates
       predictiveStop?.();
-
       const firstWrapSeen = Array.isArray(tempWraps) && tempWraps.length > 0;
       const totalUnits    = current.total || 0;
       const lastUnitsLeft = firstWrapSeen
         ? tempWraps[tempWraps.length - 1].left
         : totalUnits;
 
-      // Choose seed rate:
-      //  • After first wrap → current ORDER rate
-      //  • Before first wrap:
-      //      – first order of the day → 280
-      //      – later orders → shift live rate
       let seedRate;
       if (firstWrapSeen) {
         seedRate = Math.round(
@@ -1591,7 +1808,6 @@ function restoreActiveOrderUI() {
             );
       }
 
-      // Only (re)start ticker if there are units left to project
       if (lastUnitsLeft > 0) {
         predictiveReset?.(lastUnitsLeft, seedRate, firstWrapSeen);
         uiLastPaceUh = Math.round(predictive?.rateUh || 0) || seedRate;
@@ -1599,14 +1815,16 @@ function restoreActiveOrderUI() {
       } else {
         predictiveStop?.();
       }
-    } catch(e) {
-      // no-op: predictive helpers not present
-    }
+    } catch(e) {}
+
   } else {
-    // No active order → show form header, hide progress + order area
+    // S1/S2: show form, hide progress/area
     if (hdrProg)   hdrProg.style.display = 'none';
     if (orderArea) orderArea.style.display = 'none';
     if (hdrForm)   hdrForm.style.display = '';
+
+    // Restore contracted note on S1 only (pre-order)
+    renderPreOrderNoteFromLog?.();
 
     // Buttons hidden when idle; Delay/Close-Early only when shift is on
     show('btnStart',        true);
@@ -1615,15 +1833,19 @@ function restoreActiveOrderUI() {
     show('btnL',            false);
     show('btnDelay',        shiftOn);
     show('btnCloseEarly',   shiftOn);
+
     // Hide elapsed chip
     const chipBox = document.getElementById('chipElapsed');
     if (chipBox) chipBox.style.display = 'none';
-    // Stop predictive if present
+
     predictiveStop?.();
   }
-  // Always resync top controls
+
+  // Always resync top controls and keep action row grouped
   updateHeaderActions?.();
+  ensureActionRowLayout?.();
 }
+
 // ─────────────────────────────────────────────
 // startOrder: validate → lock in → swap to progress header
 // ─────────────────────────────────────────────
@@ -1644,6 +1866,10 @@ function startOrder() {
   if (!(total > 0)) return alert('Enter total units');
 
   const finalName = isOther ? otherVal : name;
+
+  // ✅ Remove any S1 "Contracted…" note as we transition into active order
+  const cn = document.getElementById('contractNote');
+  if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
 
   // ===== create order state =====
   current    = { name: finalName, total, start: nowHHMM(), breaks: [] };
@@ -1680,11 +1906,13 @@ function startOrder() {
   const chipVal = document.getElementById('chipElapsedVal');
   if (chipVal) chipVal.textContent = '0 min';
   updateElapsedChip?.();
+
   // ===== Swap header: hide form, show progress header (ensure flex) =====
   const hdrForm = document.getElementById('orderHeaderForm');
   const hdrProg = document.getElementById('orderHeaderProgress');
   if (hdrForm) { hdrForm.style.display = 'none'; hdrForm.classList.remove('show'); }
   if (hdrProg) { hdrProg.style.display = 'flex'; hdrProg.classList.add('show'); }
+
   // ===== Seed progress header immediately so the bar is visible at 0% =====
   const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   setTxt('progCust', finalName || '—');
@@ -1696,35 +1924,41 @@ function startOrder() {
   const fillEl = document.getElementById('progFill');
   if (fillEl) fillEl.style.width = '0%';
   setTxt('progPct', '0%');
+
   // ===== First paint + sync header actions =====
   updateProgressHeader?.();
+
   // ===== Predictive seed for this order =====
   try {
     predictiveStop?.(); // defensive
     const isFirst = isFirstOrderToday?.() === true;
     const seedRate = isFirst ? 280 : Math.round(getLiveRateUh?.() || 280);
     if (isFirst) markFirstOrderStarted?.();
-    // At order start (pre-wrap), left == total
     predictiveReset?.(current?.total || 0, seedRate, /*firstWrapSeen*/ false);
     predictiveStart?.();
   } catch(e) { /* no-op */ }
+
   updateHeaderActions?.();
-  // ===== Predictive: seed & start per Julius rules =====
+
+  // ===== Predictive: seed & start per Julius rules (duplicate defensive block kept) =====
   try {
-    // stop any previous ticker (defensive)
     predictiveStop?.();
     const isFirst = isFirstOrderToday?.() === true;
     let seedRate  = isFirst ? 280 : Math.round(getLiveRateUh?.() || 280);
     if (isFirst) markFirstOrderStarted?.();
-    // At order start (pre-wrap), left == total
     predictiveReset?.(total || 0, seedRate, /*firstWrapSeen*/ false);
     uiLastPaceUh = Math.round(predictive?.rateUh || 0) || seedRate;
     predictiveStart?.();
   } catch (e) {
     // no-op if helpers not present
   }
+
   saveAll?.();
+
+  // Keep action row layout locked (left: B/L/CloseEarly, right: Log/Delay/Undo)
+  ensureActionRowLayout?.();
 }
+
 // --- minimal fade swap helper ---
 function fadeSwap(hideEl, showEl, showDisplay = 'block') {
   if (!hideEl || !showEl) return;
@@ -2262,101 +2496,102 @@ function openCloseEarlyModal(){
 function closeCloseEarlyModal(){ document.getElementById('closeEarlyModal').style.display='none'; }
 
 function submitCloseEarly(){
-  if (!current) return closeCloseEarlyModal();
+  if (!current) return closeCloseEarlyModal?.();
 
-  const remaining = parseInt(document.getElementById('ceRemaining').value || '0', 10);
-  if (isNaN(remaining) || remaining < 0) return alert('Enter remaining units (0 or more).');
-
-  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
-  if (remaining > prevLeft) return alert('Remaining cannot exceed current left (' + prevLeft + ').');
-
-  const wrapped  = !!document.getElementById('ceWrapped').checked;
-  const reasonEl = document.getElementById('ceReason');
-  let reason     = (reasonEl && reasonEl.value || '').trim();
-
-  const elapsed = minutesSinceHHMM(current.start);
-
-  // ---- Robust reason rules (no false blocks when no live-rate) ----
-  let validationFail = false;
-  (function enforceReasonRules(){
-    const closedUnits = picks.reduce((a,b)=>a + b.units, 0);
-    const progress    = currentOrderUnitsDone();
-    const totalUnits  = closedUnits + progress;
-
-    const s = hm(startTime), e = hm(nowHHMM());
-    const liveUh = (!isNaN(s) && !isNaN(e) && e > s) ? Math.round(totalUnits / (e - s)) : 0;
-
-    // If live rate exists, compute expected minutes; otherwise null (not Infinity)
-    const expectedLiveMin = (liveUh > 0) ? ((current.total || 0) / liveUh) * 60 : null;
-    const expected300Min  = ((current.total || 0) / 300) * 60;
-
-    // Completed (0 left) unusually fast vs *live* -> require short reason
-    if (remaining === 0 && Number.isFinite(expectedLiveMin) && elapsed < expectedLiveMin * 0.70) {
-      if (!reasonEl) reason = (prompt('Add a short reason — completed unusually fast vs your live rate:') || '').trim();
-      if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
-    }
-
-    // Closing early (>0 left) very fast vs *300 u/h baseline* -> require short reason
-    if (remaining > 0 && elapsed < expected300Min * 0.70) {
-      if (!reasonEl) reason = (prompt('Please add a short reason to close early:') || '').trim();
-      if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
-    }
-  })();
-  if (validationFail) return;
-
-  // Optional wrap just before closing
-  let addedWrap = false;
-  if (wrapped){
-    if (remaining >= prevLeft) return alert('To mark a wrap, remaining must be less than ' + prevLeft + '.');
-    tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
-    addedWrap = true;
+  // 1) Read & validate inputs
+  const remaining = parseInt((document.getElementById('ceRemaining')?.value || '0'), 10);
+  if (!Number.isFinite(remaining) || remaining < 0) {
+    return alert('Enter remaining units (0 or more).');
   }
 
-  const close = nowHHMM();
-  const palletsCount = tempWraps.length || 1;
-  const unitsDone = current.total - remaining;
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current.total || 0);
+  if (remaining > prevLeft) {
+    return alert(`Remaining cannot exceed current left (${prevLeft}).`);
+  }
 
-  const ok = confirmCloseSummary({
-    name: current.name, unitsDone, pallets: palletsCount, start: current.start, close, remaining, earlyReason: reason
+  const wrapped  = !!document.getElementById('ceWrapped')?.checked;
+  const reasonEl = document.getElementById('ceReason');
+  const reason   = (reasonEl && reasonEl.value || '').trim();
+
+  // Reason is required only when closing early with units still left
+  if (remaining > 0 && reason.length < 3) {
+    if (reasonEl) reasonEl.focus();
+    return alert('Please add a short reason for closing early.');
+  }
+
+  // 2) Optional: log a final wrap if user ticked the box and there was progress
+  let addedWrap = false;
+  if (wrapped) {
+    if (remaining < prevLeft) {
+      tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
+      addedWrap = true;
+    } else {
+      // No additional progress since last wrap; don’t create a duplicate wrap
+      return alert('You have not reduced the units since the last wrap. Uncheck “Wrapped last pallet” or adjust Remaining.');
+    }
+  }
+
+  // 3) Confirm & finalize
+  const close = nowHHMM();
+  const unitsDone    = (current.total || 0) - remaining;
+  const palletsCount = tempWraps.length || 1;
+
+  const ok = confirmCloseSummary?.({
+    name: current.name,
+    unitsDone,
+    pallets: palletsCount,
+    start: current.start,
+    close,
+    remaining,
+    earlyReason: reason
   });
-  if (!ok){
+  if (ok === false) {
     if (addedWrap) tempWraps.pop();
     return;
   }
 
-  const exclMins = current.breaks.reduce((a,b)=> a + (b.minutes || 0), 0);
+  const exclMins = (current.breaks || []).reduce((a,b)=> a + (b.minutes || 0), 0);
   const order = {
-    name: current.name, units: unitsDone, pallets: palletsCount, close, start: current.start, excl: exclMins,
+    name:   current.name,
+    units:  unitsDone,
+    pallets: palletsCount,
+    start:  current.start,
+    close,
+    remaining,
+    excl:   exclMins,
     earlyReason: reason || '',
-    log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
+    closedEarly: true,
+    log: { wraps: tempWraps.slice(0), breaks: (current.breaks || []).slice(0) }
   };
   picks.push(order);
   lastClose = close;
 
-  predictiveStop(); // stop prediction when closing early
+  // 4) Reset active state & UI
+  predictiveStop?.();
+  current   = null;
+  tempWraps = [];
+  undoStack = [];
 
-  current = null; tempWraps = []; undoStack = [];
-  document.getElementById('orderArea').style.display = 'none';
-  ['btnUndo'].forEach(id => document.getElementById(id).style.display = 'none');
-  document.getElementById('btnStart').style.display  = 'inline-block';
-  document.getElementById('btnStart').disabled       = true;
-  document.getElementById('btnComplete').style.display = 'none';
-  document.getElementById('oLeft').value  = '';
-  document.getElementById('oTotal').value = '';
+  const orderArea = document.getElementById('orderArea'); if (orderArea) orderArea.style.display = 'none';
+  const btnUndo   = document.getElementById('btnUndo');   if (btnUndo) btnUndo.style.display = 'none';
+  const btnStart  = document.getElementById('btnStart');  if (btnStart) { btnStart.style.display = 'inline-block'; btnStart.disabled = true; }
+  const btnComplete = document.getElementById('btnComplete'); if (btnComplete) btnComplete.style.display = 'none';
+  const oLeft  = document.getElementById('oLeft');  if (oLeft)  oLeft.value  = '';
+  const oTotal = document.getElementById('oTotal'); if (oTotal) oTotal.value = '';
 
-  closeCloseEarlyModal();
-  renderDone();
-  updateSummary();
-  updateDelayBtn();
-  updateEndShiftVisibility();
-  updateCloseEarlyVisibility();
-  saveAll();
-  showToast('Order closed');
+  closeCloseEarlyModal?.();
+  renderDone?.();
+  updateSummary?.();
+  updateDelayBtn?.();
+  updateEndShiftVisibility?.();
+  updateCloseEarlyVisibility?.();
+  restoreActiveOrderUI?.();
+  saveAll?.();
+  showToast?.('Order closed');
 
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) chipBox.style.display = 'none';
 }
-
 
 // ====== Completed orders & history ======
 function renderTimeline(){
@@ -2469,37 +2704,33 @@ function renderWeeklySummary(){
     const floorToQuarter = (mins)=> Math.max(0, Math.floor(mins/15)*15);
     const num = (v)=> Number.isFinite(+v) ? +v : 0;
 
-    let totalUnits = 0;
-    let totalHours = 0;
-    let sumDayRates = 0;
+    let totalUnits  = 0;
+    let totalHours  = 0;
     let overtimeMin = 0;
 
     weekDays.forEach(d=>{
       const units = num(d.totalUnits);
       const hours = num(d.shiftLen);
-      const rate  = num(d.dayRate);
 
       const workedMin    = num(d.workedMin) || num(d.elapsedMin) || Math.round(hours*60);
       const scheduledMin = num(d.scheduledMin) || Math.round((hours || 9)*60);
 
       totalUnits += units;
       if (hours > 0) totalHours += hours;
-      if (rate  > 0) sumDayRates += rate;
 
       const delta = workedMin - scheduledMin;
       if (delta > 0) overtimeMin += floorToQuarter(delta);
     });
 
-    const weighted = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
-    const mean     = (weekDays.length>0) ? Math.round(sumDayRates / weekDays.length) : 0;
-    const overtimeH = (overtimeMin/60);
+    const weighted   = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
+    const overtimeH  = (overtimeMin/60);
 
     const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
     const hintEl = document.getElementById('weekRangeHint');
     if(hintEl) hintEl.textContent = `Week: ${fmtShort(startDate)} – ${fmtShort(endDate)}`;
 
     setTxt('weekWeighted', weighted ? (weighted+' u/h') : '— u/h');
-    setTxt('weekMean',     mean     ? (mean+' u/h')     : '— u/h');
+    // simple mean removed: no write to #weekMean
     setTxt('weekUnits',    String(totalUnits));
     setTxt('weekHours',    (totalHours||0).toFixed(1));
     setTxt('weekDays',     String(weekDays.length));
@@ -2679,15 +2910,19 @@ function endShift(){
 function clearToday(){
   if (!confirm("Clear today's data and reset to pre-shift? This cannot be undone.")) return;
 
-  // Stop any live predictive timer safely
+  // Stop any running predictive ticker and pending grace-start timer
   try {
-    if (window.predictive && predictive.timer){
+    if (window.predictive && predictive.timer) {
       clearInterval(predictive.timer);
       predictive.timer = null;
     }
-  } catch(e){ /* no-op */ }
+    if (window._predictiveGraceTimer) {
+      clearTimeout(window._predictiveGraceTimer);
+      window._predictiveGraceTimer = null;
+    }
+  } catch(e){}
 
-  // Wipe in-memory state for the current day
+  // Wipe in-memory state
   startTime  = null;
   current    = null;
   tempWraps  = [];
@@ -2709,8 +2944,8 @@ function clearToday(){
   if (doneCard)  doneCard.style.display  = 'none';
 
   if (hdrProg)   hdrProg.style.display   = 'none';
-  if (hdrForm)   hdrForm.style.display   = '';     // show the start form
-  if (area)      area.style.display      = 'none'; // hide wraps/timeline
+  if (hdrForm)   hdrForm.style.display   = '';
+  if (area)      area.style.display      = 'none';
 
   // Reset form fields
   const left  = document.getElementById('oLeft');   if (left)  left.value  = '';
@@ -2732,19 +2967,27 @@ function clearToday(){
   if (chipVal) chipVal.textContent = '—';
 
   // Re-render shells
-  renderTimeline();   // empty timeline
-  renderDone();       // empty completed table
-  updateSummary();    // zeros for totals/rate
-  updateDelayBtn();
-  updateEndShiftVisibility();
-  updateCloseEarlyVisibility();
+  renderTimeline?.();
+  renderDone?.();
+  updateSummary?.();
+  updateDelayBtn?.();
+  updateEndShiftVisibility?.();
+  updateCloseEarlyVisibility?.();
 
-  // Persist the cleared state (saveAll should write null/[] as needed)
-  if (typeof saveAll === 'function') saveAll();
+  // Cleanup: remove any pre-shift notes (both S1 banner + old progStartNote)
+  clearStartHint?.();
+  const psn = document.getElementById('progStartNote');
+  if (psn && psn.parentNode) psn.parentNode.removeChild(psn);
+  const cn = document.getElementById('contractNote');
+  if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
 
-  // Ensure we're on the Tracker tab with the pre-shift view
+  // Persist + land back on Tracker
+  saveAll?.();
   if (typeof showTab === 'function') showTab('tracker');
-  saveAll();
+  saveAll?.();
+
+  // Keep action row grouping stable after reset
+  ensureActionRowLayout?.();
 }
 
 function clearHistory(){
@@ -3249,7 +3492,47 @@ function initWeekCardToggle(){
 
   card.dataset.bound = '1';
 }
+function ensureActionRowLayout(){
+  const delayBtn = document.getElementById('btnDelay');
+  if (!delayBtn || !delayBtn.parentElement) return;
 
+  const row = delayBtn.parentElement;
+
+  // Create groups once
+  let left = document.getElementById('actionsLeft');
+  let right = document.getElementById('actionsRight');
+  if (!left){
+    left = document.createElement('div');
+    left.id = 'actionsLeft';
+    row.insertBefore(left, row.firstChild);
+  }
+  if (!right){
+    right = document.createElement('div');
+    right.id = 'actionsRight';
+    row.appendChild(right);
+  }
+
+  // Lock row layout
+  row.style.display = 'flex';
+  row.style.alignItems = 'center';
+  row.style.justifyContent = 'space-between';
+  row.style.gap = '12px';
+
+  // Move buttons into groups (hidden states are fine)
+  const btnB   = document.getElementById('btnB');
+  const btnL   = document.getElementById('btnL');
+  const btnCE  = document.getElementById('btnCloseEarly');
+  const btnDel = document.getElementById('btnDelay');
+  const btnUn  = document.getElementById('btnUndo');
+
+  [btnB, btnL, btnCE].forEach(el => { if (el && el.parentNode !== left) left.appendChild(el); });
+  [btnDel, btnUn].forEach(el => { if (el && el.parentNode !== right) right.appendChild(el); });
+
+  left.style.display  = 'flex';
+  left.style.gap      = '10px';
+  right.style.display = 'flex';
+  right.style.gap     = '10px';
+}
 
 // ====== Boot ======
 document.addEventListener('DOMContentLoaded', function () {
@@ -3293,6 +3576,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (el) el.style.display = 'none';
       });
     }
+    renderShiftChooser();
     // ── 6) Decide header: progress vs new-order form ────────────────
     if (hadOpen && window.archived !== true) {
       // We have an active order: ensure progress header/UI is shown
@@ -3443,6 +3727,20 @@ function updateHeaderActions(){
   const wrapBtn = document.getElementById('btnWrapTop');
   if (wrapBtn) wrapBtn.disabled = !inOrder;
 }
+
 </script>
+<!-- Contracted Start Picker -->
+<div id="contractModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center; z-index:9999;">
+  <div style="background:#141821; border:1px solid #243244; border-radius:14px; padding:16px; width:min(520px,92%);">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <h3 style="margin:0;">What time are you contracted to start?</h3>
+      <button class="btn" type="button" onclick="closeContractModal()">✕</button>
+    </div>
+    <div id="contractHourList" class="row" style="flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
+    <div class="hint" style="margin-top:10px;">
+      We’ll log this as your contracted time, and also log the actual start (now). Live Rate uses the actual start.
+    </div>
+  </div>
+</div>
 </body>
 </html>
