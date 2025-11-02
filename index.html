@@ -280,7 +280,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 </head>
 <body>
 <div class="wrap">
-  <h1><b><b></b>Warehouse QuickCalc & Tracker v3.8</b></h1>
+  <h1><b>Warehouse QuickCalc & Tracker v3.8</b></h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -2477,122 +2477,6 @@ function tickBreak() {
   if (typeof updateProgressHeader === 'function') updateProgressHeader();
 }
 
-function updateCloseEarlyVisibility(){
-  const btn = document.getElementById('btnCloseEarly');
-  if (!btn) return;
-  const on = !!(current && Number.isFinite(current.total));
-  btn.style.display = on ? 'inline-block' : 'none';
-  btn.disabled = !on;
-}
-
-function openCloseEarlyModal(){
-  if(!current) return;
-  document.getElementById('ceRemaining').value='';
-  document.getElementById('ceWrapped').checked=false;
-  const r=document.getElementById('ceReason'); if(r) r.value='';
-  document.getElementById('closeEarlyModal').style.display='flex';
-}
-
-function closeCloseEarlyModal(){ document.getElementById('closeEarlyModal').style.display='none'; }
-
-function submitCloseEarly(){
-  if (!current) return closeCloseEarlyModal?.();
-
-  // 1) Read & validate inputs
-  const remaining = parseInt((document.getElementById('ceRemaining')?.value || '0'), 10);
-  if (!Number.isFinite(remaining) || remaining < 0) {
-    return alert('Enter remaining units (0 or more).');
-  }
-
-  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current.total || 0);
-  if (remaining > prevLeft) {
-    return alert(`Remaining cannot exceed current left (${prevLeft}).`);
-  }
-
-  const wrapped  = !!document.getElementById('ceWrapped')?.checked;
-  const reasonEl = document.getElementById('ceReason');
-  const reason   = (reasonEl && reasonEl.value || '').trim();
-
-  // Reason is required only when closing early with units still left
-  if (remaining > 0 && reason.length < 3) {
-    if (reasonEl) reasonEl.focus();
-    return alert('Please add a short reason for closing early.');
-  }
-
-  // 2) Optional: log a final wrap if user ticked the box and there was progress
-  let addedWrap = false;
-  if (wrapped) {
-    if (remaining < prevLeft) {
-      tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
-      addedWrap = true;
-    } else {
-      // No additional progress since last wrap; don’t create a duplicate wrap
-      return alert('You have not reduced the units since the last wrap. Uncheck “Wrapped last pallet” or adjust Remaining.');
-    }
-  }
-
-  // 3) Confirm & finalize
-  const close = nowHHMM();
-  const unitsDone    = (current.total || 0) - remaining;
-  const palletsCount = tempWraps.length || 1;
-
-  const ok = confirmCloseSummary?.({
-    name: current.name,
-    unitsDone,
-    pallets: palletsCount,
-    start: current.start,
-    close,
-    remaining,
-    earlyReason: reason
-  });
-  if (ok === false) {
-    if (addedWrap) tempWraps.pop();
-    return;
-  }
-
-  const exclMins = (current.breaks || []).reduce((a,b)=> a + (b.minutes || 0), 0);
-  const order = {
-    name:   current.name,
-    units:  unitsDone,
-    pallets: palletsCount,
-    start:  current.start,
-    close,
-    remaining,
-    excl:   exclMins,
-    earlyReason: reason || '',
-    closedEarly: true,
-    log: { wraps: tempWraps.slice(0), breaks: (current.breaks || []).slice(0) }
-  };
-  picks.push(order);
-  lastClose = close;
-
-  // 4) Reset active state & UI
-  predictiveStop?.();
-  current   = null;
-  tempWraps = [];
-  undoStack = [];
-
-  const orderArea = document.getElementById('orderArea'); if (orderArea) orderArea.style.display = 'none';
-  const btnUndo   = document.getElementById('btnUndo');   if (btnUndo) btnUndo.style.display = 'none';
-  const btnStart  = document.getElementById('btnStart');  if (btnStart) { btnStart.style.display = 'inline-block'; btnStart.disabled = true; }
-  const btnComplete = document.getElementById('btnComplete'); if (btnComplete) btnComplete.style.display = 'none';
-  const oLeft  = document.getElementById('oLeft');  if (oLeft)  oLeft.value  = '';
-  const oTotal = document.getElementById('oTotal'); if (oTotal) oTotal.value = '';
-
-  closeCloseEarlyModal?.();
-  renderDone?.();
-  updateSummary?.();
-  updateDelayBtn?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
-  restoreActiveOrderUI?.();
-  saveAll?.();
-  showToast?.('Order closed');
-
-  const chipBox = document.getElementById('chipElapsed');
-  if (chipBox) chipBox.style.display = 'none';
-}
-
 // ====== Completed orders & history ======
 function renderTimeline(){
   const tl = document.getElementById('orderTimeline');
@@ -2614,7 +2498,7 @@ function renderTimeline(){
     row0.innerHTML = `<span>🟢 Order started</span><span class="meta">${current.start || ''}</span>`;
     tl.appendChild(row0);
   }
-
+  
   // Breaks / Delays / Notes
   (current?.breaks || []).forEach(b => {
     const row = document.createElement('div');
@@ -2655,6 +2539,144 @@ function renderTimeline(){
   });
 }
 
+// --- Close Early buttons visibility
+function updateCloseEarlyVisibility(){
+  const btn = document.getElementById('btnCloseEarly');
+  if (!btn) return;
+  const on = !!(current && Number.isFinite(current.total));
+  btn.style.display = on ? 'inline-block' : 'none';
+  btn.disabled = !on;
+}
+
+// --- Modal open/close
+function openCloseEarlyModal(){
+  if (!current) return;
+  const r = document.getElementById('ceReason');
+  document.getElementById('ceRemaining').value = '';
+  document.getElementById('ceWrapped').checked = false;
+  if (r) r.value = '';
+  document.getElementById('closeEarlyModal').style.display = 'flex';
+}
+function closeCloseEarlyModal(){
+  const m = document.getElementById('closeEarlyModal');
+  if (m) m.style.display = 'none';
+}
+
+// --- Finalize Close Early
+function submitCloseEarly(){
+  if (!current) return closeCloseEarlyModal?.();
+
+  // 1) read + validate
+  const remEl = document.getElementById('ceRemaining');
+  const remaining = parseInt((remEl?.value || '0'), 10);
+  if (!Number.isFinite(remaining) || remaining < 0) {
+    return alert('Enter remaining units (0 or more).');
+  }
+
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current.total || 0);
+  if (remaining > prevLeft) {
+    return alert(`Remaining cannot exceed current left (${prevLeft}).`);
+  }
+
+  const wrapped  = !!document.getElementById('ceWrapped')?.checked;
+  const reasonEl = document.getElementById('ceReason');
+  const reason   = (reasonEl && reasonEl.value || '').trim();
+
+  // reason only required when closing with units left
+  if (remaining > 0 && reason.length < 3) {
+    if (reasonEl) reasonEl.focus();
+    return alert('Please add a short reason for closing early.');
+  }
+
+  // 2) optional final wrap (only if we actually reduced left)
+  let addedWrap = false;
+  if (wrapped) {
+    if (remaining < prevLeft) {
+      tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
+      addedWrap = true;
+    } else {
+      return alert('No progress since last wrap. Uncheck “Wrapped last pallet” or adjust Remaining.');
+    }
+  }
+
+  // 3) confirm (if helper exists) then archive
+  const closeHHMM   = nowHHMM();
+  const unitsDone   = (current.total || 0) - remaining;
+  const palletsCnt  = tempWraps.length || 1;
+
+  const ok = (typeof confirmCloseSummary === 'function') ? confirmCloseSummary({
+    name: current.name, unitsDone, pallets: palletsCnt,
+    start: current.start, close: closeHHMM, remaining, earlyReason: reason
+  }) : true;
+
+  if (ok === false) {
+    if (addedWrap) tempWraps.pop();
+    return;
+  }
+
+  const exclMins = (current.breaks || []).reduce((a,b)=> a + (b.minutes || 0), 0);
+  picks.push({
+    name: current.name,
+    units: unitsDone,
+    pallets: palletsCnt,
+    start: current.start,
+    close: closeHHMM,
+    remaining,
+    excl: exclMins,
+    earlyReason: reason || '',
+    closedEarly: true,
+    log: { wraps: tempWraps.slice(0), breaks: (current.breaks || []).slice(0) }
+  });
+  lastClose = closeHHMM;
+
+  // 4) reset state + UI (bring back new-order header form)
+  predictiveStop?.();
+  current   = null;
+  tempWraps = [];
+  undoStack = [];
+
+  // hide active area
+  const area = document.getElementById('orderArea');
+  if (area) area.style.display = 'none';
+
+  // swap progress header -> header form
+  const hdrForm = document.getElementById('orderHeaderForm');
+  const hdrProg = document.getElementById('orderHeaderProgress');
+  if (hdrForm && hdrProg) {
+    if (typeof fadeSwap === 'function') fadeSwap(hdrProg, hdrForm, 'block');
+    else { hdrProg.style.display = 'none'; hdrForm.style.display = 'block'; }
+  }
+
+  // reset inputs for a fresh order (use helper if present)
+  if (typeof resetNewOrderForm === 'function') {
+    resetNewOrderForm();
+  } else {
+    const oLeft  = document.getElementById('oLeft');   if (oLeft)  oLeft.value  = '';
+    const oTotal = document.getElementById('oTotal');  if (oTotal) oTotal.value = '';
+    const sel    = document.getElementById('oCust');   if (sel)    sel.value    = '';
+    const ddT    = document.querySelector('#oDD .dd-toggle');
+    if (ddT) ddT.textContent = 'Select customer…';
+  }
+
+  // buttons/chips
+  const btnUndo     = document.getElementById('btnUndo');     if (btnUndo) btnUndo.style.display = 'none';
+  const btnStartTop = document.getElementById('btnStart');    if (btnStartTop) { btnStartTop.style.display = 'inline-block'; btnStartTop.disabled = true; }
+  const btnComplete = document.getElementById('btnComplete'); if (btnComplete) btnComplete.style.display = 'none';
+  const chipBox     = document.getElementById('chipElapsed'); if (chipBox) chipBox.style.display = 'none';
+
+  // close modal + refresh
+  closeCloseEarlyModal?.();
+  renderDone?.();
+  updateSummary?.();
+  updateDelayBtn?.();
+  updateEndShiftVisibility?.();
+  updateCloseEarlyVisibility?.();
+  saveAll?.();
+  showToast?.('Order closed');
+
+  // keep action row grouped
+  ensureActionRowLayout?.();
+}
 
 function renderDone(){
   var tb=document.getElementById('doneBody'); tb.innerHTML='';
