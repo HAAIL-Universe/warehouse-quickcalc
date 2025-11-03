@@ -1670,129 +1670,77 @@ function updCalcGate(){
 }
 
 // ====== Tabs ======
-function showTab(which){
-  // ---------- swap visible section ----------
-  const id = 'tab' + which.charAt(0).toUpperCase() + which.slice(1);
-  ['tabCalc','tabTracker','tabHistory'].forEach(x =>
-    document.getElementById(x).classList.toggle('hidden', x !== id)
-  );
+if (which === 'tracker') {
+  const inOrder = !!(current && Number.isFinite(current.total));
 
-  // ---------- tab button active state ----------
-  ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(x =>
-    document.getElementById(x).classList.remove('active')
-  );
-  if (which === 'calc')    document.getElementById('tabCalcBtn').classList.add('active');
-  if (which === 'tracker') document.getElementById('tabTrackBtn').classList.add('active');
-  if (which === 'history') document.getElementById('tabHistBtn').classList.add('active');
+  // durable shift check
+  const hasShift =
+    (window.shiftActive === true) ||
+    (localStorage.getItem('shiftActive') === '1') ||
+    !!startTime ||
+    (Array.isArray(picks) && picks.length > 0);
 
-  // live banner only on tracker
-  const lb = document.getElementById('liveBanner');
-  if (lb) lb.classList.toggle('hidden', which !== 'tracker');
+  // Shift chooser vs active blocks
+  const shiftCard    = document.getElementById('shiftCard');
+  const shiftChooser = document.getElementById('shiftChooser');   // <-- NEW
+  const activeCard   = document.getElementById('activeOrderCard');
+  const doneCard     = document.getElementById('completedCard');
 
-  // convenience handles used below
-  const form = document.getElementById('orderHeaderForm');
-  const prog = document.getElementById('orderHeaderProgress');
-  const area = document.getElementById('orderArea');
+  if (!hasShift) {
+    // pre-shift screen
+    if (shiftCard)    shiftCard.style.display    = 'block';
+    if (shiftChooser) shiftChooser.style.display = 'block';       // show start buttons pre-shift
+    if (activeCard)   activeCard.style.display   = 'none';
+    if (doneCard)     doneCard.style.display     = 'none';
 
-  // ---------- HISTORY TAB ----------
-  if (which === 'history') {
-    renderWeeklySummary?.();
-    initWeekCardToggle?.();
-    // hide order-only bottom controls on history
+    if (prog) prog.style.display = 'none';
+    if (form) form.style.display = 'block';
+    if (area) area.style.display = 'none';
+
+    // hide all order controls
     ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-    saveAll?.();
-    return;
-  }
-
-  // ---------- TRACKER TAB ----------
-  if (which === 'tracker') {
-    const inOrder = !!(current && Number.isFinite(current.total));
-
-    // ✅ FIX 1: honor durable shift flag so we don't fall back to pre-shift UI
-    const hasShift =
-      (window.shiftActive === true) ||
-      (localStorage.getItem('shiftActive') === '1') ||
-      !!startTime ||
-      (Array.isArray(picks) && picks.length > 0);
-
-    // Shift chooser vs active blocks
-    const shiftCard  = document.getElementById('shiftCard');
-    const activeCard = document.getElementById('activeOrderCard');
-    const doneCard   = document.getElementById('completedCard');
-
-    if (!hasShift) {
-      // pre-shift screen
-      if (shiftCard)  shiftCard.style.display  = 'block';
-      if (activeCard) activeCard.style.display = 'none';
-      if (doneCard)   doneCard.style.display   = 'none';
-
-      if (prog) prog.style.display = 'none';
-      if (form) form.style.display = 'block';
-      if (area) area.style.display = 'none';
-
-      // hide all order controls
-      ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-        const el = document.getElementById(id); if (el) el.style.display = 'none';
-      });
-
-      updateEndShiftVisibility?.();
-      updateCloseEarlyVisibility?.();
-      saveAll?.();
-      return;
-    }
-
-    // We have a shift: normalize header based on order state
-    if (inOrder) {
-      if (shiftCard)  shiftCard.style.display  = 'none';
-      if (activeCard) activeCard.style.display = 'block';
-      if (form) { form.style.display = 'none'; form.classList.add('fade'); form.classList.remove('show'); }
-      if (prog) { prog.style.display = 'flex'; prog.classList.add('fade','show'); }
-      if (area) area.style.display = 'block';
-      if (doneCard) doneCard.style.display = (picks.length ? 'block' : 'none');
-
-      // ✅ FIX 2: hide start-shift buttons even if shiftCard appears elsewhere
-      document.querySelectorAll('#shiftCard button[onclick^="startShift"]').forEach(b=> b.style.display='none');
-
-    } else {
-      // shift active, no open order → new-order header
-      if (activeCard) activeCard.style.display = 'none';
-      if (prog) { prog.style.display = 'none'; prog.classList.add('fade'); prog.classList.remove('show'); }
-      if (form) { form.style.display = 'block'; form.classList.add('fade','show'); }
-      if (area) area.style.display = 'none';
-      if (shiftCard) shiftCard.style.display = 'block';
-      if (doneCard)  doneCard.style.display  = (picks.length ? 'block' : 'none');
-
-      // ✅ FIX 2 (again): hide the two green “Start 9h/10h” buttons mid-shift
-      document.querySelectorAll('#shiftCard button[onclick^="startShift"]').forEach(b=> b.style.display='none');
-    }
-
-    // Gate bottom controls by active order
-    ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-      const el = document.getElementById(id);
-      if (el) el.style.display = inOrder ? 'inline-block' : 'none';
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
 
-    // Keep header/controls accurate
-    updateProgressHeader?.();
-    updateDelayBtn?.();
     updateEndShiftVisibility?.();
     updateCloseEarlyVisibility?.();
-
     saveAll?.();
     return;
   }
 
-  // ---------- CALC TAB (default) ----------
+  // We have a shift (mid-day)
+  if (shiftCard)    shiftCard.style.display    = 'block';
+  if (shiftChooser) shiftChooser.style.display = 'none';          // <-- HIDE start buttons mid-shift
+  if (doneCard)     doneCard.style.display     = (picks.length ? 'block' : 'none');
+
+  if (inOrder) {
+    if (activeCard) activeCard.style.display = 'block';
+    if (form) { form.style.display = 'none'; form.classList.add('fade'); form.classList.remove('show'); }
+    if (prog) { prog.style.display = 'flex'; prog.classList.add('fade','show'); }
+    if (area) area.style.display = 'block';
+  } else {
+    // shift active, no open order → show new-order header
+    if (activeCard) activeCard.style.display = 'none';
+    if (prog) { prog.style.display = 'none'; prog.classList.add('fade'); prog.classList.remove('show'); }
+    if (form) { form.style.display = 'block'; form.classList.add('fade','show'); }
+    if (area) area.style.display = 'none';
+  }
+
+  // Gate bottom controls by active order
   ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
     const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+    if (el) el.style.display = inOrder ? 'inline-block' : 'none';
   });
-  saveAll?.();
-}
 
+  // Keep header/controls accurate
+  updateProgressHeader?.();
+  updateDelayBtn?.();
+  updateEndShiftVisibility?.();
+  updateCloseEarlyVisibility?.();
+
+  saveAll?.();
+  return;
+}
 
 // ====== Tracker core ======
 function snapToNearestHour(){
@@ -3880,17 +3828,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── 4) Pro gate & static renders that don't mutate core state ───
     applyProGate();
+    renderShiftChooser();
 
     // ── 5) Shift/Order shell visibility based on restored flags ─────
     const shift  = document.getElementById('shiftCard');
     const active = document.getElementById('activeOrderCard');
     const done   = document.getElementById('completedCard');
+    const shiftChooser = document.getElementById('shiftChooser');   // <-- NEW
 
     if (hadShift && window.archived !== true) {
-      // FIX: don't force 'activeCard' here; Section 6 decides based on hadOpen.
-      if (shift)  shift.style.display  = 'block';             // show the tracker shell
-      if (done)   done.style.display   = (picks.length ? 'block' : 'none'); // keep completed orders visible
-      // leave 'active' for Section 6
+      // don't force 'active' here; Section 6 decides based on hadOpen
+      if (shift)        shift.style.display        = 'block';       // keep shell visible
+      if (shiftChooser) shiftChooser.style.display = 'none';        // <-- HIDE start buttons mid-shift
+      if (done)         done.style.display         = (picks.length ? 'block' : 'none');
     } else {
       // No shift yet → hide order-only controls by default
       ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
@@ -3903,22 +3853,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── 6) Decide header: progress vs new-order form ────────────────
     if (hadOpen && window.archived !== true) {
-      // We have an active order: ensure progress header/UI is shown
       restoreActiveOrderUI();
-      // Seed labels (defensive)
       const ddToggle = document.querySelector('#oDD .dd-toggle');
       if (ddToggle && current?.name) ddToggle.textContent = current.name;
       const oTot = document.getElementById('oTotal');
       if (oTot && Number.isFinite(current.total)) oTot.value = String(current.total);
-      // Elapsed chip ON
       const chip = document.getElementById('chipElapsed');
       if (chip?.style) chip.style.display = '';
       updateElapsedChip?.();
       setElapsedChipClickable?.(true);
 
-      // FIX: land on Tracker explicitly when shift active
       showTab('tracker');
       showToast('Shift restored – continue where you left off');
+
     } else if (hadShift && window.archived !== true) {
       // Shift active but no open order → new-order form visible
       const hdrForm = document.getElementById('orderHeaderForm');
@@ -3932,10 +3879,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const v = document.getElementById('chipElapsedVal'); if (v) v.textContent = '—';
       setElapsedChipClickable?.(false);
 
-      // FIX: ensure we’re on Tracker so the user sees the new-order form + completed list
+      if (shiftChooser) shiftChooser.style.display = 'none';        // <-- keep hidden
       showTab('tracker');
+
     } else {
-      // No shift at all → default to Calc (your original behavior)
+      // No shift at all → default to Calc (original behavior)
       const hdrForm = document.getElementById('orderHeaderForm');
       const hdrProg = document.getElementById('orderHeaderProgress');
       const area    = document.getElementById('orderArea');
@@ -3946,7 +3894,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (chip?.style) chip.style.display = 'none';
       const v = document.getElementById('chipElapsedVal'); if (v) v.textContent = '—';
       setElapsedChipClickable?.(false);
-      // Optional: showTab('calc'); (leave as-is if you want previous tab memory)
     }
 
     // ── 7) Heavy renders AFTER state/UI decision (prevents flips) ───
