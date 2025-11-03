@@ -1699,7 +1699,9 @@ function showTab(which){
 
   // 3) Tracker-specific UI orchestration
   if (which === 'tracker') {
-    const inOrder = !!(window.current && Number.isFinite(window.current.total));
+    // ✅ robust inOrder check (coerce total, require start)
+    const inOrder =
+      !!(window.current && window.current.start && Number.isFinite(+window.current.total));
 
     // durable shift flag: survive refreshes
     const hasShift =
@@ -1741,7 +1743,7 @@ function showTab(which){
     }
 
     // ==== mid-shift (or post-wrap) layout ====
-    // HIDE shift chooser/card completely once shift is active
+    // Hide shift chooser/card once a shift is active
     if (shiftChooser) { shiftChooser.style.display = 'none'; shiftChooser.innerHTML = ''; }
     if (shiftCard)     shiftCard.style.display = 'none';
 
@@ -1751,39 +1753,39 @@ function showTab(which){
     // Show the active tracker card
     if (activeCard)    activeCard.style.display = 'block';
 
-    // choose header (form vs progress) based on inOrder
     if (inOrder) {
+      // Show progress header + area, hide form
       if (form) form.style.display = 'none';
       if (prog) prog.style.display = 'flex';
       if (area) area.style.display = 'block';
+
+      // 🔑 Seed + paint the header
+      if (typeof showProgressHeader === 'function') showProgressHeader();
+      if (typeof updateProgressHeader === 'function') updateProgressHeader();
+
+      // Ensure actions reflect current order state
+      refreshWrapButton?.();
+      refreshCompleteButton?.();
     } else {
-      if (form) form.style.display = 'block';   // ready to start a new order
+      // Ready to start a new order
+      if (form) form.style.display = 'block';
       if (prog) prog.style.display = 'none';
       if (area) area.style.display = 'none';
+
+      // Reset new-order form to pristine state
+      if (typeof resetNewOrderForm === 'function') resetNewOrderForm();
+      window.refreshStartButton?.();
     }
 
-    // keep small header actions in sync if present
+    // Keep small header actions + side panels in sync
     updateHeaderActions?.();
-
-    // render side-panels/info that depend on being on tracker tab
     renderDone?.();
     renderULayerChips?.();
     renderHistory?.();
     renderWeeklySummary?.();
     initWeekCardToggle?.();
 
-    // validate Start button state
-    ['oTotal','oOther'].forEach(id=>{
-      const el = document.getElementById(id);
-      if (!el) return;
-      ['input','change','keyup','blur'].forEach(ev=> el.addEventListener(ev, window.refreshStartButton));
-    });
-    document.getElementById('oCust')?.addEventListener('change', window.refreshStartButton);
-    document.querySelector('#oDD .dd-menu')  ?.addEventListener('click',  ()=> setTimeout(window.refreshStartButton,0));
-    document.querySelector('#oDD .dd-toggle')?.addEventListener('click',  ()=> setTimeout(window.refreshStartButton,0));
-    window.refreshStartButton?.();
-
-    // ensure End Shift button shows at the right times
+    // ensure End Shift / Close Early visibility is correct now
     updateEndShiftVisibility?.();
     updateCloseEarlyVisibility?.();
   }
