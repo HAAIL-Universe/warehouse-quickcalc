@@ -1669,77 +1669,117 @@ function updCalcGate(){
   }
 }
 
-// ====== Tabs ======
-if (which === 'tracker') {
-  const inOrder = !!(current && Number.isFinite(current.total));
-
-  // durable shift check
-  const hasShift =
-    (window.shiftActive === true) ||
-    (localStorage.getItem('shiftActive') === '1') ||
-    !!startTime ||
-    (Array.isArray(picks) && picks.length > 0);
-
-  // Shift chooser vs active blocks
-  const shiftCard    = document.getElementById('shiftCard');
-  const shiftChooser = document.getElementById('shiftChooser');   // <-- NEW
-  const activeCard   = document.getElementById('activeOrderCard');
-  const doneCard     = document.getElementById('completedCard');
-
-  if (!hasShift) {
-    // pre-shift screen
-    if (shiftCard)    shiftCard.style.display    = 'block';
-    if (shiftChooser) shiftChooser.style.display = 'block';       // show start buttons pre-shift
-    if (activeCard)   activeCard.style.display   = 'none';
-    if (doneCard)     doneCard.style.display     = 'none';
-
-    if (prog) prog.style.display = 'none';
-    if (form) form.style.display = 'block';
-    if (area) area.style.display = 'none';
-
-    // hide all order controls
-    ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-      const el = document.getElementById(id); if (el) el.style.display = 'none';
-    });
-
-    updateEndShiftVisibility?.();
-    updateCloseEarlyVisibility?.();
-    saveAll?.();
-    return;
-  }
-
-  // We have a shift (mid-day)
-  if (shiftCard)    shiftCard.style.display    = 'block';
-  if (shiftChooser) shiftChooser.style.display = 'none';          // <-- HIDE start buttons mid-shift
-  if (doneCard)     doneCard.style.display     = (picks.length ? 'block' : 'none');
-
-  if (inOrder) {
-    if (activeCard) activeCard.style.display = 'block';
-    if (form) { form.style.display = 'none'; form.classList.add('fade'); form.classList.remove('show'); }
-    if (prog) { prog.style.display = 'flex'; prog.classList.add('fade','show'); }
-    if (area) area.style.display = 'block';
-  } else {
-    // shift active, no open order → show new-order header
-    if (activeCard) activeCard.style.display = 'none';
-    if (prog) { prog.style.display = 'none'; prog.classList.add('fade'); prog.classList.remove('show'); }
-    if (form) { form.style.display = 'block'; form.classList.add('fade','show'); }
-    if (area) area.style.display = 'none';
-  }
-
-  // Gate bottom controls by active order
-  ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+/* ====== Tabs (fixed) ====== */
+function showTab(which){
+  // 1) Swap visible sections
+  const map = {
+    calc:    'tabCalc',
+    tracker: 'tabTracker',
+    history: 'tabHistory'
+  };
+  Object.values(map).forEach(id=>{
     const el = document.getElementById(id);
-    if (el) el.style.display = inOrder ? 'inline-block' : 'none';
+    if (el) el.classList.add('hidden');
   });
+  const target = document.getElementById(map[which]);
+  if (target) target.classList.remove('hidden');
 
-  // Keep header/controls accurate
-  updateProgressHeader?.();
-  updateDelayBtn?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
+  // 2) Toggle active tab buttons
+  const btnMap = {
+    calc:    'tabCalcBtn',
+    tracker: 'tabTrackBtn',
+    history: 'tabHistBtn'
+  };
+  Object.values(btnMap).forEach(id=>{
+    const b = document.getElementById(id);
+    if (b) b.classList.remove('active');
+  });
+  const activeBtn = document.getElementById(btnMap[which]);
+  if (activeBtn) activeBtn.classList.add('active');
 
-  saveAll?.();
-  return;
+  // 3) Tracker-specific UI orchestration
+  if (which === 'tracker') {
+    const inOrder = !!(window.current && Number.isFinite(window.current.total));
+
+    // durable shift flag: survive refreshes
+    const hasShift =
+      (window.shiftActive === true) ||
+      (localStorage.getItem('shiftActive') === '1') ||
+      !!window.startTime ||
+      (Array.isArray(window.picks) && window.picks.length > 0);
+
+    // main pieces
+    const shiftCard     = document.getElementById('shiftCard');
+    const shiftChooser  = document.getElementById('shiftChooser'); // might not exist in this version; guard it
+    const activeCard    = document.getElementById('activeOrderCard');
+    const doneCard      = document.getElementById('completedCard');
+
+    // header chunks inside activeCard
+    const form = document.getElementById('orderHeaderForm');
+    const prog = document.getElementById('orderHeaderProgress');
+    const area = document.getElementById('orderArea');
+
+    if (!hasShift) {
+      // pre-shift screen
+      if (shiftCard)     shiftCard.style.display = 'block';
+      if (shiftChooser)  shiftChooser.style.display = 'block';
+      if (activeCard)    activeCard.style.display = 'none';
+      if (doneCard)      doneCard.style.display = 'none';
+
+      if (prog) prog.style.display = 'none';
+      if (form) form.style.display = 'block';
+      if (area) area.style.display = 'none';
+
+      ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+        const el = document.getElementById(id); if (el) el.style.display = 'none';
+      });
+
+      if (typeof updateEndShiftVisibility === 'function')   updateEndShiftVisibility();
+      if (typeof updateCloseEarlyVisibility === 'function') updateCloseEarlyVisibility();
+      if (typeof saveAll === 'function') saveAll();
+      return;
+    }
+
+    // mid-shift (or post-wrap) layout
+    if (shiftCard)     shiftCard.style.display = 'block';
+    if (shiftChooser)  shiftChooser.style.display = 'none'; // hide start buttons once shift is active
+    if (doneCard)      doneCard.style.display = (Array.isArray(window.picks) && window.picks.length ? 'block' : 'none');
+
+    // show active card
+    if (activeCard)    activeCard.style.display = 'block';
+
+    // choose header (form vs progress) based on inOrder
+    if (inOrder) {
+      if (form) form.style.display = 'none';
+      if (prog) prog.style.display = 'flex';
+      if (area) area.style.display = 'block';
+    } else {
+      if (form) form.style.display = 'block';
+      if (prog) prog.style.display = 'none';
+      if (area) area.style.display = 'none';
+    }
+
+    // keep small header actions in sync if present
+    if (typeof updateHeaderActions === 'function') updateHeaderActions();
+
+    // timer/summary churn only when tracker visible (your interval already checks this)
+    if (typeof renderDone === 'function')         renderDone();
+    if (typeof renderULayerChips === 'function')  renderULayerChips();
+    if (typeof renderHistory === 'function')      renderHistory();
+    if (typeof renderWeeklySummary === 'function')renderWeeklySummary();
+    if (typeof initWeekCardToggle === 'function') initWeekCardToggle();
+
+    // validate Start button state
+    ['oTotal','oOther'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      ['input','change','keyup','blur'].forEach(ev=> el.addEventListener(ev, window.refreshStartButton));
+    });
+    document.getElementById('oCust')?.addEventListener('change', window.refreshStartButton);
+    document.querySelector('#oDD .dd-menu')  ?.addEventListener('click',  ()=> setTimeout(window.refreshStartButton,0));
+    document.querySelector('#oDD .dd-toggle')?.addEventListener('click',  ()=> setTimeout(window.refreshStartButton,0));
+    if (typeof window.refreshStartButton === 'function') window.refreshStartButton();
+  }
 }
 
 // ====== Tracker core ======
