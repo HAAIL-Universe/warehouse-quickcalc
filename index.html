@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v3.3.8 BETA (Patched)</title>
+<title>Warehouse QuickCalc & Tracker v3.3.55 (Patched)</title>
 <style>
 :root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
 * { box-sizing: border-box; }
@@ -1710,7 +1710,13 @@ function showTab(which){
   // ---------- TRACKER TAB ----------
   if (which === 'tracker') {
     const inOrder = !!(current && Number.isFinite(current.total));
-    const hasShift = !!startTime || (Array.isArray(picks) && picks.length > 0);
+
+    // ✅ FIX: also honor the durable flag so we don't regress to pre-shift UI
+    const hasShift =
+      (window.shiftActive === true) ||
+      (localStorage.getItem('shiftActive') === '1') ||
+      !!startTime ||
+      (Array.isArray(picks) && picks.length > 0);
 
     // Shift chooser vs active blocks
     const shiftCard  = document.getElementById('shiftCard');
@@ -1776,7 +1782,6 @@ function showTab(which){
   });
   saveAll?.();
 }
-
 
 // ====== Tracker core ======
 function snapToNearestHour(){
