@@ -717,6 +717,11 @@ td.small { font-size:12px; color:#9fb3c8; }
 </div>
 <div id="toast" class="toast">Saved</div>
 <script>
+  // run once, as early as possible (e.g., top of your script or inside DOMContentLoaded)
+(function ensureShiftFlag(){
+  if (localStorage.getItem('shiftActive') === '1') window.shiftActive = true;
+})();
+
 // ====== State ======
 let picks = [];         // closed orders
 // ETA smoothing (GPS-style)
@@ -1671,12 +1676,11 @@ function updCalcGate(){
 
 /* ====== Tabs (fixed) ====== */
 function showTab(which){
+  // Rehydrate durable flag early (covers hard refresh)
+  if (localStorage.getItem('shiftActive') === '1') window.shiftActive = true;
+
   // 1) Swap visible sections
-  const map = {
-    calc:    'tabCalc',
-    tracker: 'tabTracker',
-    history: 'tabHistory'
-  };
+  const map = { calc:'tabCalc', tracker:'tabTracker', history:'tabHistory' };
   Object.values(map).forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
@@ -1685,11 +1689,7 @@ function showTab(which){
   if (target) target.classList.remove('hidden');
 
   // 2) Toggle active tab buttons
-  const btnMap = {
-    calc:    'tabCalcBtn',
-    tracker: 'tabTrackBtn',
-    history: 'tabHistBtn'
-  };
+  const btnMap = { calc:'tabCalcBtn', tracker:'tabTrackBtn', history:'tabHistBtn' };
   Object.values(btnMap).forEach(id=>{
     const b = document.getElementById(id);
     if (b) b.classList.remove('active');
@@ -1710,7 +1710,7 @@ function showTab(which){
 
     // main pieces
     const shiftCard     = document.getElementById('shiftCard');
-    const shiftChooser  = document.getElementById('shiftChooser'); // might not exist in this version; guard it
+    const shiftChooser  = document.getElementById('shiftChooser');
     const activeCard    = document.getElementById('activeOrderCard');
     const doneCard      = document.getElementById('completedCard');
 
@@ -1734,18 +1734,21 @@ function showTab(which){
         const el = document.getElementById(id); if (el) el.style.display = 'none';
       });
 
-      if (typeof updateEndShiftVisibility === 'function')   updateEndShiftVisibility();
-      if (typeof updateCloseEarlyVisibility === 'function') updateCloseEarlyVisibility();
-      if (typeof saveAll === 'function') saveAll();
+      updateEndShiftVisibility?.();
+      updateCloseEarlyVisibility?.();
+      saveAll?.();
       return;
     }
 
-    // mid-shift (or post-wrap) layout
-    if (shiftCard)     shiftCard.style.display = 'block';
-    if (shiftChooser)  shiftChooser.style.display = 'none'; // hide start buttons once shift is active
+    // ==== mid-shift (or post-wrap) layout ====
+    // HIDE shift chooser/card completely once shift is active
+    if (shiftChooser) { shiftChooser.style.display = 'none'; shiftChooser.innerHTML = ''; }
+    if (shiftCard)     shiftCard.style.display = 'none';
+
+    // Completed orders card visible only if we actually have picks
     if (doneCard)      doneCard.style.display = (Array.isArray(window.picks) && window.picks.length ? 'block' : 'none');
 
-    // show active card
+    // Show the active tracker card
     if (activeCard)    activeCard.style.display = 'block';
 
     // choose header (form vs progress) based on inOrder
@@ -1754,20 +1757,20 @@ function showTab(which){
       if (prog) prog.style.display = 'flex';
       if (area) area.style.display = 'block';
     } else {
-      if (form) form.style.display = 'block';
+      if (form) form.style.display = 'block';   // ready to start a new order
       if (prog) prog.style.display = 'none';
       if (area) area.style.display = 'none';
     }
 
     // keep small header actions in sync if present
-    if (typeof updateHeaderActions === 'function') updateHeaderActions();
+    updateHeaderActions?.();
 
-    // timer/summary churn only when tracker visible (your interval already checks this)
-    if (typeof renderDone === 'function')         renderDone();
-    if (typeof renderULayerChips === 'function')  renderULayerChips();
-    if (typeof renderHistory === 'function')      renderHistory();
-    if (typeof renderWeeklySummary === 'function')renderWeeklySummary();
-    if (typeof initWeekCardToggle === 'function') initWeekCardToggle();
+    // render side-panels/info that depend on being on tracker tab
+    renderDone?.();
+    renderULayerChips?.();
+    renderHistory?.();
+    renderWeeklySummary?.();
+    initWeekCardToggle?.();
 
     // validate Start button state
     ['oTotal','oOther'].forEach(id=>{
@@ -1778,7 +1781,11 @@ function showTab(which){
     document.getElementById('oCust')?.addEventListener('change', window.refreshStartButton);
     document.querySelector('#oDD .dd-menu')  ?.addEventListener('click',  ()=> setTimeout(window.refreshStartButton,0));
     document.querySelector('#oDD .dd-toggle')?.addEventListener('click',  ()=> setTimeout(window.refreshStartButton,0));
-    if (typeof window.refreshStartButton === 'function') window.refreshStartButton();
+    window.refreshStartButton?.();
+
+    // ensure End Shift button shows at the right times
+    updateEndShiftVisibility?.();
+    updateCloseEarlyVisibility?.();
   }
 }
 
@@ -1802,7 +1809,7 @@ function startShift(lenHours){
     const lenEl = document.getElementById('tLen');
     if (lenEl) lenEl.value = String(applyLen);
 
-    // >>> NEW: mark shift active (durable across refresh)
+    // Mark shift active (durable across refresh)
     window.shiftActive = true;
     localStorage.setItem('shiftActive', '1');
 
@@ -1813,7 +1820,6 @@ function startShift(lenHours){
     const lenEl = document.getElementById('tLen');
     if (lenEl) lenEl.value = String(lenHours || 9);
 
-    // >>> NEW (fallback path too)
     window.shiftActive = true;
     localStorage.setItem('shiftActive', '1');
 
