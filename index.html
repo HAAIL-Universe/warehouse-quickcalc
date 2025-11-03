@@ -1711,7 +1711,7 @@ function showTab(which){
   if (which === 'tracker') {
     const inOrder = !!(current && Number.isFinite(current.total));
 
-    // ✅ FIX: also honor the durable flag so we don't regress to pre-shift UI
+    // ✅ FIX 1: honor durable shift flag so we don't fall back to pre-shift UI
     const hasShift =
       (window.shiftActive === true) ||
       (localStorage.getItem('shiftActive') === '1') ||
@@ -1748,17 +1748,25 @@ function showTab(which){
     if (inOrder) {
       if (shiftCard)  shiftCard.style.display  = 'none';
       if (activeCard) activeCard.style.display = 'block';
-      if (doneCard)   doneCard.style.display   = 'block';      // <- add this
       if (form) { form.style.display = 'none'; form.classList.add('fade'); form.classList.remove('show'); }
       if (prog) { prog.style.display = 'flex'; prog.classList.add('fade','show'); }
       if (area) area.style.display = 'block';
+      if (doneCard) doneCard.style.display = (picks.length ? 'block' : 'none');
+
+      // ✅ FIX 2: hide start-shift buttons even if shiftCard appears elsewhere
+      document.querySelectorAll('#shiftCard button[onclick^="startShift"]').forEach(b=> b.style.display='none');
+
     } else {
+      // shift active, no open order → new-order header
       if (activeCard) activeCard.style.display = 'none';
-      if (doneCard)   doneCard.style.display   = 'block';      // <- add this
       if (prog) { prog.style.display = 'none'; prog.classList.add('fade'); prog.classList.remove('show'); }
       if (form) { form.style.display = 'block'; form.classList.add('fade','show'); }
       if (area) area.style.display = 'none';
       if (shiftCard) shiftCard.style.display = 'block';
+      if (doneCard)  doneCard.style.display  = (picks.length ? 'block' : 'none');
+
+      // ✅ FIX 2 (again): hide the two green “Start 9h/10h” buttons mid-shift
+      document.querySelectorAll('#shiftCard button[onclick^="startShift"]').forEach(b=> b.style.display='none');
     }
 
     // Gate bottom controls by active order
@@ -1784,6 +1792,7 @@ function showTab(which){
   });
   saveAll?.();
 }
+
 
 // ====== Tracker core ======
 function snapToNearestHour(){
