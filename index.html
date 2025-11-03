@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v3.3.55 (Patched)</title>
+<title>Warehouse QuickCalc & Tracker v3.3.8 BETA (Patched)</title>
 <style>
 :root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
 * { box-sizing: border-box; }
@@ -773,6 +773,7 @@ let uiLastPaceUh = 0;
 let tempWraps = [];     // wraps in current order
 let current = null;     // active order
 let startTime = "";     // shift start (HH:MM)
+window.shiftActive = (localStorage.getItem('shiftActive') === '1');
 let lastClose = "";     // last order close time
 let undoStack = [];     // undo actions for current order
 let historyDays = [];   // archived days
@@ -1797,16 +1798,24 @@ function startShift(lenHours){
     const lenEl = document.getElementById('tLen');
     if (lenEl) lenEl.value = String(applyLen);
 
+    // >>> NEW: mark shift active (durable across refresh)
+    window.shiftActive = true;
+    localStorage.setItem('shiftActive', '1');
+
     // Defer actual start to the contracted time picker
     openContractedStartPicker();
   } catch (e){
     // Safe fallback: still route through the picker
     const lenEl = document.getElementById('tLen');
     if (lenEl) lenEl.value = String(lenHours || 9);
+
+    // >>> NEW (fallback path too)
+    window.shiftActive = true;
+    localStorage.setItem('shiftActive', '1');
+
     openContractedStartPicker();
   }
 }
-
 
 function beginShift(){
   if (!startTime) startTime = snapToNearestHour();
@@ -3127,15 +3136,15 @@ function computeDowntimes(picksArr, shiftBreaksArr){
 }
 function endShift(){
   // Must not leave an active order open
-  if (current)      return alert('Complete or undo the current order before ending the shift.');
+  if (current)       return alert('Complete or undo the current order before ending the shift.');
   if (!picks.length) return alert('No completed orders to archive.');
 
   // ---- Archive snapshot into History ----
-  const dateStr   = todayISO();
-  const shiftLen  = parseFloat(document.getElementById('tLen').value || '9');
-  const totalUnits= picks.reduce((a,b)=> a + b.units, 0);
-  const downtimes = computeDowntimes(picks, shiftBreaks);
-  const snapshot  = {
+  const dateStr    = todayISO();
+  const shiftLen   = parseFloat(document.getElementById('tLen').value || '9');
+  const totalUnits = picks.reduce((a,b)=> a + b.units, 0);
+  const downtimes  = computeDowntimes(picks, shiftBreaks);
+  const snapshot   = {
     date: dateStr,
     start: startTime || '',
     end:   lastClose || '',
@@ -3152,6 +3161,10 @@ function endShift(){
   saveAll();            // persist before UI flip
   renderHistory?.();
   renderWeeklySummary?.();
+
+  // >>> NEW: end-of-shift clears durable flag
+  window.shiftActive = false;
+  localStorage.removeItem('shiftActive');
 
   // ---- Hard reset session / UI to pre-shift ----
   predictiveStop?.();
