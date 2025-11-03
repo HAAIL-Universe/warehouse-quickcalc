@@ -51,7 +51,7 @@ textarea{ min-height:90px; resize:vertical; }
 .rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
 .rateChip.green { border-color:#1f4830; background:#14271c; }
 .rateChip.amber { border-color:#584a1a; background:#2a230f; }
-.timeline { margin-top:8px; border-left:0; padding-left:0; }
+.timeline { margin-top:8px; border-left:2px solid #29364a; padding-left:10px; }
 .tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
 .tick .meta { color:#9fb3c8; font-size:12px; }
 table { width:100%; border-collapse:collapse; font-size:14px; }
@@ -79,8 +79,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 .logrow { display:none; }
 .logrow td { border-bottom:none; padding-top:0; }
 .gate-pro { display:none; }
-/* Utility: hide/show */
-.hidden { display: none !important; }
+
 /* Modal */
 .modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:20; }
 .modal .box { width:min(560px,92vw); background:#0f131b; border:1px solid #29364a; border-radius:12px; padding:14px; }
@@ -146,40 +145,9 @@ td.small { font-size:12px; color:#9fb3c8; }
   position: relative; height: 12px; background:#0f131b; border:1px solid #29364a;
   border-radius:999px; overflow:hidden; margin-top:8px;
 }
-/* Progress bar fill — with smooth dark gradient base */
-.progFill {
-  position:absolute; left:0; top:0; bottom:0; width:0%;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
-    var(--line);
-  transition: background-color .25s ease, width .35s ease;
-  border-radius: 3px;
+.progFill { position:absolute; left:0; top:0; bottom:0; width:0%;
+  background: linear-gradient(90deg, #2f6bff, #1b6e36);
 }
-/* Completely hide the 'Left: XX' text + label but preserve for JS logic */
-#progLeft,
-#progLeftLabel,
-#orderHeaderProgress span:has(#progLeft) {
-  display: none !important;
-  visibility: hidden;
-}
-
-/* Pace tints overlayed on the gradient */
-.progFill.pace-ok {
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
-    var(--ok);
-}
-.progFill.pace-warn {
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
-    var(--warn);
-}
-.progFill.pace-bad {
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
-    var(--bad);
-}
-
 .progPct { margin-left:10px; font-weight:700; min-width:56px; text-align:right; }
 .progHead{ align-items:flex-end; }
 .progPct{ margin: 0 0 2px 10px; } /* nudge down slightly */
@@ -199,18 +167,6 @@ td.small { font-size:12px; color:#9fb3c8; }
   gap: 12px;
   margin-top: 12px;
 }
-.readonly-time {
-  background: #1a1e27;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--ink);
-  font-family: monospace;
-  font-size: 14px;
-  letter-spacing: 0.5px;
-  text-align: left;
-  user-select: none;
-}
 
 #liveModal .live-key {
   grid-column: 1 / 4;        /* span full width */
@@ -222,18 +178,33 @@ td.small { font-size:12px; color:#9fb3c8; }
   grid-column: 2;            /* keep centered */
   justify-self: center;
 }
+
 #liveModal #live_formula {
   grid-column: 1;            /* bottom-left under the button */
   justify-self: start;
   opacity: .85;
   font-size: 0.95rem;
 }
+
 /* Percentage badge inline with the progress bar */
 #orderHeaderProgress .pct-badge {
   position: relative;
   display: inline-block;
   transform: translateY(6px); /* drop ~6px so it lines up with the bar */
 }
+
+/* Put Complete button in the top-right of the panel header */
+#orderHeaderProgress .header-actions {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+}
+#orderHeaderProgress .header-actions #btnComplete {
+  display: inline-block !important;
+}
+
 /* ─────────────────────────────
    Compact, Full-Width Weekly Pills (SCOPED)
    ───────────────────────────── */
@@ -242,6 +213,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 #weekCard .pill { flex:1 1 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); min-width: 0; }
 #weekCard .pill h3 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 3px; white-space: nowrap; }
 #weekCard .pill p  { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0; }
+
 /* Collapsible week card (single source of truth) */
 #weekHeader { display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding-right:6px; }
 #weekHeader:focus { outline: none; }
@@ -249,38 +221,24 @@ td.small { font-size:12px; color:#9fb3c8; }
 #weekCard .chev { font-weight:700; transition: transform .18s ease-in-out, opacity .18s ease-in-out; opacity:.8; }
 #weekCard.collapsed .chev { transform: rotate(-90deg); opacity:.6; }
 #weekCard.collapsed #weekContent { display:none; }
-/* === Progress Bar Tint (Red–Amber–Green Plan) === */
-#orderHeaderProgress .bar .fill {
-  background: var(--line); /* neutral base before rate applied */
-  transition: background-color .25s ease, width .35s ease;
-}
-
-/* Progress Bar Tint (scoped correctly) */
-#orderHeaderProgress .progBar .progFill { background: var(--line); transition: background-color .25s ease, width .35s ease; }
-#orderHeaderProgress .progBar .progFill.pace-ok   { background: var(--ok); }
-#orderHeaderProgress .progBar .progFill.pace-warn { background: var(--warn); }
-#orderHeaderProgress .progBar .progFill.pace-bad  { background: var(--bad); }
-
 /* place Complete in the top-right of the header */
 .progHead .progActions{
   position:absolute;
   top:4px;
   right:10px;
 }
+
 /* nudge the % label down so it lines up with the bar */
 .progHead #progPct{
   position:relative;
   top:6px;              /* adjust 4–10px to taste */
 }
-/* Smooth fade for order header swap */
-.fade { opacity: 0; transition: opacity 0.25s ease-in-out; }
-.fade.show { opacity: 1; }
 
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1><b>Warehouse QuickCalc & Tracker v3.8</b></h1>
+  <h1>Warehouse QuickCalc & Tracker v3.5</h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -390,8 +348,9 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
 
     <div class="card" id="activeOrderCard" style="display:none;">
+
       <!-- ✨ Header form (shown before Start) -->
-      <div id="orderHeaderForm" class="fade show">
+      <div id="orderHeaderForm">
         <div class="row" style="align-items:flex-end;">
           <div class="col">
             <label>Customer</label>
@@ -417,12 +376,11 @@ td.small { font-size:12px; color:#9fb3c8; }
           </div>
         </div>
       </div>
-
       <!-- Header shown AFTER an order starts -->
       <div id="orderHeaderProgress" class="progHead" style="display:none; position:relative;">
         <!-- Top-right actions -->
         <div class="progActions">
-          <button id="btnWrapTop" class="btn slim" type="button" onclick="openWrapModal()" disabled>Log Wrap</button>
+          <button id="btnCompleteTop" class="btn slim" style="display:none;" onclick="completeOrder()">Complete</button>
         </div>
         <div class="progMeta">
           <div class="progTitle">
@@ -433,6 +391,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 
           <div class="progSub">
             <span><strong>Pallets:</strong> <span id="progPallets">0</span></span>
+            <span class="progBullet">•</span>
             <span><strong>Left:</strong> <span id="progLeft">0</span></span>
             <span class="progBullet">•</span>
             <span><strong>Rate:</strong> <span id="progRate">—</span></span>
@@ -447,10 +406,16 @@ td.small { font-size:12px; color:#9fb3c8; }
       </div>
       <!-- Active Order Area -->
       <div id="orderArea" style="display:none; margin-top:10px;">
-        <!-- Compact: keep only a hidden oLeft for internal use -->
-        <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" style="display:none;">
-        <!-- Controls row (unchanged right-side controls container) -->
         <div class="row" style="align-items:flex-end;">
+          <!-- Left: Units Left + Log Wrap -->
+          <div class="col" style="flex:1;">
+            <label>Units left (log wrap)</label>
+            <div class="row" style="gap:6px;">
+              <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413" style="flex:1;">
+              <button id="btnLogWrap" class="btn" type="button" onclick="logWrap()" disabled>Log Wrap</button>
+            </div>
+          </div>
+          <!-- Right: Undo / Breaks / Complete -->
           <div class="col" id="orderControls"
               style="flex:0 0 auto; display:flex; align-items:flex-end; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
           </div>
@@ -469,7 +434,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 
     <div class="bottom-actions">
       <div class="left">
-        <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log / Delay</button>
+        <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log Delay</button>
         <button id="btnUndo" class="btn" type="button" onclick="undoLast()" style="display:none;">Undo</button>
       </div>
       <div class="right">
@@ -512,6 +477,7 @@ td.small { font-size:12px; color:#9fb3c8; }
         <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
           <div class="week-row">
             <div class="pill"><h3>Weighted Avg</h3><p id="weekWeighted">— u/h</p></div>
+            <div class="pill"><h3>Simple Mean</h3><p id="weekMean">— u/h</p></div>
             <div class="pill"><h3>Total Units</h3><p id="weekUnits">0</p></div>
             <div class="pill"><h3>Days Counted</h3><p id="weekDays">0</p></div>
           </div>
@@ -526,7 +492,7 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
 
     <div class="hint" style="margin-top:6px;">
-      Weighted Avg = total units ÷ total hours.
+      Weighted Avg = total units ÷ total hours. Simple Mean = average of daily rates.
     </div>
 
     <div class="card">
@@ -559,18 +525,19 @@ td.small { font-size:12px; color:#9fb3c8; }
 <div id="delayModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delayTitle">
   <div class="box">
     <div class="hdr">
-      <h3 id="delayTitle">Log / Delay</h3>      <button class="btn slim ghost" type="button" onclick="closeDelayModal()">✖</button>
+      <h3 id="delayTitle">Log Delay</h3>
+      <button class="btn slim ghost" type="button" onclick="closeDelayModal()">✖</button>
     </div>
     <div class="fld">
       <label>Start (auto)</label>
-      <div id="delayStart" class="readonly-time">--:--</div>
+      <input id="delayStart" type="time" readonly>
     </div>
     <div class="fld">
-      <label>Note / Cause</label>      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
+      <label>Cause</label>
+      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
     </div>
     <div class="actions">
       <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
-      <button class="btn" type="button" onclick="submitNote()">Note</button>
       <button class="btn ok" type="button" onclick="submitDelay()">Submit & Stop</button>
     </div>
   </div>
@@ -697,83 +664,15 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
   </div>
 </div>
-<!-- Wrap Modal -->
-<div id="wrapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="wrapTitle">
-  <div class="box" style="max-width:420px;">
-    <div class="hdr">
-      <h3 id="wrapTitle">Log Wrap</h3>
-      <button class="btn slim ghost" type="button" onclick="closeWrapModal()">✖</button>
-    </div>
-    <div class="fld">
-      <label for="wrapLeftInput">Units left on this order</label>
-      <input id="wrapLeftInput" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
-      <div class="hint" id="wrapHint">Type 0 to enable Complete.</div>
-    </div>
-    <div class="actions" style="justify-content:center; gap:8px;">
-      <button class="btn ghost" type="button" onclick="closeWrapModal()">Cancel</button>
-      <button class="btn ok" type="button" onclick="submitWrapLeft()">Save Wrap</button>
-    </div>
-  </div>
-</div>
+
 <div id="toast" class="toast">Saved</div>
+
 <script>
 // ====== State ======
 let picks = [];         // closed orders
-// ETA smoothing (GPS-style)
-let etaSmooth = [];            // rolling window of recent order rates
-let lastETAmin = null;         // last computed (smoothed) ETA in minutes
-let lastRenderedETAmin = null; // last value we actually showed (for 1m threshold)
-
-function resetEtaSmoother(){
-  etaSmooth = [];
-  lastETAmin = null;
-  lastRenderedETAmin = null;
-}
-
-// ---- Early restore & safety nets (v3.5) ----
-// ===== Predictive config/state =====
-const PREDICT = {
-  tickMs: 1000,   // 1s
-  alpha: 0.20,    // reserved for future smoothing if you want it
-  minRate: 60,    // clamps
-  maxRate: 600
-};
-
-let predictive = {
-  timer: null,
-  lastTick: 0,
-  left: 0,
-  rateUh: 0,
-  firstWrapSeen: false
-};
-// add these fields if missing
-predictive._inGrace   = false;       // true while delaying creep
-predictive.graceUntil = 0;           // epoch ms when grace ends
-
-function shiftDateKey(){
-  const d = new Date();
-  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
-  return `predictive-first-order-done-${y}-${m}-${dd}`;
-}
-function isFirstOrderToday(){ return !localStorage.getItem(shiftDateKey()); }
-function markFirstOrderStarted(){ localStorage.setItem(shiftDateKey(), '1'); }
-
-function earlyRestore() {
-  try {
-    // You already have loadAll(); reuse it to hydrate globals
-    loadAll();
-  } catch (e) {}
-}
-earlyRestore(); // <-- run BEFORE any UI work
-// Persist periodically + on tab close
-window.addEventListener('beforeunload', saveAll);
-setInterval(saveAll, 1500);
-// Last non-zero pace we painted with (for tint fallback)
-let uiLastPaceUh = 0;
 let tempWraps = [];     // wraps in current order
 let current = null;     // active order
 let startTime = "";     // shift start (HH:MM)
-window.shiftActive = (localStorage.getItem('shiftActive') === '1');
 let lastClose = "";     // last order close time
 let undoStack = [];     // undo actions for current order
 let historyDays = [];   // archived days
@@ -790,89 +689,6 @@ const KEY_CODES = 'wqt_codes';
 const KEY_LEARN = 'wqt_learn_ul';
 const PRO_UNLOCK_CODE = '0000';
 let proUnlocked = false;  // Gate: Export/Import/Manage Customers
-// Persisted preference: one-time shift length (hours)
-const SHIFT_PREF = 'wqt.shiftLenH';
-function clearStartHint(){
-  const hint = document.getElementById('snapHint');
-  if (hint) hint.textContent = '';
-}
-// --- Predictive grace (delay creep after order start) ---
-const PREDICTIVE_GRACE_MS = 30000; // set the single source of truth
-
-function schedulePredictiveStartAfter(ms){
-  try{
-    predictiveStop?.(); // no ticking during grace
-    if (window._predictiveGraceTimer) clearTimeout(window._predictiveGraceTimer);
-
-    const delay = Math.max(0, ms|0);
-    predictive._inGrace   = true;
-    predictive.graceUntil = Date.now() + delay;
-
-    window._predictiveGraceTimer = setTimeout(() => {
-      // grace ends: re-baseline to "now" so there's no jump
-      const leftNow = (typeof getCurrentLeft === 'function')
-        ? getCurrentLeft()
-        : (current?.total || 0);
-
-      const seedUh =
-        Math.max(
-          1,
-          Math.round(
-            current?.preWrapRateUh
-            ?? (typeof getLiveRateUh === 'function' && getLiveRateUh())
-            ?? (typeof computeLiveRateSnapshot === 'function' && computeLiveRateSnapshot())
-            ?? (predictive?.rateUh || 250)
-          )
-        );
-
-      predictiveReset?.(leftNow, seedUh, /*firstWrapSeen*/ Array.isArray(tempWraps) && tempWraps.length > 0);
-
-      predictive._inGrace = false;
-      predictive.graceUntil = 0;
-
-      predictiveStart?.();
-      savePredictiveState?.();
-    }, delay);
-
-    savePredictiveState?.();
-  }catch(e){}
-}
-
-function getShiftPref(){
-  const v = localStorage.getItem(SHIFT_PREF);
-  const n = parseInt(v, 10);
-  return (n === 9 || n === 10) ? n : null;
-}
-function setShiftPref(n){
-  if (n === 9 || n === 10) localStorage.setItem(SHIFT_PREF, String(n));
-}
-// ---- Lateness logging ----
-const LATE_LOG_KEY = 'wqt.lateLog'; // { "YYYY-MM-DD": {contracted, actual, lateMin, shiftLen} }
-
-function minutesBetween(hmA, hmB){
-  const [aH,aM] = (hmA||'0:0').split(':').map(x=>parseInt(x,10)||0);
-  const [bH,bM] = (hmB||'0:0').split(':').map(x=>parseInt(x,10)||0);
-  return (bH*60 + bM) - (aH*60 + aM);
-}
-function hmToMin(hm){
-  const [h,m] = (hm||'0:0').split(':').map(x=>parseInt(x,10)||0);
-  return h*60 + m;
-}
-function minToHm(min){
-  const h = Math.floor(min/60), m = min%60;
-  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
-}
-
-// ==== Local storage keys ====
-const LS = {
-  CURRENT: 'wqt.current',
-  WRAPS: 'wqt.wraps',
-  PICKS: 'wqt.picks',
-  START: 'wqt.startTime',
-  UNDO: 'wqt.undo',
-  LAST_CLOSE: 'wqt.lastClose',
-  VERSION: 'wqt.v2'
-};
 
 // Delay / Break
 let delayDraft = null; // {start:'HH:MM', cause:''}
@@ -888,24 +704,6 @@ function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10)
 function hhmmToMinutes(hhmm){
   const v = hm(hhmm);                 // hm("18:11") → 18.1833…
   return isNaN(v) ? 0 : Math.round(v * 60);
-}
-function showStartNote(text){
-  const host = document.getElementById('orderHeaderProgress');
-  if (!host) return;
-  let note = document.getElementById('progStartNote');
-  if (!note){
-    note = document.createElement('div');
-    note.id = 'progStartNote';
-    note.className = 'hint';
-    note.style.marginTop = '6px';
-    host.appendChild(note);
-  }
-  note.textContent = text;
-}
-
-function clearStartHint(){
-  const hint = document.getElementById('snapHint');
-  if (hint) hint.textContent = '';
 }
 
 function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
@@ -931,23 +729,6 @@ function weekBoundsFor(dateIso){
   return { startISO: dateToISO(sun), endISO: dateToISO(sat), startDate: sun, endDate: sat };
 }
 function inRange(iso, aISO, bISO){ return iso >= aISO && iso <= bISO; }
-// GPS-style ETA: smooth input rate (rolling avg) + blend output ETA
-function calcStableETA(leftUnits, rateNowUh){
-  if (!rateNowUh || rateNowUh <= 0 || !isFinite(rateNowUh)) return null;
-
-  // keep last 5 readings
-  etaSmooth.push(rateNowUh);
-  if (etaSmooth.length > 5) etaSmooth.shift();
-  const avgRate = etaSmooth.reduce((a,b)=>a+b,0) / etaSmooth.length;
-
-  const newETAmin = (leftUnits / avgRate) * 60;       // raw ETA (mins)
-  const blended   = (lastETAmin == null)
-      ? newETAmin
-      : (lastETAmin * 0.8 + newETAmin * 0.2);         // 80/20 damping
-
-  lastETAmin = blended;
-  return blended;
-}
 
 let elapsedModalTick = null;
 function orderActiveMinutes() {
@@ -965,71 +746,6 @@ function orderActiveMinutes() {
   }
   return Math.max(0, active);
 }
-function savePredictiveState(){
-  try {
-    const day = new Date().toISOString().slice(0,10);
-    const ps = predictive ? {
-      day,
-      leftAtBase: predictive.leftAtBase|0,
-      baseTs: predictive.baseTs|0,
-      rateUh: Math.round(predictive.rateUh||0),
-      // persist grace so UI doesn't creep after reload
-      graceUntil: predictive.graceUntil|0,
-      inGrace: !!predictive._inGrace
-    } : null;
-    localStorage.setItem('PRED_STATE', JSON.stringify(ps));
-  } catch(_) {}
-}
-
-function loadPredictiveState(){
-  try {
-    const raw = localStorage.getItem('PRED_STATE');
-    if (!raw) return null;
-    const ps = JSON.parse(raw);
-    const today = new Date().toISOString().slice(0,10);
-    if (!(ps && ps.day === today)) return null;
-
-    // recompute effective grace on load
-    const now = Date.now();
-    ps.inGrace = !!ps.inGrace && (ps.graceUntil && now < ps.graceUntil);
-
-    return ps;
-  } catch(_) { return null; }
-}
-
-function predictiveProjectedLeft(nowTs){
-  const ps = predictive || loadPredictiveState();
-  if (!ps || !ps.baseTs || !Number.isFinite(ps.leftAtBase) || !ps.rateUh) return null;
-
-  const now = Number.isFinite(nowTs) ? nowTs : Date.now();
-
-  // ❗ Hard block projection during grace
-  const inGrace = ((' _inGrace' in ps) ? ps._inGrace : ps.inGrace) ||
-                  (ps.graceUntil && now < ps.graceUntil);
-  if (inGrace) return Math.max(0, ps.leftAtBase|0);
-
-  const elapsedH = Math.max(0, (now - ps.baseTs) / 3600000);
-  const creep    = Math.round(ps.rateUh * elapsedH);
-  return Math.max(0, (ps.leftAtBase|0) - creep);
-}
-
-
-// hook saves into your predictive lifecycle (call these where you already reset/start/stop)
-const _origPredReset = typeof predictiveReset === 'function' ? predictiveReset : null;
-window.predictiveReset = function(leftAtBase, rateUh, firstWrapSeen){
-  if (_origPredReset) _origPredReset(leftAtBase, rateUh, firstWrapSeen);
-  savePredictiveState();
-};
-const _origPredStart = typeof predictiveStart === 'function' ? predictiveStart : null;
-window.predictiveStart = function(){
-  if (_origPredStart) _origPredStart();
-  savePredictiveState();
-};
-const _origPredStop = typeof predictiveStop === 'function' ? predictiveStop : null;
-window.predictiveStop = function(){
-  if (_origPredStop) _origPredStop();
-  savePredictiveState();
-};
 
 // Reset the "New Order" form to its pristine state
 function resetNewOrderForm() {
@@ -1060,89 +776,15 @@ function orderLiveRate() {
   return (done / mins) * 60;
 }
 
-function tintProgressByPace(rateUh){
+function tintProgressByPace(rate){
   const fill = document.getElementById('progFill');
   if (!fill) return;
-
-  // Resolve a robust pace
-  let r = Math.round(Number(rateUh || 0));
-  if (r <= 0) {
-    r = Math.round(
-      (predictive?.rateUh) ||
-      (typeof orderLiveRate === 'function' && orderLiveRate()) ||
-      (typeof getLiveRateUh  === 'function' && getLiveRateUh()) ||
-      uiLastPaceUh || 280
-    );
-  }
-
-  // Remember last good pace
-  if (r > 0) uiLastPaceUh = r;
-
-  // Class bands: <249 red, 249–299 amber, 300+ green
-  let cls = 'pace-bad';
-  if (r >= 300) cls = 'pace-ok';
-  else if (r >= 249) cls = 'pace-warn';
-
-  fill.classList.remove('pace-ok','pace-warn','pace-bad');
-  fill.classList.add(cls);
-}
-// Put the lateness note on the same row as the "Log / Delay" button (right side)
-function showPreOrderNote(text){
-  const delayBtn = document.getElementById('btnDelay');
-  if (!delayBtn || !delayBtn.parentElement) return;
-
-  // If ensureActionRowLayout has run, delayBtn is in #actionsRight.
-  // We want the note in the LEFT group, flush-left.
-  let container = delayBtn.parentElement;           // likely #actionsRight
-  if (container.id === 'actionsRight' && container.parentElement){
-    container = container.parentElement;            // the row wrapper
-  }
-
-  // Ensure groups exist
-  let left  = document.getElementById('actionsLeft');
-  let right = document.getElementById('actionsRight');
-  if (!left){
-    left = document.createElement('div');
-    left.id = 'actionsLeft';
-    container.insertBefore(left, container.firstChild);
-  }
-  if (!right){
-    right = document.createElement('div');
-    right.id = 'actionsRight';
-    container.appendChild(right);
-  }
-
-  // Layout the row
-  container.style.display = 'flex';
-  container.style.alignItems = 'center';
-  container.style.justifyContent = 'space-between';
-  container.style.gap = '12px';
-  left.style.display  = 'flex';
-  left.style.alignItems = 'center';
-  left.style.gap      = '10px';
-  right.style.display = 'flex';
-  right.style.gap     = '10px';
-
-  // Create/replace the note in LEFT group (first position)
-  let note = document.getElementById('contractNote');
-  if (!note){
-    note = document.createElement('div');
-    note.id = 'contractNote';
-    note.className = 'hint';
-  }
-  note.textContent = text;
-
-  if (note.parentElement !== left){
-    left.insertBefore(note, left.firstChild || null);
-  }
-}
-
-// Clear both the old start-hint and this pre-order note
-function clearStartHint(){
-  const hint = document.getElementById('snapHint');
-  if (hint) hint.textContent = '';
-  const cn = document.getElementById('contractNote');
-  if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
+  // remove any prior classes
+  fill.classList.remove('good','warn','bad','green','amber','red');
+  // class choice aligned with your chip colors
+  if (rate >= 300) fill.classList.add('green');
+  else if (rate >= 249) fill.classList.add('amber');
+  else fill.classList.add('bad');
 }
 
 function formatETA(mins){
@@ -1151,74 +793,19 @@ function formatETA(mins){
   const m = Math.round(mins%60);
   return h ? `${h}h ${m}m` : `${m}m`;
 }
-// ========= ETA helpers: segment pace + EMA =========
-
-// Per-wrap segment rate (u/h) using last N segments (default 2)
-function segmentRateUh(n=2){
-  if (!Array.isArray(tempWraps) || tempWraps.length < 2) return null;
-  const segCount = Math.min(n, tempWraps.length - 1);
-  let units = 0, minutes = 0;
-  for (let i = tempWraps.length - segCount; i < tempWraps.length; i++){
-    const a = tempWraps[i-1], b = tempWraps[i];
-    const du = Math.max(0, (a.left|0) - (b.left|0));
-    const dt = Math.max(1, hhmmToMinutes(b.t) - hhmmToMinutes(a.t));
-    units   += du;
-    minutes += dt;
-  }
-  if (minutes <= 0 || units <= 0) return null;
-  return Math.round((units / minutes) * 60);
-}
-
-// Keep a light EMA of recent segment rates (improves stability)
-window._etaEMA = window._etaEMA || null;
-function updateEtaEMA(newRateUh, alpha=0.25){
-  if (!isFinite(newRateUh) || newRateUh <= 0) return window._etaEMA;
-  window._etaEMA = (window._etaEMA == null) ? newRateUh : (alpha*newRateUh + (1-alpha)*window._etaEMA);
-  return Math.round(window._etaEMA);
-}
 
 function updateProgressHeader() {
-  const wrapOpen = document.getElementById('wrapModal')?.style.display === 'flex';
-  if (wrapOpen) return;
-  if (!current)  return;
+  if (!current) return;
 
-  window.etaSmooth = window.etaSmooth || [];
-  window.lastETAmin = (typeof window.lastETAmin === 'number') ? window.lastETAmin : null;
-  window.lastRenderedETAmin = (typeof window.lastRenderedETAmin === 'number') ? window.lastRenderedETAmin : null;
-
+  // ✅ define it here (this was missing)
   const predictiveActive = !!(predictive && predictive.timer);
 
-  // --- GRACE CHECK (authoritative hold) ---
-  let graceActive = false;
-  try {
-    const now = Date.now();
-    if (predictive && (predictive._inGrace || (predictive.graceUntil && now < predictive.graceUntil))) {
-      graceActive = true;
-    } else {
-      const ps = (typeof loadPredictiveState === 'function') ? loadPredictiveState() : null;
-      if (ps && (ps.inGrace === true) && ps.graceUntil && now < ps.graceUntil) {
-        graceActive = true;
-      }
-    }
-  } catch(_) {}
+  const total    = current.total;
+  const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+  const done     = total - lastLeft;
+  const pct      = total ? Math.round((done / total) * 100) : 0;
 
-  const total = current.total || 0;
-
-  // base 'left' from wraps…
-  let lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
-
-  // …prefer predictive projection ONLY if NOT in grace
-  if (!graceActive && predictive && predictive.baseTs && Number.isFinite(predictive.leftAtBase) && predictive.rateUh) {
-    const elapsedH = Math.max(0, (Date.now() - predictive.baseTs) / 3600000);
-    const creep    = Math.round((predictive.rateUh || 0) * elapsedH);
-    const projLeft = Math.max(0, (predictive.leftAtBase|0) - creep);
-    lastLeft = Math.max(0, Math.min(total, projLeft));
-  }
-
-  const done = total - lastLeft;
-  const pct  = total ? Math.round((done / total) * 100) : 0;
-
-  // progress numbers
+  // Progress numbers
   const elLeft = document.getElementById('progLeft');
   const elPal  = document.getElementById('progPallets');
   const elPct  = document.getElementById('progPct');
@@ -1226,98 +813,36 @@ function updateProgressHeader() {
   if (elPal)  elPal.textContent  = tempWraps.length;
   if (elPct)  elPct.textContent  = pct + '%';
 
-  // bar paint (predictive ticker paints when active)
+  // Bar: only paint if predictive isn't already doing it
   if (!predictiveActive) {
     const fill = document.getElementById('progFill');
     if (fill) fill.style.width = pct + '%';
   }
 
-  const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
-  const firstWrapSeen = Array.isArray(tempWraps) && tempWraps.length > 0;
+  // Rate + ETA: only paint if predictive isn't already doing it
+  let rate = 0;
+  if (!predictiveActive) {
+    rate = Math.round(orderLiveRate());
+    const rEl = document.getElementById('progRate');
+    const eEl = document.getElementById('progETA');
 
-  let etaRateUh;
-  if (!firstWrapSeen) {
-    // Pre-wrap: use seeded preWrapRate or shift snapshot
-    etaRateUh = Math.max(1, Math.round(
-      current?.preWrapRateUh ??
-      (isFirstOrderToday?.() ? 250 : (computeLiveRateSnapshot() || 250))
-    ));
-  } else {
-    // Signals
-    const minR = (typeof PREDICT !== 'undefined' && PREDICT.minRate) ? PREDICT.minRate : 60;
-    const maxR = (typeof PREDICT !== 'undefined' && PREDICT.maxRate) ? PREDICT.maxRate : 600;
-
-    const pred = clamp(Math.round(predictive?.rateUh || 0), minR, maxR); // predictive anchor
-    const seg  = (typeof segmentRateUh === 'function') ? segmentRateUh(2) : null; // last ~2 segments
-    const ema  = (window._etaEMA != null) ? window._etaEMA : (computeLiveRateSnapshot?.() || pred || 250);
-    const long = Math.round((current?.orderRateUh != null ? current.orderRateUh : (ema || pred || 250)));
-
-    // Weighted blend: favor current reality but anchor by predictive
-    const blended = Math.round(
-      (pred ? 0.5*pred : 0) +
-      (seg  ? 0.35*seg  : 0) +
-      (long ? 0.15*long : 0)
-    );
-
-    // Guardrails: keep ETA from “walking away”
-    const base = pred || long || 250;
-    const lo   = Math.round(base * 0.80);   // ±20% band
-    const hi   = Math.round(base * 1.20);
-    etaRateUh  = clamp(blended || base, lo, hi);
-
-    // --- Idle-freeze: don't let Order Rate decay between wraps ---
-    // minutes since last *real* progress (wrap), or since order start if none
-    const nowMin        = hhmmToMinutes(nowHHMM());
-    const lastEventMin  = tempWraps.length > 0
-      ? hhmmToMinutes(tempWraps[tempWraps.length - 1].t)
-      : hhmmToMinutes(current.start || nowHHMM());
-    const idleMin       = Math.max(0, nowMin - lastEventMin);
-
-    const breakActive   = (typeof breakDraft !== 'undefined' && !!breakDraft);
-    const delayActive   = !!(current && current.__lastDelay); // if you set this when logging delays
-
-    if (idleMin >= 2 && !breakActive && !delayActive && typeof window._lastRenderRateUh === 'number') {
-      // hold at least the last shown rate (prevents minute-by-minute drift)
-      etaRateUh = Math.max(etaRateUh, window._lastRenderRateUh);
-    }
-  }
-
-  const rEl = document.getElementById('progRate');
-  if (rEl) rEl.textContent = etaRateUh ? `${etaRateUh} u/h` : '—';
-
-  const eEl = document.getElementById('progETA');
-  if (eEl) {
-    if (etaRateUh > 0) {
-      // smoother ETA (prefer helper)
-      let etaMin;
-      if (typeof calcStableETA === 'function') {
-        etaMin = calcStableETA(lastLeft, etaRateUh);
-      } else {
-        window.etaSmooth.push(etaRateUh);
-        if (window.etaSmooth.length > 5) window.etaSmooth.shift();
-        const avgRate = window.etaSmooth.reduce((a,b)=>a+b,0) / window.etaSmooth.length;
-        const newETA  = (lastLeft / (avgRate || etaRateUh)) * 60;
-        etaMin = (window.lastETAmin == null) ? newETA : (window.lastETAmin * 0.8 + newETA * 0.2);
-        window.lastETAmin = etaMin;
-      }
-      const ext = (typeof breakExtensionMinutes === 'function') ? (breakExtensionMinutes() || 0) : 0;
-      etaMin = (etaMin ?? 0) + ext;
-      if (window.lastRenderedETAmin == null || Math.abs(etaMin - window.lastRenderedETAmin) >= 1) {
+    if (rEl) rEl.textContent = rate ? `${rate} u/h` : '—';
+    if (eEl) {
+      if (rate > 0) {
+        const etaMin = (lastLeft / rate) * 60;
         eEl.textContent = addMinutesToNow(etaMin);
-        window.lastRenderedETAmin = etaMin;
+      } else {
+        eEl.textContent = '—';
       }
-    } else {
-      eEl.textContent = '—';
     }
+  } else {
+    // when predictive is active, use its live rate for tinting
+    rate = Math.round(predictive?.rateUh || 0);
   }
 
-  // remember what we just rendered so idle freeze can hold it next tick
-  window._lastRenderRateUh = etaRateUh;
-
-  updateHeaderActions?.();
-  tintProgressByPace(etaRateUh);
+  // ✅ always tint using a defined numeric pace
+  tintProgressByPace(rate);
 }
-
 
 function showProgressHeader() {
   if (!current) return;
@@ -1329,7 +854,7 @@ function showProgressHeader() {
 
   // Seed static bits
   document.getElementById('progCust').textContent    = current.name;
-  document.getElementById('progQty').textContent     = current.total;
+  document.getElementById('progQty').textContent     = current.total;   // NEW
   document.getElementById('progPallets').textContent = '0';
   document.getElementById('progLeft').textContent    = current.total;
   document.getElementById('progRate').textContent    = '—';
@@ -1337,13 +862,16 @@ function showProgressHeader() {
   document.getElementById('progFill').style.width    = '0%';
   document.getElementById('progPct').textContent     = '0%';
 
-  // NEW: reset ETA smoother when entering progress view (GPS-style fresh start)
-  window.etaSmooth = [];
-  window.lastETAmin = null;
-  window.lastRenderedETAmin = null;
+
+  // Reset dynamic bits
+  document.getElementById('progPallets').textContent = '0';
+  document.getElementById('progLeft').textContent     = current.total;
+  document.getElementById('progRate').textContent     = '—';
+  document.getElementById('progETA').textContent      = '—';
+  document.getElementById('progFill').style.width     = '0%';
+  document.getElementById('progPct').textContent      = '0%';
 
   updateProgressHeader();
-  updateHeaderActions?.();
 }
 
 /* Utility: add minutes to now → HH:MM */
@@ -1381,43 +909,36 @@ function closeElapsedModal(){
 
 /* One-frame render based on live snapshot + current order */
 function renderElapsedModalOnce(){
-  if (!current) { closeElapsedModal(); return; }
+  if (!current){ closeElapsedModal(); return; }
 
   // Progress on the active order
   const doneNow = currentOrderUnitsDone();
-  const total   = Number(current.total) || 0;
+  const total   = current.total || 0;
   const remainingUnits = Math.max(0, total - doneNow);
 
   // Elapsed since THIS order started
   const now = nowHHMM();
   const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
 
-  // Authoritative ORDER rate (u/h) — cached at wrap, or seeded pre-wrap
-  let orderRate = null;
-  if (Number.isFinite(current?.orderRateUh)) {
-    orderRate = Number(current.orderRateUh);
-  } else if (Number.isFinite(current?.preWrapRateUh)) {
-    orderRate = Number(current.preWrapRateUh);
+  // Current ORDER rate (units/hour)
+  let orderRate = 0;
+  if (elapsedMin > 0) {
+    orderRate = (doneNow / (elapsedMin / 60)); // u/h
   }
 
-  // Time left & ETA from the fixed order rate (no per-minute recompute)
+  // Time left & ETA based on CURRENT ORDER rate
   let minsLeft = null;
   let etaStr = '—';
   if (orderRate > 0 && remainingUnits > 0){
     minsLeft = Math.round((remainingUnits / orderRate) * 60);
     etaStr   = addMinutesToNow(minsLeft);
-  } else if (remainingUnits === 0) {
-    // If it's done, show "now" as finish time
-    etaStr = now;
-    minsLeft = 0;
   }
 
-  const setTxt = (id, txt) => { const el=document.getElementById(id); if (el) el.textContent = txt; };
-
+  const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
   setTxt('el_start', current.start || '—');
   setTxt('el_elapsed', `${Math.floor(elapsedMin/60)}h ${String(elapsedMin%60).padStart(2,'0')}m`);
   setTxt('el_remaining', String(remainingUnits));
-  setTxt('el_rate', (orderRate && orderRate > 0) ? `${Math.round(orderRate)} u/h` : '— u/h');
+  setTxt('el_rate', `${Math.round(orderRate)} u/h`);
   setTxt('el_timeleft', (minsLeft===null) ? '—' : `${Math.floor(minsLeft/60)}h ${String(minsLeft%60).padStart(2,'0')}m`);
   setTxt('el_eta', etaStr);
 }
@@ -1440,60 +961,29 @@ function tryBeep(){
 // ====== Persistence ======
 function loadAll(){
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const p = JSON.parse(raw);
-      picks       = Array.isArray(p.picks) ? p.picks : [];
-      historyDays = Array.isArray(p.history) ? p.history : [];
-      current     = p.current || null;
-      tempWraps   = Array.isArray(p.tempWraps) ? p.tempWraps : [];
-      startTime   = typeof p.startTime === 'string' ? p.startTime : "";
-      lastClose   = typeof p.lastClose === 'string' ? p.lastClose : "";
-      undoStack   = Array.isArray(p.undoStack) ? p.undoStack : [];
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var p=JSON.parse(raw);
+      picks=p.picks||[]; historyDays=p.history||[];
+      current=p.current||null; tempWraps=p.tempWraps||[]; startTime=p.startTime||""; lastClose=p.lastClose||""; undoStack=p.undoStack||[];
       proUnlocked = !!p.proUnlocked;
-      shiftBreaks = Array.isArray(p.shiftBreaks) ? p.shiftBreaks : [];
-    } else {
-      // sane defaults on first run / cleared storage
-      picks = []; historyDays = []; current = null; tempWraps = [];
-      startTime = ""; lastClose = ""; undoStack = [];
-      proUnlocked = false; shiftBreaks = [];
+      shiftBreaks = p.shiftBreaks || [];
     }
-
-    const lraw = localStorage.getItem(KEY_LEARN);
-    learnedUL = lraw ? (JSON.parse(lraw) || {}) : {};
-  } catch (e) {
-    console.error(e);
-    // hard reset if corrupted
-    picks = []; historyDays = []; current = null; tempWraps = [];
-    startTime = ""; lastClose = ""; undoStack = [];
-    proUnlocked = false; shiftBreaks = []; learnedUL = {};
-  }
+    var lraw = localStorage.getItem(KEY_LEARN);
+    if(lraw){ learnedUL = JSON.parse(lraw)||{}; }
+  } catch(e){ console.error(e); }
 }
-
 function saveAll(){
   try {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify({
-        version: '3.3.55',               // keep existing schema tag
-        savedAt: new Date().toISOString(),
-        picks,
-        history: historyDays,
-        current,
-        tempWraps,
-        startTime,
-        lastClose,
-        undoStack,
-        proUnlocked,
-        shiftBreaks
-      })
-    );
-    localStorage.setItem(KEY_LEARN, JSON.stringify(learnedUL || {}));
-  } catch (e) {
-    console.error(e);
-  }
+    localStorage.setItem(KEY, JSON.stringify({
+      version:'3.3.55', savedAt:new Date().toISOString(),
+      picks, history:historyDays,
+      current, tempWraps, startTime, lastClose, undoStack,
+      proUnlocked, shiftBreaks
+    }));
+    localStorage.setItem(KEY_LEARN, JSON.stringify(learnedUL));
+  } catch(e){ console.error(e); }
 }
-
 setInterval(function(){ saveAll(); }, 30000);
 
 // Custom codes
@@ -1670,76 +1160,64 @@ function updCalcGate(){
 }
 
 // ====== Tabs ======
-if (which === 'tracker') {
-  const inOrder = !!(current && Number.isFinite(current.total));
+function showTab(which){
+  // swap visible section
+  const id = 'tab' + which.charAt(0).toUpperCase() + which.slice(1);
+  ['tabCalc','tabTracker','tabHistory'].forEach(x =>
+    document.getElementById(x).classList.toggle('hidden', x !== id)
+  );
 
-  // durable shift check
-  const hasShift =
-    (window.shiftActive === true) ||
-    (localStorage.getItem('shiftActive') === '1') ||
-    !!startTime ||
-    (Array.isArray(picks) && picks.length > 0);
+  // tab button active state
+  ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(x =>
+    document.getElementById(x).classList.remove('active')
+  );
+  if (which === 'calc')    document.getElementById('tabCalcBtn').classList.add('active');
+  if (which === 'tracker') document.getElementById('tabTrackBtn').classList.add('active');
+  if (which === 'history') document.getElementById('tabHistBtn').classList.add('active');
 
-  // Shift chooser vs active blocks
-  const shiftCard    = document.getElementById('shiftCard');
-  const shiftChooser = document.getElementById('shiftChooser');   // <-- NEW
-  const activeCard   = document.getElementById('activeOrderCard');
-  const doneCard     = document.getElementById('completedCard');
+  // live banner only on tracker
+  const lb = document.getElementById('liveBanner');
+  if (lb) lb.classList.toggle('hidden', which !== 'tracker');
 
-  if (!hasShift) {
-    // pre-shift screen
-    if (shiftCard)    shiftCard.style.display    = 'block';
-    if (shiftChooser) shiftChooser.style.display = 'block';       // show start buttons pre-shift
-    if (activeCard)   activeCard.style.display   = 'none';
-    if (doneCard)     doneCard.style.display     = 'none';
-
-    if (prog) prog.style.display = 'none';
-    if (form) form.style.display = 'block';
-    if (area) area.style.display = 'none';
-
-    // hide all order controls
+  if (which === 'history') {
+    // (re)build weekly summary & keep order-only controls hidden here
+    renderWeeklySummary();
+    initWeekCardToggle();
     ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-      const el = document.getElementById(id); if (el) el.style.display = 'none';
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
     });
-
-    updateEndShiftVisibility?.();
-    updateCloseEarlyVisibility?.();
-    saveAll?.();
+    saveAll();
     return;
   }
 
-  // We have a shift (mid-day)
-  if (shiftCard)    shiftCard.style.display    = 'block';
-  if (shiftChooser) shiftChooser.style.display = 'none';          // <-- HIDE start buttons mid-shift
-  if (doneCard)     doneCard.style.display     = (picks.length ? 'block' : 'none');
+  if (which === 'tracker') {
+    // Single source of truth for header/form/progress + order area visibility
+    if (typeof restoreActiveOrderUI === 'function') restoreActiveOrderUI();
 
-  if (inOrder) {
-    if (activeCard) activeCard.style.display = 'block';
-    if (form) { form.style.display = 'none'; form.classList.add('fade'); form.classList.remove('show'); }
-    if (prog) { prog.style.display = 'flex'; prog.classList.add('fade','show'); }
-    if (area) area.style.display = 'block';
-  } else {
-    // shift active, no open order → show new-order header
-    if (activeCard) activeCard.style.display = 'none';
-    if (prog) { prog.style.display = 'none'; prog.classList.add('fade'); prog.classList.remove('show'); }
-    if (form) { form.style.display = 'block'; form.classList.add('fade','show'); }
-    if (area) area.style.display = 'none';
+    // Gate bottom controls by active order
+    const inOrder = hasActiveOrder();
+    ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.style.display = inOrder ? 'inline-block' : 'none';
+    });
+
+    // Keep progress header numbers fresh
+    if (typeof updateProgressHeader === 'function') updateProgressHeader();
+
+    updateDelayBtn();
+    updateEndShiftVisibility();
+    updateCloseEarlyVisibility();
+    saveAll();
+    return;
   }
 
-  // Gate bottom controls by active order
+  // default: calc tab (no order-only controls)
   ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
     const el = document.getElementById(id);
-    if (el) el.style.display = inOrder ? 'inline-block' : 'none';
+    if (el) el.style.display = 'none';
   });
-
-  // Keep header/controls accurate
-  updateProgressHeader?.();
-  updateDelayBtn?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
-
-  saveAll?.();
-  return;
+  saveAll();
 }
 
 // ====== Tracker core ======
@@ -1751,43 +1229,21 @@ function snapToNearestHour(){
 }
 
 function startShift(lenHours){
-  try {
-    // Persist one-time 9h/10h preference
-    const existing = getShiftPref();
-    const chosen = existing || (lenHours | 0);
-    if (!existing && (chosen === 9 || chosen === 10)) setShiftPref(chosen);
+  const lenEl = document.getElementById('tLen');
+  if (lenEl) lenEl.value = String(lenHours || 9);
 
-    // Seed hidden length field for downstream logic
-    const applyLen = getShiftPref() || (lenHours || 9);
-    const lenEl = document.getElementById('tLen');
-    if (lenEl) lenEl.value = String(applyLen);
+  startTime = snapToNearestHour();
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = `Shift started @ ${startTime} • ${lenEl ? lenEl.value : lenHours || 9}h`;
 
-    // >>> NEW: mark shift active (durable across refresh)
-    window.shiftActive = true;
-    localStorage.setItem('shiftActive', '1');
-
-    // Defer actual start to the contracted time picker
-    openContractedStartPicker();
-  } catch (e){
-    // Safe fallback: still route through the picker
-    const lenEl = document.getElementById('tLen');
-    if (lenEl) lenEl.value = String(lenHours || 9);
-
-    // >>> NEW (fallback path too)
-    window.shiftActive = true;
-    localStorage.setItem('shiftActive', '1');
-
-    openContractedStartPicker();
-  }
+  beginShift();
 }
 
+// REPLACE beginShift() with this:
 function beginShift(){
   if (!startTime) startTime = snapToNearestHour();
 
-  // Clean any pre-shift hints/notes
-  clearStartHint?.();
-
-  // Show tracker UI
+  // show shift UI; but keep only the header form visible until an order starts
   const shift = document.getElementById('shiftCard');
   const active = document.getElementById('activeOrderCard');
   const done = document.getElementById('completedCard');
@@ -1795,119 +1251,21 @@ function beginShift(){
   if (active) active.style.display = 'block';
   if (done)   done.style.display = 'block';
 
-  // Header form visible until an order starts
+  // header: show form, hide progress
   const hdrForm = document.getElementById('orderHeaderForm');
   const hdrProg = document.getElementById('orderHeaderProgress');
   if (hdrForm) hdrForm.style.display = '';
   if (hdrProg) hdrProg.style.display = 'none';
 
-  // Hide order-only buttons until active
-  ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-    const el = document.getElementById(id); if (el) el.style.display = 'none';
-  });
+  // bottom action buttons stay hidden until an order is active
+  ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 
+  // elapsed chip hidden until an order starts
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) chipBox.style.display = 'none';
 
-  renderDone();
-  updateSummary?.();
-  updateDelayBtn?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
-  saveAll();
-
-  // Lock the bottom action row layout
-  ensureActionRowLayout?.();
-}
-
-function openContractedStartPicker(){
-  const modal = document.getElementById('contractModal');
-  const list  = document.getElementById('contractHourList');
-  if (!modal || !list) return;
-
-  list.innerHTML = '';
-
-  const nowH = new Date().getHours(); // 0..23
-  // Build buttons for [now-5, now-4, ..., now, now+1]
-  for (let delta = -5; delta <= 1; delta++) {
-    const h = (nowH + delta + 24) % 24;         // wrap around midnight
-    const hh = (h < 10 ? '0' : '') + h;
-    const btn = document.createElement('button');
-    btn.className = 'btn';
-    btn.type = 'button';
-    btn.textContent = `${hh}:00`;
-    btn.onclick = () => applyContractedStart(h);
-    list.appendChild(btn);
-  }
-
-  modal.style.display = 'flex';
-}
-
-
-function closeContractModal(){
-  const modal = document.getElementById('contractModal');
-  if (modal) modal.style.display = 'none';
-}
-
-function applyContractedStart(hh){
-  closeContractModal();
-
-  const prefLen = getShiftPref() || 9;
-  const lenEl = document.getElementById('tLen');
-  if (lenEl) lenEl.value = String(prefLen);
-
-  const contracted = (hh<10?'0':'') + hh + ':00';
-  const actual     = nowHHMM();
-  const cMin = hmToMin(contracted);
-  const aMin = hmToMin(actual);
-
-  // Effective start: contracted if on-time/early; actual if late
-  const effectiveMin = (aMin <= cMin) ? cMin : aMin;
-  const effectiveHM  = minToHm(effectiveMin);
-
-  // Live rate baseline
-  startTime = effectiveHM;
-
-  // Log lateness
-  const lateMin = aMin - cMin;
-  try {
-    const day = new Date().toISOString().slice(0,10);
-    const raw = localStorage.getItem(LATE_LOG_KEY);
-    const obj = raw ? JSON.parse(raw) : {};
-    obj[day] = { contracted, actual, effective: effectiveHM, lateMin, shiftLen: prefLen };
-    localStorage.setItem(LATE_LOG_KEY, JSON.stringify(obj));
-  } catch(e) {}
-
-  // Show S2 (customer selection) view
-  beginShift();
-  if (typeof updateSummary === 'function') updateSummary();
-
-  // S2 note (same row as Log/Delay, left side)
-  let note = 'on time';
-  if (lateMin > 0)      note = `${lateMin}m late`;
-  else if (lateMin < 0) note = `${-lateMin}m early`;
-  showPreOrderNote?.(`Contracted ${contracted} • Actual ${actual} (${note})`);
-}
-
-
-function renderShiftChooser(){
-  const card = document.getElementById('shiftCard');
-  if (!card) return;
-
-  // This selects the row that currently holds the two buttons
-  const btnRow = card.querySelector('.col > .row');
-  if (!btnRow) return;
-
-  const pref = getShiftPref();
-  if (pref === 9 || pref === 10){
-    // Replace the two buttons with a single Start button using the saved preference
-    btnRow.innerHTML =
-      `<button class="btn ok" type="button" style="min-width:180px;" onclick="startShift(${pref})">Start ${pref}h Shift</button>`;
-  } else {
-    // Leave the original two-button chooser (first run)
-    // No-op: your HTML already has them
-  }
-  clearStartHint();
+  renderDone(); updateSummary(); updateDelayBtn(); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
 }
 
 function refreshStartButton(){
@@ -1920,138 +1278,65 @@ function refreshStartButton(){
   btn.disabled = !ok;
 }
 
-
+function refreshWrapButton(){
+  const btn = document.getElementById('btnLogWrap');
+  const inp = document.getElementById('oLeft');
+  if(!btn || !inp) return;
+  const raw = (inp.value||'').trim();
+  btn.disabled = (raw === '');
+}
 // Restores correct UI when page loads or state changes
 function restoreActiveOrderUI() {
-  try {
-    const shiftOn  = ( !!startTime || (Array.isArray(picks) && picks.length > 0) ) 
-                 && window.archived !== true;
-    const inOrder  = !!(shiftOn && current && Number.isFinite(current.total));
+  const inOrder = !!current;
 
-    const hdrForm   = document.getElementById('orderHeaderForm');
-    const hdrProg   = document.getElementById('orderHeaderProgress');
-    const orderArea = document.getElementById('orderArea');
+  const hdrForm = document.getElementById('orderHeaderForm');      // the old “Customer / Total units” header block
+  const hdrProg = document.getElementById('orderHeaderProgress');  // the new progress header block
+  const orderArea = document.getElementById('orderArea');          // wrap input + timeline
 
-    const show = (id, on, disp = 'inline-block') => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.style.display = on ? disp : 'none';
-    };
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? 'inline-block' : 'none'; };
 
-    if (inOrder) {
-      if (hdrForm && hdrProg) {
-        if (typeof fadeSwap === 'function') fadeSwap(hdrForm, hdrProg, 'flex');
-        else { hdrForm.style.display = 'none'; hdrProg.style.display = 'flex'; }
-      }
-      if (orderArea) orderArea.style.display = 'block';
+  if (inOrder) {
+    // show progress header, hide form header
+    if (hdrForm) hdrForm.style.display = 'none';
+    if (hdrProg) hdrProg.style.display = '';
 
-      const cn = document.getElementById('contractNote');
-      if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
+    if (orderArea) orderArea.style.display = 'block';
+    show('btnStart', false);
+    show('btnComplete', true);
+    show('btnCompleteTop', true);
+    show('btnUndo', true);
+    show('btnB', true);
+    show('btnL', true);
 
-      const sel = document.getElementById('oCust'); if (sel && current.name) sel.value = current.name;
-      const tot = document.getElementById('oTotal'); if (tot && Number.isFinite(current.total)) tot.value = String(current.total);
-      const ddToggle = document.querySelector('#oDD .dd-toggle'); if (ddToggle && current.name) ddToggle.textContent = current.name;
+    // Elapsed chip visible during active order
+    const chipBox = document.getElementById('chipElapsed');
+    if (chipBox) chipBox.style.display = '';
 
-      const total = current.total || 0;
+    // Repaint live pieces
+    updateProgressHeader();   // fills title, ETA, % and bar
+    renderTimeline();         // shows wraps/breaks recorded so far
+    refreshWrapButton();      // enables Log Wrap if input has a number
+    refreshCompleteButton();
+    predictiveReset(getCurrentLeft(), getLiveRateUh());
+    predictiveStart();
+  } else {
+    // no active order → show form header, hide progress header
+    if (hdrForm) hdrForm.style.display = '';
+    if (hdrProg) hdrProg.style.display = 'none';
 
-      // ==== Key fix: don't snap back on refresh ====
-      // Start from wraps/total…
-      let lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+    if (orderArea) orderArea.style.display = 'none';
+    show('btnStart', true);
+    show('btnComplete', false);
+    show('btnCompleteTop', false);
+    show('btnUndo', false);
+    show('btnB', false);
+    show('btnL', false);
 
-      // …then prefer a projection from saved predictive state (survives reloads)
-      // predictiveProjectedLeft() uses PRED_STATE from localStorage if needed.
-      const proj = (typeof predictiveProjectedLeft === 'function') ? predictiveProjectedLeft() : null;
-      if (proj !== null && isFinite(proj)) {
-        lastLeft = Math.max(0, Math.min(total, proj));
-      } else if (predictive && predictive.baseTs && isFinite(predictive.leftAtBase) && predictive.rateUh) {
-        // fallback: live in-memory predictive object (same math)
-        const elapsedH = Math.max(0, (Date.now() - predictive.baseTs) / 3600000);
-        const creep    = Math.round((predictive.rateUh || 0) * elapsedH);
-        const projLeft = Math.max(0, (predictive.leftAtBase|0) - creep);
-        lastLeft = Math.max(0, Math.min(total, projLeft));
-      }
-
-      const done = total - lastLeft;
-      const pct  = total ? Math.round((done / total) * 100) : 0;
-
-      const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      setTxt('progCust', current.name || '—');
-      setTxt('progQty',  total);
-      setTxt('progLeft', lastLeft);
-      setTxt('progPallets', String(tempWraps.length));
-      setTxt('progPct', pct + '%');
-      const fill = document.getElementById('progFill'); if (fill) fill.style.width = pct + '%';
-
-      show('btnStart',       false);
-      show('btnUndo',        true);
-      show('btnB',           true);
-      show('btnL',           true);
-      show('btnDelay',       true);
-      show('btnCloseEarly',  true);
-
-      const chipBox = document.getElementById('chipElapsed');
-      if (chipBox) chipBox.style.display = '';
-
-      updateProgressHeader?.();
-      renderTimeline?.();
-      refreshWrapButton?.();
-      refreshCompleteButton?.();
-
-      // ==== Predictive resume with pre-wrap lock & saved rate ====
-      try {
-        predictiveStop?.();
-
-        const firstWrapSeen = Array.isArray(tempWraps) && tempWraps.length > 0;
-        const savedPS = (typeof loadPredictiveState === 'function') ? loadPredictiveState() : null;
-
-        let seedRate;
-        if (firstWrapSeen) {
-          const orderUh = (typeof orderLiveRate === 'function') ? (orderLiveRate() || 0) : 0;
-          const liveUh  = (typeof getLiveRateUh === 'function') ? (getLiveRateUh() || 0) : 0;
-          seedRate = Math.round(orderUh || liveUh || savedPS?.rateUh || 250);
-        } else {
-          const isFirst = (typeof isFirstOrderToday === 'function') ? isFirstOrderToday() === true : false;
-          const liveUh  = (typeof getLiveRateUh === 'function') ? (getLiveRateUh() || 0) : 0;
-          // prefer previously saved predictive rate if present; else our locked pre-wrap or live
-          seedRate = Math.round(savedPS?.rateUh || current?.preWrapRateUh || (isFirst ? 250 : (liveUh || 250)));
-        }
-
-        if (lastLeft > 0) {
-          predictiveReset?.(lastLeft, seedRate, firstWrapSeen);
-          uiLastPaceUh = Math.round(predictive?.rateUh || 0) || seedRate;
-          predictiveStart?.();
-        } else {
-          predictiveStop?.();
-        }
-      } catch(e) { /* keep UI alive */ }
-
-    } else {
-      if (hdrProg)   hdrProg.style.display = 'none';
-      if (orderArea) orderArea.style.display = 'none';
-      if (hdrForm)   hdrForm.style.display = '';
-
-      renderPreOrderNoteFromLog?.();
-
-      show('btnStart',        true);
-      show('btnUndo',         false);
-      show('btnB',            false);
-      show('btnL',            false);
-      show('btnDelay',        shiftOn);
-      show('btnCloseEarly',   shiftOn);
-
-      const chipBox = document.getElementById('chipElapsed');
-      if (chipBox) chipBox.style.display = 'none';
-
-      predictiveStop?.();
-    }
-
-    updateHeaderActions?.();
-    ensureActionRowLayout?.();
-  } catch (err) {
-    console.warn('restoreActiveOrderUI failed (kept UI alive):', err);
+    // Hide elapsed chip if you prefer when idle
+    const chipBox = document.getElementById('chipElapsed');
+    if (chipBox) chipBox.style.display = 'none';
   }
 }
-
 
 // ─────────────────────────────────────────────
 // startOrder: validate → lock in → swap to progress header
@@ -2074,18 +1359,12 @@ function startOrder() {
 
   const finalName = isOther ? otherVal : name;
 
-  // remove any pre-order contracted note
-  const cn = document.getElementById('contractNote');
-  if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
-
-  // create order state
   current    = { name: finalName, total, start: nowHHMM(), breaks: [] };
   tempWraps  = [];
   undoStack  = [{ type: 'start' }];
 
-  // show order area + controls
-  const orderArea = document.getElementById('orderArea');
-  if (orderArea) orderArea.style.display = 'block';
+  // Show order area + controls
+  document.getElementById('orderArea').style.display = 'block';
   ['btnB','btnL','btnUndo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'inline-block';
@@ -2093,84 +1372,57 @@ function startOrder() {
   const btnStart = document.getElementById('btnStart');
   if (btnStart) btnStart.style.display = 'none';
 
-  refreshWrapButton?.();
-  refreshCompleteButton?.();
-  renderTimeline?.();
-  updateSummary?.();
-  updateDelayBtn?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
+  const btnComplete = document.getElementById('btnComplete');
+  if (btnComplete) { btnComplete.style.display = 'inline-block'; btnComplete.disabled = true; }
 
-  // elapsed chip
+  const topBtn = document.getElementById('btnCompleteTop');
+  if (topBtn) { topBtn.style.display = 'inline-block'; topBtn.disabled = true; }
+
+  refreshWrapButton();
+  refreshCompleteButton();
+  renderTimeline();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+
+  // Elapsed chip visible while an order is active
   const chipBox = document.getElementById('chipElapsed');
   if (chipBox) {
     chipBox.style.display = '';
-    const b = chipBox.querySelector('b'); if (b) b.textContent = 'Elapsed';
+    chipBox.querySelector('b') && (chipBox.querySelector('b').textContent = 'Elapsed');
   }
   const chipVal = document.getElementById('chipElapsedVal');
   if (chipVal) chipVal.textContent = '0 min';
-  updateElapsedChip?.();
+  updateElapsedChip();
 
-  // swap headers
+  // ---- Swap header: hide form, show progress header (force flex) ----
   const hdrForm = document.getElementById('orderHeaderForm');
   const hdrProg = document.getElementById('orderHeaderProgress');
-  if (hdrForm) { hdrForm.style.display = 'none'; hdrForm.classList.remove('show'); }
-  if (hdrProg) { hdrProg.style.display = 'flex'; hdrProg.classList.add('show'); }
+  if (hdrForm) hdrForm.style.display = 'none';
+  if (hdrProg) hdrProg.style.display = 'flex';
 
-  // seed header
-  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setTxt('progCust', finalName || '—');
-  setTxt('progQty',  total || 0);
-  setTxt('progPallets', '0');
-  setTxt('progLeft', total || 0);
-  setTxt('progRate', '—');
-  setTxt('progETA',  '—');
-  const fillEl = document.getElementById('progFill'); if (fillEl) fillEl.style.width = '0%';
-  setTxt('progPct', '0%');
+  // ---- Seed progress header fields & reset visuals ----
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setText('progCust', finalName || '—');
+  setText('progQty',  total || 0);
+  setText('progLeft', total || 0);
+  setText('progPallets', 0);
+  setText('progRate', '—');
+  setText('progETA',  '—');
+  setText('progPct',  '0%');
 
-  updateProgressHeader?.();
+  const fill = document.getElementById('progFill');
+  if (fill) fill.style.width = '0%';
 
-  // ===== LOCKED pre-wrap seed rate (no immediate start) =====
-  try {
-    predictiveStop?.(); // defensive
-    const isFirst  = isFirstOrderToday?.() === true;
+  // Paint once
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
 
-    // Use live shift rate once the day has started (fallback 250)
-    const lockedUh = isFirst ? 250 : Math.max(120, Math.round(computeLiveRateSnapshot() || 250));
-    current.preWrapRateUh = lockedUh; // remember for ETA until first wrap
+  // PREDICTIVE: baseline at start and begin creeping
+  predictiveReset(getCurrentLeft(), getLiveRateUh());
+  predictiveStart();
 
-    // Baseline the projection but DON'T start creeping yet
-    predictiveReset?.(current.total || 0, lockedUh, /*firstWrapSeen*/ false);
-  } catch (e) { /* no-op */ }
-
-  // Defer the creep start to the grace timer
-  updateHeaderActions?.();
-  schedulePredictiveStartAfter(PREDICTIVE_GRACE_MS);
-  saveAll?.();
-  ensureActionRowLayout?.();
-}
-
-// --- minimal fade swap helper ---
-function fadeSwap(hideEl, showEl, showDisplay = 'block') {
-  if (!hideEl || !showEl) return;
-  // ensure both have .fade class
-  hideEl.classList.add('fade');
-  showEl.classList.add('fade');
-
-  // make the target renderable first (so CSS can animate)
-  showEl.style.display = showDisplay;
-
-  // start fade
-  // hide -> remove .show (fade out)
-  hideEl.classList.remove('show');
-
-  // show -> next frame add .show (fade in)
-  requestAnimationFrame(() => {
-    showEl.classList.add('show');
-  });
-
-  // after transition, fully hide the old one
-  setTimeout(() => { hideEl.style.display = 'none'; }, 250);
+  saveAll();
 }
 
 function logWrap() {
@@ -2193,86 +1445,76 @@ function logWrap() {
   const t = nowHHMM();
   tempWraps.push({ left, done, t });
   undoStack.push({ type: 'wrap' });
-  updateEtaEMA(segmentRateUh(1));
-  // cache authoritative order-rate from the last segment
-  const segUh = segmentRateUh(1);
-  if (isFinite(segUh)) current.orderRateUh = segUh;
+
   inp.value = '';
   refreshWrapButton();
   renderTimeline();
   updateSummary();
   refreshCompleteButton();
-  if (typeof updateProgressHeader === 'function') updateProgressHeader();
-  // Switch predictive rule after a wrap
-  if (left === 0) {
-    predictiveStop(); // you already auto-complete via existing flow
-  } else {
-    const orderRate = isFinite(current.orderRateUh) ? current.orderRateUh
-                      : Math.round(getLiveRateUh?.() || 280);
-    predictiveReset(left, orderRate, true);
-    uiLastPaceUh = orderRate;
-    predictiveStart();
-  }
-
-
-  // 🔹 added line here — keeps buttons in sync (esp. Complete unlock)
-  updateHeaderActions?.();
-
-  // ✅ Auto-close when 0 left
-  if (left === 0) {
-    showToast('Order complete — closing...');
-    setTimeout(() => completeOrder(), 300);
-    return;
-  }
   saveAll();
+
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
+
+  // PREDICTIVE: snap to the new true left and continue
+  predictiveReset(left, getLiveRateUh());
 }
 
 function undoLast() {
   if (!current) { showToast('Nothing to undo'); return; }
-
-  const last = undoStack.pop();
+  const last = undoStack.pop(); 
   if (!last) { showToast('Nothing to undo'); return; }
-
-  // Never allow Undo to go past the order start
-  if (last.type === 'start') {
-    undoStack.push(last);                 // restore the sentinel
-    showToast('Nothing more to undo');    // user feedback
-    return;
-  }
 
   if (last.type === 'wrap') {
     tempWraps.pop();
 
   } else if (last.type === 'break') {
-    current.breaks?.pop();
+    current.breaks.pop();
 
   } else if (last.type === 'delay' && current.__lastDelay) {
-    current.breaks = (current.breaks || []).filter(b => b !== current.__lastDelay);
+    current.breaks = current.breaks.filter(b => b !== current.__lastDelay);
     current.__lastDelay = null;
+
+  } else if (last.type === 'start') {
+    // undo the whole order
+    current = null; tempWraps = [];
+    predictiveStop(); // PREDICTIVE: stop (no order)
+    document.getElementById('orderArea').style.display = 'none';
+    ['btnB','btnL','btnUndo'].forEach(id => document.getElementById(id).style.display='none');
+    document.getElementById('btnStart').style.display    = 'inline-block';
+    document.getElementById('btnComplete').style.display = 'none';
+
+    const hdrForm = document.getElementById('orderHeaderForm');
+    const hdrProg = document.getElementById('orderHeaderProgress');
+    const topBtn = document.getElementById('btnCompleteTop');
+    if (topBtn){ topBtn.style.display = 'none'; topBtn.disabled = true; }
+    if (hdrForm) hdrForm.style.display = '';
+    if (hdrProg) hdrProg.style.display = 'none';
+
+    showToast('Order start undone');
+    updateDelayBtn(); 
+    updateEndShiftVisibility(); 
+    updateCloseEarlyVisibility(); 
+    updateSummary();
+    refreshCompleteButton();
+    saveAll();
+
+    if (typeof updateProgressHeader === 'function') updateProgressHeader();
+    return;
   }
 
-  // --- Recompute + repaint ---
+  renderTimeline();
+  updateSummary();
+  refreshCompleteButton();
+  saveAll();
   if (typeof updateProgressHeader === 'function') updateProgressHeader();
-  if (typeof renderTimeline       === 'function') renderTimeline();
-  if (typeof updateSummary        === 'function') updateSummary();
-  if (typeof refreshCompleteButton=== 'function') refreshCompleteButton();
-  if (typeof refreshWrapButton    === 'function') refreshWrapButton();
-  if (typeof updateDelayBtn       === 'function') updateDelayBtn();
-  if (typeof updateEndShiftVisibility   === 'function') updateEndShiftVisibility();
-  if (typeof updateCloseEarlyVisibility === 'function') updateCloseEarlyVisibility();
 
-  // Predictive: re-baseline to latest known left/rate (or stop if no order)
+  // PREDICTIVE: re-baseline to latest known left (or stop if none)
   if (current) {
-    const left = (typeof getCurrentLeft === 'function') ? getCurrentLeft() : (current.left ?? 0);
-    const rate = (typeof getLiveRateUh  === 'function') ? getLiveRateUh()  : 0;
-    if (typeof predictiveReset === 'function') predictiveReset(left, rate);
+    predictiveReset(getCurrentLeft(), getLiveRateUh());
   } else {
-    if (typeof predictiveStop === 'function') predictiveStop();
+    predictiveStop();
   }
-
-  if (typeof saveAll === 'function') saveAll();
 }
-
 
 function refreshCompleteButton(){
   ['btnComplete', 'btnCompleteTop'].forEach(id=>{
@@ -2306,6 +1548,13 @@ function getLiveRateUh(){
   return NaN;
 }
 
+let predictive = {
+  timer: null,
+  leftAtBase: 0,     // units left at last real measurement (wrap/start)
+  baseTs: 0,         // ms timestamp baseline recorded
+  rateUh: 0,         // units/hour used for the creep
+};
+
 function fmtETA(ms){
   if (!isFinite(ms)) return '—';
   const d = new Date(ms);
@@ -2335,14 +1584,6 @@ function predictiveStart(){
 function predictiveStop(){
   if (predictive.timer) clearInterval(predictive.timer);
   predictive.timer = null;
-}
-// Minutes to add to ETA while a break/lunch is active.
-// At break start we add the full target (20/30). If you overrun, it grows with elapsed.
-function breakExtensionMinutes(){
-  if (!window.breakDraft) return 0;
-  const elapsedMin = Math.round((hm(nowHHMM()) - hm(breakDraft.startHHMM)) * 60);
-  const targetMin  = Math.round((breakDraft.targetSec || 0) / 60);
-  return Math.max(targetMin, elapsedMin);
 }
 function predictiveTick(){
   if (!current || !current.total) return;
@@ -2422,6 +1663,7 @@ function completeOrder() {
   };
   picks.push(archived);
   lastClose = closeHHMM;
+  saveAll();
 
   // Stop prediction & clear state
   predictiveStop();
@@ -2434,11 +1676,13 @@ function completeOrder() {
   hide('orderArea');
   hide('btnUndo');
   hide('btnComplete');
+  hide('btnCompleteTop');
 
   // Restore header form (fresh new-order panel), hide progress header
   const hdrForm = document.getElementById('orderHeaderForm');
   const hdrProg = document.getElementById('orderHeaderProgress');
-  if (hdrForm && hdrProg) fadeSwap(hdrProg, hdrForm, 'block');
+  if (hdrForm) hdrForm.style.display = '';
+  if (hdrProg) hdrProg.style.display = 'none';
 
   // Reset inputs & Start button state for a brand-new order
   resetNewOrderForm();
@@ -2461,90 +1705,38 @@ function completeOrder() {
   const fill = document.getElementById('progFill');
   if (pct)  pct.textContent = '0%';
   if (fill) fill.style.width = '0%';
-  saveAll();
 }
 
+
+
+
+// ====== Delay logging ======
 function updateDelayBtn(){
   const el = document.getElementById('btnDelay');
   if (!el) return;
-  const shiftOn = !!startTime && window.archived !== true;
-  el.style.display = shiftOn ? 'inline-block' : 'none';
+  el.style.display = hasActiveOrder() ? 'inline-block' : 'none';
 }
-
 function openDelayModal(){
-  const shiftOn = !!startTime && window.archived !== true;
-  if (!shiftOn) return alert('Start your shift to log notes/delays');
-
+  if(!current) return alert('Start an order to log a delay');
   delayDraft = { start: nowHHMM(), cause: '' };
-
-  const s = document.getElementById('delayStart');
-  const c = document.getElementById('delayCause');
-
-  // ✅ display readonly timestamp instead of editable input
-  if (s) s.textContent = delayDraft.start;
-  if (c) c.value = '';
-
-  document.getElementById('delayModal').style.display = 'flex';
+  document.getElementById('delayStart').value = delayDraft.start;
+  document.getElementById('delayCause').value = '';
+  document.getElementById('delayModal').style.display='flex';
 }
-
 function closeDelayModal(){ document.getElementById('delayModal').style.display='none'; }
 function cancelDelay(){ delayDraft=null; closeDelayModal(); }
 function submitDelay(){
-  if (!delayDraft){ closeDelayModal(); return; }
-
-  const end = nowHHMM();
-  const minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
-  const cause = (document.getElementById('delayCause').value||'').trim();
-
-  if (current && Number.isFinite(current.total)) {
-    // attach to current order
-    current.breaks = current.breaks || [];
-    const entry = { type:'D', start: delayDraft.start, end, minutes, cause };
-    current.breaks.push(entry);
-    current.__lastDelay = entry;
-    undoStack.push?.({ type:'delay' });
-    renderTimeline?.(); updateSummary?.(); saveAll?.();
-  } else {
-    // shift-level delay (no active order)
-    try {
-      const key = 'shiftDelays';
-      const arr = JSON.parse(localStorage.getItem(key) || '[]');
-      arr.push({ type:'D', start: delayDraft.start, end, minutes, cause });
-      localStorage.setItem(key, JSON.stringify(arr));
-    } catch(e){}
-  }
-
-  delayDraft = null;
+  if(!current || !delayDraft){ closeDelayModal(); return; }
+  var end = nowHHMM();
+  var minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
+  var cause = (document.getElementById('delayCause').value||'').trim();
+  var entry = {type:'D', start: delayDraft.start, end, minutes, cause};
+  current.breaks.push(entry);
+  current.__lastDelay = entry;
+  undoStack.push({type:'delay'});
+  delayDraft=null;
   closeDelayModal();
-  showToast?.(`Delay logged (${minutes}m)`);
-}
-
-// Save a text note (no delay timing). Works with or without an active order.
-function submitNote(){
-  const txt = (document.getElementById('delayCause').value || '').trim();
-  if (!txt) { showToast?.('Enter a note'); return; }
-
-  const t = nowHHMM();
-  if (current && Number.isFinite(current.total)) {
-    // store on the active order timeline
-    current.breaks = current.breaks || [];
-    current.breaks.push({ type:'N', t, note: txt });
-    undoStack.push?.({ type:'note' });
-    renderTimeline?.();
-    updateSummary?.();
-    saveAll?.();
-  } else {
-    // shift-level note (no active order). Persist separately.
-    try {
-      const key = 'shiftNotes';
-      const arr = JSON.parse(localStorage.getItem(key) || '[]');
-      arr.push({ t, note: txt });
-      localStorage.setItem(key, JSON.stringify(arr));
-    } catch(e){}
-  }
-
-  showToast?.('Note saved');
-  closeDelayModal();
+  renderTimeline(); updateSummary(); showToast('Delay logged ('+minutes+'m)'); saveAll();
 }
 
 // ====== Break timer (banner) ======
@@ -2567,12 +1759,6 @@ function startBreak(kind){
 
   // PREDICTIVE: pause creeping during breaks
   predictiveStop();
-  if (typeof updateProgressHeader === 'function') updateProgressHeader();
-
-}
-
-function hasActiveOrder(){ 
-  return !!(window.current && Number.isFinite(window.current.total)); 
 }
 
 function submitBreak(){
@@ -2643,234 +1829,159 @@ function tickBreak() {
 
   const now = nowHHMM();
   const elapsedMin = Math.round((hm(now) - hm(breakDraft.startHHMM)) * 60);
-  const targetMin  = Math.round((breakDraft.targetSec || 0) / 60);
+  const targetMin = Math.round(breakDraft.targetSec / 60);
   const diff = targetMin - elapsedMin;
 
   const breakDisplay = diff >= 0 ? `${diff} min` : `-${Math.abs(diff)} min over`;
 
   const breakBar = document.getElementById('breakBarCountdown');
-  const chip     = document.getElementById('chipElapsedVal');
-  const chipBox  = document.getElementById('chipElapsed');
+  const chip = document.getElementById('chipElapsedVal');
+  const chipBox = document.getElementById('chipElapsed');
 
-  const chipLabel = chipBox?.querySelector('b');
+  const chipLabel = chipBox.querySelector('b');
   if (chipLabel) chipLabel.textContent = 'Back in';
 
-  if (breakBar) breakBar.textContent = breakDisplay;
-  if (chip)     chip.textContent     = breakDisplay;
+  breakBar.textContent = breakDisplay;
+  chip.textContent = breakDisplay;
 
-  if (chipBox) {
-    chipBox.classList.remove('green', 'amber');
-    chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
-  }
+  chipBox.classList.remove('green', 'amber');
+  chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
 
   if (diff === 0 && !breakDraft.beeping) {
     breakDraft.beeping = true;
-    tryBeep?.();
+    tryBeep();
   }
-
-  // Keep header ETA reflecting planned/overrun break in real time
-  if (typeof updateProgressHeader === 'function') updateProgressHeader();
 }
 
-// ====== Completed orders & history ======
-function renderTimeline(){
-  const tl = document.getElementById('orderTimeline');
-  if (!tl) return;
-  tl.innerHTML = '';
-
-  // tiny escaper (local to this function)
-  const esc = s => String(s)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-
-  // Order start
-  if (current) {
-    const row0 = document.createElement('div');
-    row0.className = 'tick';
-    row0.innerHTML = `<span>🟢 Order started</span><span class="meta">${current.start || ''}</span>`;
-    tl.appendChild(row0);
-  }
-  
-  // Breaks / Delays / Notes
-  (current?.breaks || []).forEach(b => {
-    const row = document.createElement('div');
-    row.className = 'tick';
-
-    if (b.type === 'N') {
-      // 📝 Note — single timestamp (no duration)
-      const t   = b.t || '';
-      const txt = (b.note || '').trim();
-      row.innerHTML = `<span>📝 Note${txt ? ' — ' + esc(txt) : ''}</span><span class="meta">${t}</span>`;
-    } else if (b.type === 'D') {
-      // ⏱️ Delay — start → end • Xm (guarded)
-      const cause = b.cause ? ': ' + esc(b.cause) : '';
-      const start = b.start || '';
-      const end   = b.end   || '';
-      const mins  = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
-      const meta  = (start && end) ? `${start} → ${end}${mins ? ' • ' + mins : ''}` : (start || end || '');
-      row.innerHTML = `<span>⏱️ Delay${cause}</span><span class="meta">${meta}</span>`;
-    } else {
-      // ☕ Break / Lunch — start → end • Xm (guarded)
-      const label = (b.type === 'B') ? 'Break' : 'Lunch';
-      const start = b.start || '';
-      const end   = b.end   || '';
-      const mins  = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
-      const meta  = (start && end) ? `${start} → ${end}${mins ? ' • ' + mins : ''}` : (start || end || '');
-      row.innerHTML = `<span>☕ ${label}</span><span class="meta">${meta}</span>`;
-    }
-
-    tl.appendChild(row);
-  });
-
-  // Wraps
-  tempWraps.forEach((w, i) => {
-    const row = document.createElement('div');
-    row.className = 'tick';
-    row.innerHTML = `<span>📦 Wrap ${i+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t || ''}</span>`;
-    tl.appendChild(row);
-  });
-}
-
-// --- Close Early buttons visibility
+// ====== Close Early ======
 function updateCloseEarlyVisibility(){
   const btn = document.getElementById('btnCloseEarly');
   if (!btn) return;
-  const on = !!(current && Number.isFinite(current.total));
-  btn.style.display = on ? 'inline-block' : 'none';
-  btn.disabled = !on;
+  const trackerVisible = !document.getElementById('tabTracker').classList.contains('hidden');
+  btn.style.display = (trackerVisible && hasActiveOrder()) ? 'inline-block' : 'none';
 }
 
-// --- Modal open/close
 function openCloseEarlyModal(){
-  if (!current) return;
-  const r = document.getElementById('ceReason');
-  document.getElementById('ceRemaining').value = '';
-  document.getElementById('ceWrapped').checked = false;
-  if (r) r.value = '';
-  document.getElementById('closeEarlyModal').style.display = 'flex';
-}
-function closeCloseEarlyModal(){
-  const m = document.getElementById('closeEarlyModal');
-  if (m) m.style.display = 'none';
+  if(!current) return;
+  document.getElementById('ceRemaining').value='';
+  document.getElementById('ceWrapped').checked=false;
+  const r=document.getElementById('ceReason'); if(r) r.value='';
+  document.getElementById('closeEarlyModal').style.display='flex';
 }
 
-// --- Finalize Close Early
+function closeCloseEarlyModal(){ document.getElementById('closeEarlyModal').style.display='none'; }
+
 function submitCloseEarly(){
-  if (!current) return closeCloseEarlyModal?.();
+  if(!current) return closeCloseEarlyModal();
 
-  // 1) read + validate
-  const remEl = document.getElementById('ceRemaining');
-  const remaining = parseInt((remEl?.value || '0'), 10);
-  if (!Number.isFinite(remaining) || remaining < 0) {
-    return alert('Enter remaining units (0 or more).');
-  }
+  const remaining = parseInt(document.getElementById('ceRemaining').value||'0',10);
+  if (isNaN(remaining) || remaining < 0) return alert('Enter remaining units (0 or more).');
 
-  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current.total || 0);
-  if (remaining > prevLeft) {
-    return alert(`Remaining cannot exceed current left (${prevLeft}).`);
-  }
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total;
+  if (remaining > prevLeft) return alert('Remaining cannot exceed current left ('+prevLeft+').');
 
-  const wrapped  = !!document.getElementById('ceWrapped')?.checked;
+  const wrapped = !!document.getElementById('ceWrapped').checked;
   const reasonEl = document.getElementById('ceReason');
-  const reason   = (reasonEl && reasonEl.value || '').trim();
+  let reason = (reasonEl && reasonEl.value || '').trim();
 
-  // reason only required when closing with units left
-  if (remaining > 0 && reason.length < 3) {
-    if (reasonEl) reasonEl.focus();
-    return alert('Please add a short reason for closing early.');
-  }
+  const elapsed = minutesSinceHHMM(current.start);
 
-  // 2) optional final wrap (only if we actually reduced left)
-  let addedWrap = false;
-  if (wrapped) {
-    if (remaining < prevLeft) {
-      tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
-      addedWrap = true;
-    } else {
-      return alert('No progress since last wrap. Uncheck “Wrapped last pallet” or adjust Remaining.');
+  let validationFail = false;
+  (function enforceReasonRules(){
+    const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+    const progress    = currentOrderUnitsDone();
+    const totalUnits  = closedUnits + progress;
+    const s = hm(startTime), e = hm(nowHHMM());
+    const live = (!isNaN(s) && !isNaN(e) && e > s) ? Math.round(totalUnits / (e - s)) : 0;
+    const expectedLiveMin = live > 0 ? ((current.total||0) / live) * 60 : Infinity;
+    const expected300Min  = ((current.total||0) / 300) * 60;
+
+    if (remaining === 0 && elapsed < expectedLiveMin * 0.70 && (reason.length < 4)){
+      if (!reasonEl) reason = (prompt('Add a short reason — completed unusually fast vs your live rate:') || '').trim();
+      if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
     }
+    if (remaining > 0 && elapsed < expected300Min * 0.70 && (reason.length < 4)){
+      if (!reasonEl) reason = (prompt('Please add a short reason to close early:') || '').trim();
+      if (reason.length < 4) { if (reasonEl) reasonEl.focus(); validationFail = true; }
+    }
+  })();
+  if (validationFail) return;
+
+  let addedWrap = false;
+  if (wrapped){
+    if (remaining >= prevLeft) return alert('To mark a wrap, remaining must be less than '+prevLeft+'.');
+    tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
+    addedWrap = true;
   }
 
-  // 3) confirm (if helper exists) then archive
-  const closeHHMM   = nowHHMM();
-  const unitsDone   = (current.total || 0) - remaining;
-  const palletsCnt  = tempWraps.length || 1;
+  const close = nowHHMM();
+  const palletsCount = tempWraps.length || 1;
+  const unitsDone = current.total - remaining;
 
-  const ok = (typeof confirmCloseSummary === 'function') ? confirmCloseSummary({
-    name: current.name, unitsDone, pallets: palletsCnt,
-    start: current.start, close: closeHHMM, remaining, earlyReason: reason
-  }) : true;
+  const ok = confirmCloseSummary({
+    name: current.name, unitsDone, pallets: palletsCount, start: current.start, close, remaining, earlyReason: reason
+  });
 
-  if (ok === false) {
+  if (!ok){
     if (addedWrap) tempWraps.pop();
     return;
   }
 
-  const exclMins = (current.breaks || []).reduce((a,b)=> a + (b.minutes || 0), 0);
-  picks.push({
-    name: current.name,
-    units: unitsDone,
-    pallets: palletsCnt,
-    start: current.start,
-    close: closeHHMM,
-    remaining,
-    excl: exclMins,
+  const exclMins = current.breaks.reduce((a,b)=>a+(b.minutes||0),0);
+  const order = {
+    name: current.name, units: unitsDone, pallets: palletsCount, close, start: current.start, excl: exclMins,
     earlyReason: reason || '',
-    closedEarly: true,
-    log: { wraps: tempWraps.slice(0), breaks: (current.breaks || []).slice(0) }
+    log: { wraps: tempWraps.slice(0), breaks: current.breaks.slice(0) }
+  };
+  picks.push(order);
+  lastClose = close;
+
+  predictiveStop(); // PREDICTIVE: stop when closing early
+
+  current = null; tempWraps = []; undoStack = [];
+  document.getElementById('orderArea').style.display = 'none';
+  ['btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display = 'inline-block';
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnComplete').style.display = 'none';
+  document.getElementById('oLeft').value = '';
+  document.getElementById('oTotal').value = '';
+
+  closeCloseEarlyModal();
+  renderDone();
+  updateSummary();
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
+  saveAll();
+  showToast('Order closed');
+
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) chipBox.style.display = 'none';
+}
+
+// ====== Completed orders & history ======
+function renderTimeline(){
+  var tl=document.getElementById('orderTimeline'); if(!tl) return;
+  tl.innerHTML='';
+  if (current) {
+    const row0=document.createElement('div');
+    row0.className='tick';
+    row0.innerHTML=`<span>🟢 Order started</span><span class="meta">${current.start}</span>`;
+    tl.appendChild(row0);
+  }
+  (current?.breaks||[]).forEach(function(b){
+    const row=document.createElement('div'); row.className='tick';
+    row.innerHTML = (b.type==='D')
+      ? `<span>⏱️ Delay${b.cause?': '+b.cause.replace(/</g,'&lt;'):''}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span>`
+      : `<span>☕ ${(b.type==='B')?'Break':'Lunch'}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span>`;
+    tl.appendChild(row);
   });
-  lastClose = closeHHMM;
-
-  // 4) reset state + UI (bring back new-order header form)
-  predictiveStop?.();
-  current   = null;
-  tempWraps = [];
-  undoStack = [];
-
-  // hide active area
-  const area = document.getElementById('orderArea');
-  if (area) area.style.display = 'none';
-
-  // swap progress header -> header form
-  const hdrForm = document.getElementById('orderHeaderForm');
-  const hdrProg = document.getElementById('orderHeaderProgress');
-  if (hdrForm && hdrProg) {
-    if (typeof fadeSwap === 'function') fadeSwap(hdrProg, hdrForm, 'block');
-    else { hdrProg.style.display = 'none'; hdrForm.style.display = 'block'; }
-  }
-
-  // reset inputs for a fresh order (use helper if present)
-  if (typeof resetNewOrderForm === 'function') {
-    resetNewOrderForm();
-  } else {
-    const oLeft  = document.getElementById('oLeft');   if (oLeft)  oLeft.value  = '';
-    const oTotal = document.getElementById('oTotal');  if (oTotal) oTotal.value = '';
-    const sel    = document.getElementById('oCust');   if (sel)    sel.value    = '';
-    const ddT    = document.querySelector('#oDD .dd-toggle');
-    if (ddT) ddT.textContent = 'Select customer…';
-  }
-
-  // buttons/chips
-  const btnUndo     = document.getElementById('btnUndo');     if (btnUndo) btnUndo.style.display = 'none';
-  const btnStartTop = document.getElementById('btnStart');    if (btnStartTop) { btnStartTop.style.display = 'inline-block'; btnStartTop.disabled = true; }
-  const btnComplete = document.getElementById('btnComplete'); if (btnComplete) btnComplete.style.display = 'none';
-  const chipBox     = document.getElementById('chipElapsed'); if (chipBox) chipBox.style.display = 'none';
-
-  // close modal + refresh
-  closeCloseEarlyModal?.();
-  renderDone?.();
-  updateSummary?.();
-  updateDelayBtn?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
-  saveAll?.();
-  showToast?.('Order closed');
-
-  // keep action row grouped
-  ensureActionRowLayout?.();
+  tempWraps.forEach(function(w,wi){
+    const row=document.createElement('div'); row.className='tick';
+    row.innerHTML = `<span>📦 Wrap ${wi+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t}</span>`;
+    tl.appendChild(row);
+  });
 }
 
 function renderDone(){
@@ -2921,33 +2032,37 @@ function renderWeeklySummary(){
     const floorToQuarter = (mins)=> Math.max(0, Math.floor(mins/15)*15);
     const num = (v)=> Number.isFinite(+v) ? +v : 0;
 
-    let totalUnits  = 0;
-    let totalHours  = 0;
+    let totalUnits = 0;
+    let totalHours = 0;
+    let sumDayRates = 0;
     let overtimeMin = 0;
 
     weekDays.forEach(d=>{
       const units = num(d.totalUnits);
       const hours = num(d.shiftLen);
+      const rate  = num(d.dayRate);
 
       const workedMin    = num(d.workedMin) || num(d.elapsedMin) || Math.round(hours*60);
       const scheduledMin = num(d.scheduledMin) || Math.round((hours || 9)*60);
 
       totalUnits += units;
       if (hours > 0) totalHours += hours;
+      if (rate  > 0) sumDayRates += rate;
 
       const delta = workedMin - scheduledMin;
       if (delta > 0) overtimeMin += floorToQuarter(delta);
     });
 
-    const weighted   = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
-    const overtimeH  = (overtimeMin/60);
+    const weighted = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
+    const mean     = (weekDays.length>0) ? Math.round(sumDayRates / weekDays.length) : 0;
+    const overtimeH = (overtimeMin/60);
 
     const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
     const hintEl = document.getElementById('weekRangeHint');
     if(hintEl) hintEl.textContent = `Week: ${fmtShort(startDate)} – ${fmtShort(endDate)}`;
 
     setTxt('weekWeighted', weighted ? (weighted+' u/h') : '— u/h');
-    // simple mean removed: no write to #weekMean
+    setTxt('weekMean',     mean     ? (mean+' u/h')     : '— u/h');
     setTxt('weekUnits',    String(totalUnits));
     setTxt('weekHours',    (totalHours||0).toFixed(1));
     setTxt('weekDays',     String(weekDays.length));
@@ -3099,89 +2214,43 @@ function computeDowntimes(picksArr, shiftBreaksArr){
   return gaps;
 }
 function endShift(){
-  // Must not leave an active order open
-  if (current)       return alert('Complete or undo the current order before ending the shift.');
-  if (!picks.length) return alert('No completed orders to archive.');
+  if(current){ return alert('Complete or undo the current order before ending the shift.'); }
+  if(!picks.length){ return alert('No completed orders to archive.'); }
+  var dateStr=todayISO();
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var totalUnits=picks.reduce((a,b)=>a+b.units,0);
+  var downtimes = computeDowntimes(picks, shiftBreaks);
+  var snapshot={date:dateStr,start:startTime||'',end:lastClose||'',shiftLen,totalUnits,dayRate:shiftLen>0?Math.round(totalUnits/shiftLen):0,picks:picks.slice(0),shiftBreaks:shiftBreaks.slice(0),downtimes};
+  historyDays.push(snapshot); saveAll(); renderHistory();
+  renderWeeklySummary();
 
-  // ---- Archive snapshot into History ----
-  const dateStr    = todayISO();
-  const shiftLen   = parseFloat(document.getElementById('tLen').value || '9');
-  const totalUnits = picks.reduce((a,b)=> a + b.units, 0);
-  const downtimes  = computeDowntimes(picks, shiftBreaks);
-  const snapshot   = {
-    date: dateStr,
-    start: startTime || '',
-    end:   lastClose || '',
-    shiftLen,
-    totalUnits,
-    dayRate: shiftLen > 0 ? Math.round(totalUnits / shiftLen) : 0,
-    picks: picks.slice(0),
-    shiftBreaks: shiftBreaks.slice(0),
-    downtimes
-  };
-  historyDays.push(snapshot);
-
-  // Paint History now
-  saveAll();            // persist before UI flip
-  renderHistory?.();
-  renderWeeklySummary?.();
-
-  // >>> NEW: end-of-shift clears durable flag
-  window.shiftActive = false;
-  localStorage.removeItem('shiftActive');
-
-  // ---- Hard reset session / UI to pre-shift ----
-  predictiveStop?.();
-  picks = []; lastClose = '';
-  current = null; tempWraps = []; undoStack = []; shiftBreaks = [];
-  startTime = '';
-
-  const orderArea = document.getElementById('orderArea');        if (orderArea) orderArea.style.display = 'none';
-  ['btnB','btnL','btnUndo','btnDelay','btnCloseEarly'].forEach(id=>{
-    const el = document.getElementById(id); if (el) el.style.display = 'none';
-  });
-
-  const btnStart = document.getElementById('btnStart');          if (btnStart){ btnStart.style.display='inline-block'; btnStart.disabled = true; }
-  const btnComplete = document.getElementById('btnComplete');    if (btnComplete) btnComplete.style.display='none';
-
-  const oLeft  = document.getElementById('oLeft');               if (oLeft)  oLeft.value  = '';
-  const oTotal = document.getElementById('oTotal');              if (oTotal) oTotal.value = '';
-  const hdrForm = document.getElementById('orderHeaderForm');    if (hdrForm) hdrForm.style.display = '';
-  const hdrProg = document.getElementById('orderHeaderProgress');if (hdrProg) hdrProg.style.display = 'none';
-
-  const activeCard = document.getElementById('activeOrderCard'); if (activeCard) activeCard.style.display = 'none';
-  const doneCard   = document.getElementById('completedCard');   if (doneCard)   doneCard.style.display   = 'none';
-  const shiftCard  = document.getElementById('shiftCard');       if (shiftCard)  shiftCard.style.display  = 'block';
-
-  const chip = document.getElementById('chipElapsed');           if (chip) chip.style.display = 'none';
-
-  renderDone?.();
-  updateSummary?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
-
-  // Jump to History page now
-  showTab?.('history');
-  showToast?.('Shift archived to History');
-  saveAll?.();
+  // Reset session
+  predictiveStop(); // PREDICTIVE: ensure stopped
+  picks=[]; lastClose=''; current=null; tempWraps=[]; undoStack=[]; shiftBreaks=[];
+  document.getElementById('orderArea').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+  startTime='';
+  renderDone(); updateSummary(); showToast('Shift archived to History'); showTab('history'); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
 }
 
 function clearToday(){
   if (!confirm("Clear today's data and reset to pre-shift? This cannot be undone.")) return;
 
-  // Stop any running predictive ticker and pending grace-start timer
+  // Stop any live predictive timer safely
   try {
-    if (window.predictive && predictive.timer) {
+    if (window.predictive && predictive.timer){
       clearInterval(predictive.timer);
       predictive.timer = null;
     }
-    if (window._predictiveGraceTimer) {
-      clearTimeout(window._predictiveGraceTimer);
-      window._predictiveGraceTimer = null;
-    }
-  } catch(e){}
+  } catch(e){ /* no-op */ }
 
-  // Wipe in-memory state
+  // Wipe in-memory state for the current day
   startTime  = null;
   current    = null;
   tempWraps  = [];
@@ -3203,8 +2272,8 @@ function clearToday(){
   if (doneCard)  doneCard.style.display  = 'none';
 
   if (hdrProg)   hdrProg.style.display   = 'none';
-  if (hdrForm)   hdrForm.style.display   = '';
-  if (area)      area.style.display      = 'none';
+  if (hdrForm)   hdrForm.style.display   = '';     // show the start form
+  if (area)      area.style.display      = 'none'; // hide wraps/timeline
 
   // Reset form fields
   const left  = document.getElementById('oLeft');   if (left)  left.value  = '';
@@ -3226,27 +2295,18 @@ function clearToday(){
   if (chipVal) chipVal.textContent = '—';
 
   // Re-render shells
-  renderTimeline?.();
-  renderDone?.();
-  updateSummary?.();
-  updateDelayBtn?.();
-  updateEndShiftVisibility?.();
-  updateCloseEarlyVisibility?.();
+  renderTimeline();   // empty timeline
+  renderDone();       // empty completed table
+  updateSummary();    // zeros for totals/rate
+  updateDelayBtn();
+  updateEndShiftVisibility();
+  updateCloseEarlyVisibility();
 
-  // Cleanup: remove any pre-shift notes (both S1 banner + old progStartNote)
-  clearStartHint?.();
-  const psn = document.getElementById('progStartNote');
-  if (psn && psn.parentNode) psn.parentNode.removeChild(psn);
-  const cn = document.getElementById('contractNote');
-  if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
+  // Persist the cleared state (saveAll should write null/[] as needed)
+  if (typeof saveAll === 'function') saveAll();
 
-  // Persist + land back on Tracker
-  saveAll?.();
+  // Ensure we're on the Tracker tab with the pre-shift view
   if (typeof showTab === 'function') showTab('tracker');
-  saveAll?.();
-
-  // Keep action row grouping stable after reset
-  ensureActionRowLayout?.();
 }
 
 function clearHistory(){
@@ -3669,27 +2729,6 @@ function computeCbTotal(){
   return total;
 }
 
-function refreshWrapButton() {
-  const inp = document.getElementById('oLeft');
-  const btn = document.querySelector('#orderArea button[onclick="logWrap()"]');
-  if (!btn || !inp) return;
-
-  const val = inp.value.trim();
-  if (val === '0') {
-    btn.textContent = 'Close Order';
-    btn.classList.add('ok');
-  } else {
-    btn.textContent = 'Log Wrap';
-    btn.classList.remove('ok');
-  }
-}
-
-// 🔁 Make it react live
-document.addEventListener('DOMContentLoaded', () => {
-  const inp = document.getElementById('oLeft');
-  if (inp) inp.addEventListener('input', refreshWrapButton);
-});
-
 // ====== QuickCalc live result ======
 function recalcQuick(){
   const DEFAULT_RATE = 300;
@@ -3751,293 +2790,216 @@ function initWeekCardToggle(){
 
   card.dataset.bound = '1';
 }
-function ensureActionRowLayout(){
-  const delayBtn = document.getElementById('btnDelay');
-  if (!delayBtn || !delayBtn.parentElement) return;
 
-  const row = delayBtn.parentElement;
-
-  // Create groups once
-  let left = document.getElementById('actionsLeft');
-  let right = document.getElementById('actionsRight');
-  if (!left){
-    left = document.createElement('div');
-    left.id = 'actionsLeft';
-    row.insertBefore(left, row.firstChild);
-  }
-  if (!right){
-    right = document.createElement('div');
-    right.id = 'actionsRight';
-    row.appendChild(right);
-  }
-
-  // Lock row layout
-  row.style.display = 'flex';
-  row.style.alignItems = 'center';
-  row.style.justifyContent = 'space-between';
-  row.style.gap = '12px';
-
-  // Move buttons into groups (hidden states are fine)
-  const btnB   = document.getElementById('btnB');
-  const btnL   = document.getElementById('btnL');
-  const btnCE  = document.getElementById('btnCloseEarly');
-  const btnDel = document.getElementById('btnDelay');
-  const btnUn  = document.getElementById('btnUndo');
-
-  [btnB, btnL, btnCE].forEach(el => { if (el && el.parentNode !== left) left.appendChild(el); });
-  [btnDel, btnUn].forEach(el => { if (el && el.parentNode !== right) right.appendChild(el); });
-
-  left.style.display  = 'flex';
-  left.style.gap      = '10px';
-  right.style.display = 'flex';
-  right.style.gap     = '10px';
-}
 
 // ====== Boot ======
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function(){
   try {
-    // ── 1) Restore persisted state FIRST ────────────────────────────
     loadCustomCodes();
-    loadAll(); // hydrates: startTime, current, tempWraps, picks, historyDays, etc.
+    loadAll(); // loads startTime, picks, current, history, etc.
+    
+    // Hard-hide gated actions if there is no real active order
+    document.getElementById('btnDelay')?.style && (document.getElementById('btnDelay').style.display = 'none');
+    document.getElementById('btnCloseEarly')?.style && (document.getElementById('btnCloseEarly').style.display = 'none');
 
-    // FIX: include durable shift flag in detection
-    const durableShift =
-      (window.shiftActive === true) || (localStorage.getItem('shiftActive') === '1');
-
-    const hadShift = durableShift || !!startTime || (Array.isArray(picks) && picks.length > 0);
-    const hadOpen  = !!(current && Number.isFinite(current.total));
-
-    // ── 2) Build customer dropdowns (safe post-restore) ─────────────
+    // Build dropdowns
     buildDropdown('oDD','oCust','oOther','o');
     reloadDropdowns();
 
-    // ── 3) Wire modals & inputs ─────────────────────────────────────
+    // Elapsed chip modal + backdrop
     document.getElementById('chipElapsed')?.addEventListener('click', openElapsedModal);
     document.getElementById('elapsedModal')?.addEventListener('click', (e)=>{
-      if (e.target?.id === 'elapsedModal') closeElapsedModal();
+      if (e.target && e.target.id === 'elapsedModal') closeElapsedModal();
     });
+
+    // Input listeners
     document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
-    document.getElementById('oLeft') ?.addEventListener('input', refreshWrapButton);
+    document.getElementById('oLeft')?.addEventListener('input', refreshWrapButton);
+
+    // Close Live Update when clicking backdrop
     document.getElementById('liveUpdateModal')?.addEventListener('click', (e)=>{
-      if (e.target?.id === 'liveUpdateModal') closeLiveUpdateModal();
-    });
-    document.getElementById('chipRate')?.addEventListener('click', openLiveModal);
-    document.getElementById('liveModal')?.addEventListener('click', (e)=>{
-      if (e.target?.id === 'liveModal') closeLiveModal();
+      if (e.target && e.target.id === 'liveUpdateModal') closeLiveUpdateModal();
     });
 
-    // ── 4) Pro gate & static renders that don't mutate core state ───
     applyProGate();
-    renderShiftChooser();
 
-    // ── 5) Shift/Order shell visibility based on restored flags ─────
-    const shift  = document.getElementById('shiftCard');
-    const active = document.getElementById('activeOrderCard');
-    const done   = document.getElementById('completedCard');
-    const shiftChooser = document.getElementById('shiftChooser');   // <-- NEW
-
-    if (hadShift && window.archived !== true) {
-      // don't force 'active' here; Section 6 decides based on hadOpen
-      if (shift)        shift.style.display        = 'block';       // keep shell visible
-      if (shiftChooser) shiftChooser.style.display = 'none';        // <-- HIDE start buttons mid-shift
-      if (done)         done.style.display         = (picks.length ? 'block' : 'none');
-    } else {
-      // No shift yet → hide order-only controls by default
-      ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-      });
-    }
-
-    renderShiftChooser();
-
-    // ── 6) Decide header: progress vs new-order form ────────────────
-    if (hadOpen && window.archived !== true) {
-      restoreActiveOrderUI();
-      const ddToggle = document.querySelector('#oDD .dd-toggle');
-      if (ddToggle && current?.name) ddToggle.textContent = current.name;
-      const oTot = document.getElementById('oTotal');
-      if (oTot && Number.isFinite(current.total)) oTot.value = String(current.total);
-      const chip = document.getElementById('chipElapsed');
-      if (chip?.style) chip.style.display = '';
-      updateElapsedChip?.();
-      setElapsedChipClickable?.(true);
-
-      showTab('tracker');
-      showToast('Shift restored – continue where you left off');
-
-    } else if (hadShift && window.archived !== true) {
-      // Shift active but no open order → new-order form visible
-      const hdrForm = document.getElementById('orderHeaderForm');
-      const hdrProg = document.getElementById('orderHeaderProgress');
-      const area    = document.getElementById('orderArea');
-      if (hdrForm) hdrForm.style.display = 'block';
-      if (hdrProg) hdrProg.style.display = 'none';
-      if (area)    area.style.display    = 'none';
-      const chip = document.getElementById('chipElapsed');
-      if (chip?.style) chip.style.display = 'none';
-      const v = document.getElementById('chipElapsedVal'); if (v) v.textContent = '—';
-      setElapsedChipClickable?.(false);
-
-      if (shiftChooser) shiftChooser.style.display = 'none';        // <-- keep hidden
-      showTab('tracker');
-
-    } else {
-      // No shift at all → default to Calc (original behavior)
-      const hdrForm = document.getElementById('orderHeaderForm');
-      const hdrProg = document.getElementById('orderHeaderProgress');
-      const area    = document.getElementById('orderArea');
-      if (hdrForm) hdrForm.style.display = 'block';
-      if (hdrProg) hdrProg.style.display = 'none';
-      if (area)    area.style.display    = 'none';
-      const chip = document.getElementById('chipElapsed');
-      if (chip?.style) chip.style.display = 'none';
-      const v = document.getElementById('chipElapsedVal'); if (v) v.textContent = '—';
-      setElapsedChipClickable?.(false);
-    }
-
-    // ── 7) Heavy renders AFTER state/UI decision (prevents flips) ───
+    // History UI
     renderHistory();
-    renderWeeklySummary();
-    initWeekCardToggle();
+    renderWeeklySummary();       // compute week stats once on boot
+    initWeekCardToggle();        // <-- initialize collapsible "This Week" card (no nested DOMContentLoaded)
     renderDone();
     renderULayerChips();
 
-    // ── 8) Start button validation (order of entry agnostic) ────────
-    ['oTotal','oOther'].forEach(id=>{
-      const el = document.getElementById(id);
-      if (!el) return;
-      ['input','change','keyup','blur'].forEach(ev=> el.addEventListener(ev, refreshStartButton));
+    // Live Rate chip → modal
+    document.getElementById('chipRate')?.addEventListener('click', openLiveModal);
+
+    // Live modal backdrop
+    document.getElementById('liveModal')?.addEventListener('click', (e)=>{
+      if (e.target && e.target.id === 'liveModal') closeLiveModal();
     });
-    document.getElementById('oCust')?.addEventListener('change', refreshStartButton);
-    document.querySelector('#oDD .dd-menu')  ?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
-    document.querySelector('#oDD .dd-toggle')?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
-    refreshStartButton();
 
-    // ── 9) Live summary + timer loop ────────────────────────────────
-    setInterval(function(){
-      const trackerVisible = !document.getElementById('tabTracker')?.classList?.contains('hidden');
-      if (!trackerVisible) return;
+    // ===== AUTO-RESUME CHECK =====
+    if (startTime && (!window.archived || window.archived === false)) {
+      // Hide shift setup, show main tracker
+      document.getElementById('shiftCard').style.display = 'none';
+      document.getElementById('completedCard').style.display = 'block';
+      renderDone();
       updateSummary();
-      if (breakDraft){
-        tickBreak();
-        setElapsedChipClickable?.(false);
-      } else if (current){
-        updateElapsedChip?.();
-        setElapsedChipClickable?.(true);
-      } else {
-        setElapsedChipClickable?.(false);
-      }
-    }, 600);
+      updateDelayBtn();
+      updateEndShiftVisibility();
+      updateCloseEarlyVisibility();
 
-    // ── 10) QuickCalc wiring ────────────────────────────────────────
-    const qcRateEl  = document.getElementById('qcRate');
-    const qcUnitsEl = document.getElementById('qcUnits');
-    if (qcRateEl){
+      const activeCard = document.getElementById('activeOrderCard');
+      const orderArea  = document.getElementById('orderArea');
+
+      // --- Case A: Order in progress ---
+      if (current) {
+        if (activeCard) activeCard.style.display = 'block';
+        if (orderArea)  orderArea.style.display  = 'block';
+
+        // Restore form values (for visibility only)
+        document.getElementById('oCust').value  = current.name || '';
+        document.getElementById('oTotal').value = current.total || '';
+        document.getElementById('snapHint').textContent = 'Order resumed @ ' + (current.start || '—');
+
+        // Sync dropdown label & persist if new
+        {
+          const ddToggle = document.querySelector('#oDD .dd-toggle');
+          if (ddToggle && current?.name) ddToggle.textContent = current.name;
+
+          if (current?.name && !DEFAULT_CODES.includes(current.name) && !customCodes.includes(current.name)) {
+            customCodes.push(current.name);
+            saveCustomCodes();
+            reloadDropdowns();
+          }
+        }
+
+        // Restore buttons
+        ['btnB','btnL','btnUndo'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'inline-block';
+        });
+        document.getElementById('btnStart').style.display    = 'none';
+        document.getElementById('btnComplete').style.display = 'inline-block';
+        document.getElementById('btnComplete').disabled      = false;
+
+        renderTimeline();
+      }
+      // --- Case B: Shift active, no current order ---
+      else {
+        if (activeCard) activeCard.style.display = 'block';
+        if (orderArea)  orderArea.style.display  = 'none';
+        ['btnB','btnL','btnUndo'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
+        document.getElementById('btnStart').style.display    = 'inline-block';
+        document.getElementById('btnStart').disabled         = true;
+        document.getElementById('btnComplete').style.display = 'none';
+        reloadDropdowns();
+        document.getElementById('oCust').value  = '';
+        document.getElementById('oTotal').value = '';
+      }
+
+      // --- Resume chip correctly ---
+      const chipBox = document.getElementById('chipElapsed');
+      const chipVal = document.getElementById('chipElapsedVal');
+
+      if (breakDraft) {
+        if (chipBox) chipBox.style.display = '';
+        tickBreak(); // show "Back in" + countdown
+        setElapsedChipClickable(false); // disabled on break
+      }
+      else if (current && current.start) {
+        if (chipBox) chipBox.style.display = '';
+        updateElapsedChip(); // show elapsed for order
+        setElapsedChipClickable(true); // clickable during active order
+      }
+      else {
+        if (chipBox) chipBox.style.display = 'none';
+        if (chipVal) chipVal.textContent   = '—';
+        setElapsedChipClickable(false); // no order
+      }
+
+      showTab('tracker');
+      showToast('Shift restored – continue where you left off');
+    }
+
+    // Refresh summary/UI
+    updateSummary();
+    updateDelayBtn();
+    updateEndShiftVisibility();
+    updateCloseEarlyVisibility();
+    updateElapsedChip();
+
+    // Initial clickability if no auto-resume path triggered above
+    if (!startTime || (window.archived === true)) {
+      setElapsedChipClickable(!!current && !breakDraft);
+    }
+
+    // === QuickCalc wiring ===
+    var qcRateEl = document.getElementById('qcRate');
+    if(qcRateEl){
       qcRateEl.addEventListener('input', ()=>{ updCalcGate(); recalcQuick(); });
       qcRateEl.addEventListener('change', ()=>{ updCalcGate(); recalcQuick(); });
     }
-    if (qcUnitsEl){
-      qcUnitsEl.addEventListener('input',  recalcQuick);
+    var qcUnitsEl = document.getElementById('qcUnits');
+    if(qcUnitsEl){
+      qcUnitsEl.addEventListener('input', recalcQuick);
       qcUnitsEl.addEventListener('change', recalcQuick);
     }
 
+    // Start button validation (robust regardless of entry order)
+    ['oTotal','oOther'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      ['input','change','keyup','blur'].forEach(ev =>
+        el.addEventListener(ev, refreshStartButton)
+      );
+    });
+
+    // also listen to the hidden native select (safety if it's ever shown/changed)
+    document.getElementById('oCust')?.addEventListener('change', refreshStartButton);
+
+    // and to the custom dropdown UI (value is applied on click; defer to let it set)
+    document.querySelector('#oDD .dd-menu')?.addEventListener('click', () => setTimeout(refreshStartButton, 0));
+    document.querySelector('#oDD .dd-toggle')?.addEventListener('click', () => setTimeout(refreshStartButton, 0));
+
+    // evaluate once on load in case fields are prefilled
+    refreshStartButton();
+
+    // Live summary + timer loop (also enforce chip clickability state)
+    setInterval(function(){
+      if(!document.getElementById('tabTracker').classList.contains('hidden')){
+        updateSummary();
+        if (breakDraft) {
+          tickBreak();
+          setElapsedChipClickable(false);
+        } else if (current) {
+          updateElapsedChip();
+          setElapsedChipClickable(true);
+        } else {
+          setElapsedChipClickable(false);
+        }
+      }
+    }, 600);
+
     // Countback & keyboard input
     cbSetFocus('layers'); updateCbDisplays(); computeCbTotal();
-    document.addEventListener('keydown', (e)=>{
-      const tag = (e.target?.tagName || '').toUpperCase();
+    document.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
       if (/^[0-9]$/.test(e.key)) { cbTap(e.key); e.preventDefault(); }
       else if (e.key === 'Backspace') { cbBack(); e.preventDefault(); }
       else if (e.key === ' ' || e.key === 'Enter') { cbNextField(); e.preventDefault(); }
     });
 
-    // Initial compute for QuickCalc
     recalcQuick();
-
-    // Final pass refresh (stable snapshot)
-    updateSummary();
-    updateDelayBtn();
-    updateEndShiftVisibility();
-    updateCloseEarlyVisibility();
-    updateElapsedChip();
-    saveAll?.();
-  } catch (err) {
+  } catch (err){
     console.error(err);
     showToast('Error on load: ' + (err.message || err));
   }
 });
-
-function openWrapModal(){
-  if (!current) return;
-  const m   = document.getElementById('wrapModal');
-  const inp = document.getElementById('wrapLeftInput');
-
-  const total    = current.total || 0;
-  const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
-
-  if (inp) {
-    inp.value = '';
-    inp.placeholder = String(lastLeft);
-    // ensure only one listener (avoid dupes)
-    inp.removeEventListener('input', refreshWrapModalBtn);
-    inp.addEventListener('input', refreshWrapModalBtn);
-  }
-  if (m) m.style.display = 'flex';
-  setTimeout(()=>inp?.focus(), 10);
-  refreshWrapModalBtn(); // set initial label
-}
-
-function refreshWrapModalBtn(){
-  const inp  = document.getElementById('wrapLeftInput');
-  const btn  = document.querySelector('#wrapModal .actions .btn.ok');
-  const hint = document.getElementById('wrapHint');
-  if (!inp || !btn) return;
-
-  const isZero = (inp.value || '').trim() === '0';
-  btn.textContent = isZero ? 'Complete' : 'Save Wrap';
-  if (hint) hint.textContent = isZero ? 'Ready to complete this order.' : 'Type 0 to enable Complete.';
-}
-
-function closeWrapModal(){
-  const m   = document.getElementById('wrapModal');
-  const inp = document.getElementById('wrapLeftInput');
-  if (m) m.style.display = 'none';
-  inp?.removeEventListener('input', refreshWrapModalBtn);
-}
-
-function submitWrapLeft(){
-  const inp = document.getElementById('wrapLeftInput');
-  const v   = Math.max(0, toInt(inp?.value));
-  const oLeft = document.getElementById('oLeft');
-  if (oLeft) oLeft.value = String(v);
-
-  closeWrapModal();
-
-  refreshWrapButton?.();
-  logWrap?.();
-  updateHeaderActions?.();
-  showToast?.('Wrap logged');
-}
-function updateHeaderActions(){
-  const inOrder = hasActiveOrder?.() || !!(current && Number.isFinite(current?.total));
-  const wrapBtn = document.getElementById('btnWrapTop');
-  if (wrapBtn) wrapBtn.disabled = !inOrder;
-}
-
 </script>
-<!-- Contracted Start Picker -->
-<div id="contractModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center; z-index:9999;">
-  <div style="background:#141821; border:1px solid #243244; border-radius:14px; padding:16px; width:min(520px,92%);">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-      <h3 style="margin:0;">What time are you contracted to start?</h3>
-      <button class="btn" type="button" onclick="closeContractModal()">✕</button>
-    </div>
-    <div id="contractHourList" class="row" style="flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
-    <div class="hint" style="margin-top:10px;">
-      We’ll log this as your contracted time, and also log the actual start (now). Live Rate uses the actual start.
-    </div>
-  </div>
-</div>
 </body>
 </html>
