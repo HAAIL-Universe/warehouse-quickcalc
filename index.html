@@ -1,0 +1,4151 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warehouse QuickCalc & Tracker v4 (Patched)</title>
+<style>
+:root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; background:#0b0d10; color:var(--ink); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
+h1 { font-size: 20px; margin:6px 0 10px; }
+.tabs { display:flex; gap:8px; margin:6px 0 10px; position: sticky; top:0; background:var(--bg); padding-top:6px; z-index:15; }
+.tabbtn { flex:1; text-align:center; padding:10px; border:1px solid #253348; border-radius:10px; background:#0f131b; color:var(--ink); font-weight:700; cursor:pointer; }
+.tabbtn.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.hidden { display:none; }
+.card { background:var(--card); border:1px solid #253348; border-radius:14px; padding:14px; margin: 10px 0; }
+/* Make the Live Rate chip clearly clickable */
+#chipRate { cursor: pointer; transition: transform .08s ease; }
+#chipRate:active { transform: scale(0.97); }
+/* QC keypad tactile press + pointer */
+.cbPad button { cursor: pointer; transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease; }
+.cbPad button:active { transform: scale(0.97); }
+.cbPad button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Elapsed chip disabled when on break */
+#chipElapsed.disabled{ pointer-events:none; opacity:0.6; filter:saturate(0.7); }
+
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+input, select, button, textarea { font-size:16px; }
+input[type="number"], input[type="time"], input[type="text"], select, textarea {
+  width:100%; background:#0f131b; color:var(--ink); border:1px solid #29364a; border-radius:10px; padding:10px; outline:none;
+}
+textarea{ min-height:90px; resize:vertical; }
+.row { display:flex; gap:10px; flex-wrap: wrap; }
+.col { flex:1; min-width:220px; }
+.btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; cursor:pointer; }
+.btn.ghost { background:transparent; border-color:#29364a; }
+.btn.ok { border-color:#2e6b3a; background:#173220; }
+.btn.warn { border-color:#8a6a15; background:#30250f; }
+.btn.bad { border-color:#7a2b2b; background:#331b1b; }
+.btn.chip { padding:8px 10px; border-radius:999px; }
+.btn.slim { padding:6px 10px; border-radius:999px; font-size:14px; }
+.btn[disabled] { opacity:0.5; cursor:not-allowed; }
+.pill { border-radius:12px; padding:10px 12px; background:#0f131b; border:1px solid #29364a; text-align:center; }
+.pill h3 { margin:0; font-size:13px; color:#9fb3c8; }
+.pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
+.rateBanner { position: sticky; top:48px; z-index:10; display:flex; gap:10px; margin:8px 0; }
+.rateChip { flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid #29364a; background:#0f131b; }
+.rateChip.good { border-color:#1f4830; background:#14271c; }
+.rateChip.warn { border-color:#584a1a; background:#2a230f; }
+.rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
+.rateChip.green { border-color:#1f4830; background:#14271c; }
+.rateChip.amber { border-color:#584a1a; background:#2a230f; }
+.timeline { margin-top:8px; border-left:0; padding-left:0; }
+.tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
+.tick .meta { color:#9fb3c8; font-size:12px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { border-bottom:1px dashed #253348; padding:8px 6px; text-align:left; }
+th { color:#9fb3c8; }
+tr.clickable { cursor:pointer; }
+td.small { font-size:12px; color:#9fb3c8; }
+.bottom-actions { margin: 20px 0 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bottom-actions .left { flex:1 1 auto; min-width:220px; }
+.bottom-actions .right { flex:0 0 auto; white-space:nowrap; display:flex; gap:8px; }
+.safetybar { margin: 8px 0 40px; }
+.safetybar .btn { width:100%; border-style:dashed; opacity:0.8; }
+.hint { color:#9fb3c8; font-size:12px; }
+.tagbox { display:flex; flex-wrap:wrap; gap:8px; }
+.tag { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid #29364a; background:#0f131b; font-weight:700; }
+.tag button { border:0; background:transparent; color:#9fb3c8; cursor:pointer; font-size:14px; }
+.accordion .accHead { width:100%; text-align:left; padding:10px; border:1px solid #29364a; background:#0f131b; border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.accordion .accHead.ok { border-color:#1f4830; background:#14271c; }
+.accordion .accHead.warn { border-color:#584a1a; background:#2a230f; }
+.accordion .accHead.bad { border-color:#4f1f1f; background:#2a1313; }
+.accordion .accBody { display:none; padding:10px 0 0 0; }
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0f131b; border:1px solid #29364a; padding:10px 12px; border-radius:10px; display:none; z-index:30; }
+.toast.show { display:block; }
+.logwrap { padding:8px 10px; background:#0f131b; border:1px solid #29364a; border-radius:10px; margin:8px 0; }
+.logrow { display:none; }
+.logrow td { border-bottom:none; padding-top:0; }
+.gate-pro { display:none; }
+/* Utility: hide/show */
+.hidden { display: none !important; }
+/* Modal */
+.modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:20; }
+.modal .box { width:min(560px,92vw); background:#0f131b; border:1px solid #29364a; border-radius:12px; padding:14px; }
+.modal .hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.modal .hdr h3 { margin:0; font-size:16px; color:#cfe2ff; }
+.modal .fld { margin:8px 0; }
+.modal .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+.count { font-variant-numeric: tabular-nums; font-weight:800; font-size:28px; }
+
+/* Custom dropdown */
+.dd { position:relative; }
+.dd-toggle { width:100%; text-align:left; padding:10px; border:1px solid #29364a; border-radius:10px; background:#0f131b; color:var(--ink); cursor:pointer; }
+.dd.open .dd-menu { display:block; }
+.dd-menu { position:absolute; z-index:12; left:0; right:0; top:110%; background:#0f131b; border:1px solid #29364a; border-radius:10px; padding:6px; display:none; max-height:280px; overflow:auto; }
+.dd-group { border:1px solid #29364a; border-radius:8px; margin:6px 0; overflow:hidden; }
+.dd-group h4 { margin:0; padding:8px 10px; background:#0b0d10; color:#cfe2ff; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
+.dd-items { display:none; padding:4px 6px; }
+.dd-items button { width:100%; text-align:left; padding:8px 10px; background:transparent; border:0; color:var(--ink); cursor:pointer; border-radius:6px; }
+.dd-items button:hover { background:#11151d; }
+.dd-other { margin:6px 0 0; display:flex; gap:6px; }
+.dd-other button { flex:1; }
+.dd-other input { flex:1; }
+
+/* Countback calc */
+.cbCard { margin-top:8px; padding:10px; border-radius:12px; border:1px dashed #29364a; background:#0f131b; }
+.cbRow { display:flex; gap:8px; align-items:center; }
+.cbDisplay { flex:1; display:flex; gap:8px; }
+.cbBox { flex:1; border:1px solid #29364a; border-radius:10px; padding:8px; }
+.cbBox h4 { margin:0 0 6px; font-size:12px; color:#9fb3c8; }
+.cbVal { font-weight:800; font-size:22px; min-height:28px; }
+.cbPad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; }
+.cbPad button { padding:28px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:500; font-size:22px; }
+.cbChips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.cbSummary { margin-left:auto; text-align:right; font-weight:800; }
+
+/* === Break Bar (bottom sticky) === */
+.breakbar{
+  position:sticky;
+  bottom:0;
+  z-index:25;
+  background:#0f131b;
+  border:1px solid #29364a;
+  border-radius:12px;
+  padding:10px;
+  display:none;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+}
+.breakbar .grow{ flex:1; }
+.breakbar .title{ font-weight:800; }
+.breakbar .meta{ color:#9fb3c8; font-size:12px; }
+/* Weekly summary card tinting */
+.card.ok  { border-color:#1f4830; background:#14271c; }
+.card.warn{ border-color:#584a1a; background:#2a230f; }
+.card.bad { border-color:#4f1f1f; background:#2a1313; }
+/* Progress header (replaces form once order starts) */
+.progHead { display:none; gap:10px; align-items:center; }
+.progMeta { flex: 1 1 auto; }
+.progTitle { font-weight:800; font-size:16px; }
+.progSub { color: var(--muted); font-size:12px; margin-top:2px; }
+.progBar {
+  position: relative; height: 12px; background:#0f131b; border:1px solid #29364a;
+  border-radius:999px; overflow:hidden; margin-top:8px;
+}
+/* Progress bar fill — with smooth dark gradient base */
+.progFill {
+  position:absolute; left:0; top:0; bottom:0; width:0%;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--line);
+  transition: background-color .25s ease, width .35s ease;
+  border-radius: 3px;
+}
+/* Completely hide the 'Left: XX' text + label but preserve for JS logic */
+#progLeft,
+#progLeftLabel,
+#orderHeaderProgress span:has(#progLeft) {
+  display: none !important;
+  visibility: hidden;
+}
+
+/* Pace tints overlayed on the gradient */
+.progFill.pace-ok {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--ok);
+}
+.progFill.pace-warn {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--warn);
+}
+.progFill.pace-bad {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%),
+    var(--bad);
+}
+
+.progPct { margin-left:10px; font-weight:700; min-width:56px; text-align:right; }
+.progHead{ align-items:flex-end; }
+.progPct{ margin: 0 0 2px 10px; } /* nudge down slightly */
+.progFill.green { background: linear-gradient(90deg,#1f4830,#2e6b3a); }
+.progFill.amber { background: linear-gradient(90deg,#584a1a,#8a6a15); }
+.progFill.bad   { background: linear-gradient(90deg,#4f1f1f,#7a2b2b); }
+.progTitle .progBullet { opacity:.55; margin:0 6px; }
+/* --- Tracker header tweaks --- */
+#orderHeaderProgress {
+  position: relative; /* anchor for absolute children */
+}
+/* --- Live modal layout --- */
+#liveModal .footer-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* left | button | right */
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.readonly-time {
+  background: #1a1e27;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--ink);
+  font-family: monospace;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  text-align: left;
+  user-select: none;
+}
+
+#liveModal .live-key {
+  grid-column: 1 / 4;        /* span full width */
+  text-align: center;
+  opacity: .85;
+}
+
+#liveModal .footer-grid .btn {
+  grid-column: 2;            /* keep centered */
+  justify-self: center;
+}
+#liveModal #live_formula {
+  grid-column: 1;            /* bottom-left under the button */
+  justify-self: start;
+  opacity: .85;
+  font-size: 0.95rem;
+}
+/* Percentage badge inline with the progress bar */
+#orderHeaderProgress .pct-badge {
+  position: relative;
+  display: inline-block;
+  transform: translateY(6px); /* drop ~6px so it lines up with the bar */
+}
+/* ─────────────────────────────
+   Compact, Full-Width Weekly Pills (SCOPED)
+   ───────────────────────────── */
+#weekCard { padding: 10px 12px; border-radius: 12px; }
+#weekCard .week-row { display:flex; gap:8px; flex-wrap:nowrap; justify-content:space-between; width:100%; }
+#weekCard .pill { flex:1 1 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); min-width: 0; }
+#weekCard .pill h3 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 3px; white-space: nowrap; }
+#weekCard .pill p  { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0; }
+/* Collapsible week card (single source of truth) */
+#weekHeader { display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; padding-right:6px; }
+#weekHeader:focus { outline: none; }
+#weekHeader:focus-visible { outline: none; }
+#weekCard .chev { font-weight:700; transition: transform .18s ease-in-out, opacity .18s ease-in-out; opacity:.8; }
+#weekCard.collapsed .chev { transform: rotate(-90deg); opacity:.6; }
+#weekCard.collapsed #weekContent { display:none; }
+/* === Progress Bar Tint (Red–Amber–Green Plan) === */
+#orderHeaderProgress .bar .fill {
+  background: var(--line); /* neutral base before rate applied */
+  transition: background-color .25s ease, width .35s ease;
+}
+
+/* Progress Bar Tint (scoped correctly) */
+#orderHeaderProgress .progBar .progFill { background: var(--line); transition: background-color .25s ease, width .35s ease; }
+#orderHeaderProgress .progBar .progFill.pace-ok   { background: var(--ok); }
+#orderHeaderProgress .progBar .progFill.pace-warn { background: var(--warn); }
+#orderHeaderProgress .progBar .progFill.pace-bad  { background: var(--bad); }
+
+/* place Complete in the top-right of the header */
+.progHead .progActions{
+  position:absolute;
+  top:4px;
+  right:10px;
+}
+/* nudge the % label down so it lines up with the bar */
+.progHead #progPct{
+  position:relative;
+  top:6px;              /* adjust 4–10px to taste */
+}
+/* Smooth fade for order header swap */
+.fade { opacity: 0; transition: opacity 0.25s ease-in-out; }
+.fade.show { opacity: 1; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><b>Warehouse QuickCalc & Tracker v4</b></h1>
+
+  <div class="tabs">
+    <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
+    <button id="tabTrackBtn" class="tabbtn" type="button" onclick="showTab('tracker')">Tracker</button>
+    <button id="tabHistBtn" class="tabbtn" type="button" onclick="showTab('history')">History</button>
+  </div>
+
+  <div id="liveBanner" class="rateBanner hidden">
+    <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
+    <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
+    <div id="chipElapsed" class="rateChip" style="display:none;"><b>Back in</b><div id="chipElapsedVal">—</div></div>
+  </div>
+
+  <!-- QuickCalc -->
+  <section id="tabCalc">
+    <!-- Countback calculator (moved ABOVE QuickCalc) -->
+    <div class="cbCard">
+      <div class="cbRow" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="cbDisplay">
+          <div class="cbBox">
+            <h4>Layers</h4>
+            <div id="cbLayers" class="cbVal">0</div>
+          </div>
+          <div class="cbBox">
+            <h4>U/Layer</h4>
+            <div id="cbUL" class="cbVal">0</div>
+            <div id="cbChips" class="cbChips"></div>
+          </div>
+          <div class="cbBox">
+            <h4>Extras</h4>
+            <div id="cbExtras" class="cbVal">0</div>
+          </div>
+          <div class="cbSummary">
+            <div class="hint">Total</div>
+            <div id="cbTotal" class="count">0</div>
+            <div id="cbHint" class="hint" style="margin-top:4px;text-align:right;">Typing Layers…</div>
+          </div>
+        </div>
+        <div style="flex:1; min-width:240px; display:flex; gap:8px;">
+          <div style="flex:1;">
+            <div class="cbPad" style="flex:1;">
+              <button onclick="cbTap('7')">7</button>
+              <button onclick="cbTap('8')">8</button>
+              <button onclick="cbTap('9')">9</button>
+              <button onclick="cbTap('4')">4</button>
+              <button onclick="cbTap('5')">5</button>
+              <button onclick="cbTap('6')">6</button>
+              <button onclick="cbTap('1')">1</button>
+              <button onclick="cbTap('2')">2</button>
+              <button onclick="cbTap('3')">3</button>
+              <button onclick="cbTap('0')">0</button>
+              <button onclick="cbBack()">⌫</button>
+              <button onclick="cbReset()">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- QuickCalc inputs -->
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Units</label>
+          <input id="qcUnits" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 820">
+        </div>
+        <div class="col">
+          <label>Override Rate (u/h)</label>
+          <input id="qcRate" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="optional">
+        </div>
+      </div>
+      <!-- Live result -->
+      <div class="row" style="margin-top:10px;">
+        <div class="col">
+          <div class="pill">
+            <h3>Rate Used</h3>
+            <p id="qcRateUsed">300 u/h</p>
+          </div>
+        </div>
+        <div class="col">
+          <div class="pill">
+            <h3>Time Needed</h3>
+            <p id="qcTime">—</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tracker -->
+  <section id="tabTracker" class="hidden">
+    <div class="card" id="shiftCard">
+      <div class="row" style="align-items:flex-end;">
+        <div class="col">
+          <div class="row" style="gap:8px; justify-content:center;">
+            <button class="btn ok" type="button" style="min-width:140px;" onclick="startShift(9)">Start 9h Shift</button>
+            <button class="btn" type="button" style="min-width:140px;" onclick="startShift(10)">Start 10h Shift</button>
+          </div>
+          <div id="snapHint" class="hint"></div>
+        </div>
+
+        <!-- keep tLen as a hidden field so the rest of the code works unchanged -->
+        <input id="tLen" type="number" value="9" style="display:none;">
+      </div>
+
+      <div class="hint">Start time is snapped to the nearest hour automatically.  
+      Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (includes breaks &amp; delays).</div>
+    </div>
+
+    <div class="card" id="activeOrderCard" style="display:none;">
+      <!-- ✨ Header form (shown before Start) -->
+      <div id="orderHeaderForm" class="fade show">
+        <div class="row" style="align-items:flex-end;">
+          <div class="col">
+            <label>Customer</label>
+            <div class="row" style="gap:6px;">
+              <div class="col">
+                <select id="oCust" class="hidden"></select>
+                <div id="oDD" class="dd">
+                  <button class="dd-toggle" type="button">Select customer…</button>
+                  <div class="dd-menu"></div>
+                </div>
+              </div>
+              <div class="col">
+                <input id="oOther" type="text" class="hidden" maxlength="6" placeholder="ABCDEF" pattern="[A-Za-z]{6}">
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <label>Total units</label>
+            <input id="oTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 1024">
+          </div>
+          <div class="col" style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+            <button class="btn" type="button" id="btnSharedStart" onclick="openSharedStart()" disabled>Shared Pick</button>
+            <button class="btn" type="button" onclick="startOrder()" id="btnStart" disabled>Start</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Header shown AFTER an order starts -->
+      <div id="orderHeaderProgress" class="progHead" style="display:none; position:relative;">
+        <!-- Top-right actions -->
+        <div class="progActions">
+          <button id="btnWrapTop" class="btn slim" type="button" onclick="openWrapModal()" disabled>Log Wrap</button>
+        </div>
+        <div class="progMeta">
+          <div class="progTitle">
+            <span id="progCust">—</span>
+            <span class="progBullet">•</span>
+            <span><strong>Qty:</strong> <span id="progQty">0</span></span>
+          </div>
+          
+          <div class="progSub">
+            <span><strong>Pallets:</strong> <span id="progPallets">0</span></span>
+            <span><strong>Left:</strong> <span id="progLeft">0</span></span>
+            <span class="progBullet">•</span>
+            <span><strong>Rate:</strong> <span id="progRate">—</span></span>
+            <span class="progBullet">•</span>
+            <span><strong>ETA:</strong> <span id="progETA">—</span></span>
+          </div>
+
+          <div class="progBar"><div id="progFill" class="progFill"></div></div>
+        </div>
+
+        <div id="progPct" class="progPct">0%</div>
+      </div>
+      <!-- Active Order Area -->
+      <div id="orderArea" style="display:none; margin-top:10px;">
+        <!-- Compact: keep only a hidden oLeft for internal use -->
+        <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" style="display:none;">
+        <!-- Controls row (unchanged right-side controls container) -->
+        <div class="row" style="align-items:flex-end;">
+          <div class="col" id="orderControls"
+              style="flex:0 0 auto; display:flex; align-items:flex-end; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+          </div>
+        </div>
+        <div class="timeline" id="orderTimeline"></div>
+      </div>
+    </div>
+
+    <div class="card" id="completedCard" style="display:none;">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>
+        <tbody id="doneBody"></tbody>
+      </table>
+    </div>
+    <!-- Shared Pick Modal -->
+    <div id="sharedModal" class="modal" style="display:none;">
+      <div class="modal-content" style="max-width:420px;">
+        <h3>Shared Order</h3>
+        <p id="sharedHeader"></p>
+
+        <div style="margin-top:12px;">
+          <label>Units at this location</label>
+          <input id="sharedUnits" type="number" min="1" style="width:100%;font-size:1.2em;text-align:center;">
+        </div>
+
+        <div class="row" style="margin-top:10px;justify-content:space-between;">
+          <button class="btn" type="button" onclick="sharedAddUnits()">Submit</button>
+          <button class="btn" type="button" onclick="sharedLogWrap()">Log Wrap</button>
+          <button class="btn danger" type="button" onclick="closeSharedPickModal()">Finish</button>
+        </div>
+
+        <div id="sharedSummary" style="margin-top:10px;font-size:0.9em;color:#aaa;"></div>
+      </div>
+    </div>
+    <div class="bottom-actions">
+      <div class="left">
+        <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log / Delay</button>
+        <button id="btnUndo" class="btn" type="button" onclick="undoLast()" style="display:none;">Undo</button>
+      </div>
+      <div class="right">
+        <button id="btnB" class="btn" type="button" title="Start 20 min break" onclick="openBreakModal('B')" style="display:none;">B</button>
+        <button id="btnL" class="btn" type="button" title="Start 30 min lunch" onclick="openBreakModal('L')" style="display:none;">L</button>
+        <button class="btn" type="button" id="btnCloseEarly" onclick="openCloseEarlyModal()" style="display:none;">Close Early…</button>
+        <button class="btn ok" type="button" id="btnEndShift" onclick="endShift()" style="min-width:220px;">End Shift &amp; Archive →</button>
+      </div>
+    </div>
+    <div class="safetybar">
+      <button class="btn ghost" type="button" onclick="clearToday()">Clear today's data</button>
+    </div>
+  </section>
+    <!-- Shared Pick Bottom Dock (only visible in shared mode) -->
+  <div id="sharedDock" style="
+    position:sticky; bottom:0; left:0; right:0; z-index:30;
+    background: rgba(20,22,28,0.95); border-top:1px solid #2b2f3a;
+    padding:12px; display:none; backdrop-filter:saturate(120%) blur(4px);
+  ">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <button class="btn" type="button" id="sharedCancelBtn" onclick="sharedCancel()">Cancel</button>
+
+      <div style="display:flex; align-items:center; gap:8px;">
+        <label style="font-size:12px; opacity:.8;">Units</label>
+        <input id="sharedUnitsDock" type="number" min="1" style="width:110px; text-align:center; font-size:1.1em;">
+      </div>
+      <button class="btn" type="button" id="sharedSubmitBtn" onclick="sharedSubmitUnits()">Submit</button>
+      <button class="btn ghost" type="button" title="Hide bar" onclick="hideSharedDock()">✖</button>
+      <div id="sharedDockInfo" style="margin-left:auto; font-size:.9em; opacity:.85;">
+        <!-- live summary -->
+      </div>
+    </div>
+  </div>
+  <!-- Bottom Break Bar -->
+  <div id="breakBar" class="breakbar">
+    <div class="grow">
+      <div class="title" id="breakBarTitle">Break</div>
+      <div class="meta">
+        Started <span id="breakBarStart">--:--</span> • <span id="breakBarTarget">20 min target</span>
+      </div>
+    </div>
+    <div class="count" id="breakBarCountdown">20 min</div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" type="button" onclick="submitBreak()">Stop & Log</button>
+      <button class="btn ghost" type="button" onclick="cancelBreak()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- History -->
+  <section id="tabHistory" class="hidden">
+    <div class="card" id="weekCard">
+      <div id="weekHeader" class="row-between" role="button" tabindex="0" aria-expanded="false" aria-controls="weekContent">
+        <div class="card-h">This Week (Sun–Sat)</div>
+        <div id="weekChevron" class="chev">▼</div>
+      </div>
+      <div id="weekContent">
+        <div class="sub" id="weekRangeHint">Week: …</div>
+
+        <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+          <div class="week-row">
+            <div class="pill"><h3>Weighted Avg</h3><p id="weekWeighted">— u/h</p></div>
+            <div class="pill"><h3>Total Units</h3><p id="weekUnits">0</p></div>
+            <div class="pill"><h3>Days Counted</h3><p id="weekDays">0</p></div>
+          </div>
+          <div class="week-row">
+            <div class="pill"><h3>Total Hours</h3><p id="weekHours">0.0</p></div>
+            <div class="pill"><h3>Overtime (15m blocks)</h3><p id="weekOvertime">0.0 h</p></div>
+          </div>
+        </div>
+
+        <div class="footnote">Weighted Avg = total units ÷ total hours.</div>
+      </div>
+    </div>
+
+    <div class="hint" style="margin-top:6px;">
+      Weighted Avg = total units ÷ total hours.
+    </div>
+
+    <div class="card">
+      <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <h3 style="margin:0; font-size:14px; color:#9fb3c8;">History (daily archives)</h3>
+        <div>
+          <button class="btn gate-pro" type="button" onclick="exportCSV()">Export CSV (today)</button>
+          <button class="btn gate-pro" type="button" onclick="exportJSON()">Export JSON (all)</button>
+          <label id="impLabel" class="btn gate-pro" for="impFile">Import JSON</label><input id="impFile" type="file" accept="application/json" style="display:none;">
+          <button class="btn" type="button" style="background:#331b1b;border-color:#7a2b2b;" onclick="clearHistory()">Clear History</button>
+          <button class="btn gate-pro" type="button" onclick="toggleManageCustomers()">Manage Customers</button>
+        </div>
+      </div>
+      <div id="histList" style="margin-top:8px;"></div>
+    </div>
+
+    <div id="manageCustomersCard" class="card hidden">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Manage Customers</h3>
+      <div class="hint">Manually-added customers are shown below. Tap ✖ to remove.</div>
+      <div id="custTags" class="tagbox" style="margin-top:8px;"></div>
+      <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn ghost" type="button" onclick="reloadDropdowns()">Reload dropdowns</button>
+        <button class="btn bad" type="button" onclick="clearAllCustom()">Clear ALL custom customers</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Delay Modal -->
+<div id="delayModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delayTitle">
+  <div class="box">
+    <div class="hdr">
+      <h3 id="delayTitle">Log / Delay</h3>      <button class="btn slim ghost" type="button" onclick="closeDelayModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label>Start (auto)</label>
+      <div id="delayStart" class="readonly-time">--:--</div>
+    </div>
+    <div class="fld">
+      <label>Note / Cause</label>      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
+      <button class="btn" type="button" onclick="submitNote()">Note</button>
+      <button class="btn ok" type="button" onclick="submitDelay()">Submit & Stop</button>
+    </div>
+  </div>
+</div>
+<!-- Live Rate Modal -->
+<div id="liveModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="liveTitle">
+  <div class="box" style="max-width:640px;">
+    <div class="hdr">
+      <h3 id="liveTitle">Live Rate – Now</h3>
+      <button class="btn slim ghost" type="button" onclick="closeLiveModal()">✖</button>
+    </div>
+    <div class="fld">
+      <div class="row">
+        <div class="col">
+          <div class="pill"><h3>Total Units</h3><p id="live_totUnits">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Elapsed</h3><p id="live_elapsed">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Live Rate</h3><p id="live_rate">— u/h</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fld">
+      <div class="logwrap">
+        <!-- 1) Colour key centered -->
+        <div class="hint" style="text-align:center; margin-bottom:10px;">
+          Colour key:
+          <b style="color:#9fd6a5;">Green ≥ 300</b> •
+          <b style="color:#e6cf8a;">Amber 249–299</b> •
+          <b style="color:#e49b9b;">Red &lt; 249</b>
+        </div>
+
+        <!-- 2) Button centered -->
+        <div class="actions" style="justify-content:center; flex-direction:column; align-items:center; text-align:center;">
+          <button class="btn" type="button" onclick="openLiveUpdateModal()">Update with Units Remaining</button>
+          <span id="live_hint" class="hint" style="margin-top:6px;"></span>
+        </div>
+
+        <!-- 3) Formula bottom-left under the button -->
+        <div class="hint" style="margin-top:10px;">Formula</div>
+        <div id="live_formula" class="tick" style="text-align:left;">Live = Total Units ÷ Hours</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Live Update (override Left) Modal -->
+<div id="liveUpdateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="liveUpdateTitle">
+  <div class="box" style="max-width:420px;">
+    <div class="hdr">
+      <h3 id="liveUpdateTitle">Units Remaining</h3>
+      <button class="btn slim ghost" type="button" onclick="closeLiveUpdateModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label for="liveLeftInput">How many units remain on this order?</label>
+      <input id="liveLeftInput" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+      <div class="hint" id="liveUpdateHint"></div>
+    </div>
+    <div class="actions" style="justify-content:center; gap:8px;">
+      <button class="btn ghost" type="button" onclick="closeLiveUpdateModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitLiveUpdateLeft()">Update</button>
+    </div>
+  </div>
+</div>
+<!-- Elapsed / ETA Modal -->
+<div id="elapsedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="elapsedTitle" style="display:none;">
+  <div class="box" style="max-width:520px;">
+    <div class="hdr">
+      <h3 id="elapsedTitle">Order Timer</h3>
+      <button class="btn slim ghost" type="button" onclick="closeElapsedModal()">✖</button>
+    </div>
+    <div class="fld">
+      <div class="row">
+        <div class="col">
+          <div class="pill"><h3>Order Start</h3><p id="el_start">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Elapsed</h3><p id="el_elapsed">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Remaining</h3><p id="el_remaining">—</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="fld">
+      <div class="row">
+        <div class="col">
+          <div class="pill"><h3>Current Order Rate</h3><p id="el_rate">— u/h</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>Predicted Time Left</h3><p id="el_timeleft">—</p></div>
+        </div>
+        <div class="col">
+          <div class="pill"><h3>ETA (finish)</h3><p id="el_eta">—</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Close Early Modal -->
+<div id="closeEarlyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="closeEarlyTitle">
+  <div class="box">
+    <div class="hdr">
+      <h3 id="closeEarlyTitle">Close Order Early</h3>
+      <button class="btn slim ghost" type="button" onclick="closeCloseEarlyModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label>Remaining units</label>
+      <input id="ceRemaining" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+    </div>
+    <div class="fld">
+      <label>Reason (required if 0 units or under 70% expected time)</label>
+      <textarea id="ceReason" placeholder="Explain why closing early…"></textarea>
+    </div>
+    <div class="fld" style="display:flex;align-items:center;gap:8px;">
+      <input id="ceWrapped" type="checkbox">
+      <label for="ceWrapped" style="margin:0;">Wrapped last pallet</label>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" type="button" onclick="closeCloseEarlyModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitCloseEarly()">Close Order</button>
+    </div>
+  </div>
+</div>
+<!-- Wrap Modal -->
+<div id="wrapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="wrapTitle">
+  <div class="box" style="max-width:420px;">
+    <div class="hdr">
+      <h3 id="wrapTitle">Log Wrap</h3>
+      <button class="btn slim ghost" type="button" onclick="closeWrapModal()">✖</button>
+    </div>
+    <div class="fld">
+      <label for="wrapLeftInput">Units left on this order</label>
+      <input id="wrapLeftInput" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 413">
+      <div class="hint" id="wrapHint">Type 0 to enable Complete.</div>
+    </div>
+    <div class="actions" style="justify-content:center; gap:8px;">
+      <button class="btn ghost" type="button" onclick="closeWrapModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitWrapLeft()">Save Wrap</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast">Saved</div>
+<script>
+// ====== State ======
+let picks = [];         // closed orders
+// ETA smoothing (GPS-style)
+let etaSmooth = [];            // rolling window of recent order rates
+let lastETAmin = null;         // last computed (smoothed) ETA in minutes
+let lastRenderedETAmin = null; // last value we actually showed (for 1m threshold)
+
+function resetEtaSmoother(){
+  etaSmooth = [];
+  lastETAmin = null;
+  lastRenderedETAmin = null;
+}
+function hideSharedDock(){
+  const dock = document.getElementById('sharedDock');
+  if (dock) dock.style.display = 'none';
+  localStorage.setItem('sharedDockOpen','0'); // remember hidden
+}
+
+// ---- Early restore & safety nets (v3.5) ----
+// ===== Predictive config/state =====
+const PREDICT = {
+  tickMs: 1000,   // 1s
+  alpha: 0.20,    // reserved for future smoothing if you want it
+  minRate: 60,    // clamps
+  maxRate: 600
+};
+// Shared Pick state
+let sharedSession = null;
+
+function openSharedPickModal(){
+  const sel   = document.getElementById('oCust');
+  const total = parseInt(document.getElementById('oTotal').value||'0',10);
+  const name  = sel?.value || '';
+
+  sharedSession = {
+    name,
+    total,
+    entries: [],
+    wraps: [],
+    start: nowHHMM()
+  };
+
+  document.getElementById('sharedHeader').textContent = `Customer: ${name} | Total: ${total}`;
+  document.getElementById('sharedUnits').value = '';
+  document.getElementById('sharedSummary').textContent = 'No entries yet.';
+  document.getElementById('sharedModal').style.display = 'flex';
+}
+
+function sharedAddUnits() {
+  const input = document.getElementById('sharedUnits');
+  const val = parseInt(input.value || '0', 10);
+  if (!(val > 0)) return alert('Enter units first');
+
+  // Add to shared session units
+  const entry = { units: val, t: nowHHMM() };
+  sharedSession.entries.push(entry);
+
+  input.value = '';
+
+  const sum = sharedSession.entries.reduce((a, b) => a + b.units, 0);
+  document.getElementById('sharedSummary').textContent =
+    `Total so far: ${sum} units (${sharedSession.entries.length} entries)`;
+
+  // Update the total units display
+  document.getElementById('chipTotalVal').textContent = sum;
+}
+
+function sharedLogWrap() {
+  const left = Math.max(0, sharedSession.total - sharedMySum);
+  sharedSession.wraps.push({ left, t: nowHHMM() });
+
+  // Update wrap state and visual info
+  showToast?.('Wrap logged for shared order.');
+  updateProgressHeader?.();  // Ensure progress bar reflects wrap
+  updateSharedDockInfo();    // Update dock info
+}
+
+function closeSharedPickModal(){
+  document.getElementById('sharedModal').style.display = 'none';
+
+  // archive partial shared order
+  if(sharedSession && sharedSession.entries.length){
+    const totalUnits = sharedSession.entries.reduce((a,b)=>a+b.units,0);
+    const entry = {
+      name: sharedSession.name,
+      shared: true,
+      units: totalUnits,
+      wraps: sharedSession.wraps.slice(),
+      start: sharedSession.start,
+      closed: nowHHMM()
+    };
+    picks.push(entry);
+    renderTimeline();
+    saveAll();
+    showToast?.(`Shared order saved (${totalUnits} units).`);
+  }
+  sharedSession = null;
+}
+// Shared mode state
+let sharedMySum = 0;        // my contributed units
+let sharedWraps = [];       // [{ left, t }]
+let sharedStartedAt = null; // HH:MM when I started
+window._sharedProgressLeft = null; // progressive "left" overlay for header
+
+function openSharedStart() {
+  // Initialize shared session state
+  sharedSession = {
+    name: document.getElementById('oCust').value,
+    total: parseInt(document.getElementById('oTotal').value, 10),
+    entries: [],
+    wraps: [],
+    start: nowHHMM()
+  };
+
+  // Start the order, which also triggers all order UI and behaviors
+  startOrder();  // This starts the order as usual
+
+  // Now set current.shared = true to indicate it's a shared order
+  if (current) {
+    current.shared = true;
+
+    // NEW: same immediate UI kick as normal start
+    const chip = document.getElementById('chipElapsed');
+    if (chip) {
+      chip.style.display = '';
+      const label = chip.querySelector('b');
+      if (label) label.textContent = 'Elapsed';
+    }
+    updateElapsedChip?.();
+    setElapsedChipClickable?.(true);
+    updateCloseEarlyVisibility?.();
+  }
+
+  // Update the Total Units, Left, and other progress bar elements (kept)
+  document.getElementById('progLeft').textContent = current.total;
+  document.getElementById('progRate').textContent = '—';
+  document.getElementById('progPct').textContent = '0%';
+  document.getElementById('progFill').style.width = '0%';
+  updateProgressHeader?.();
+  updateHeaderActions?.();
+
+  // Show the shared dock (bottom bar)
+  document.getElementById('sharedDock').style.display = 'flex';
+  localStorage.setItem('sharedDockOpen','1');
+  updateSharedDockInfo();
+  setTimeout(() => document.getElementById('sharedUnitsDock').focus(), 0);
+}
+
+// 2) Hook after startOrder completes: flip into shared mode & show dock
+(function attachSharedStartHook(){
+  if (typeof startOrder !== 'function') return;
+  const _origStartOrder = startOrder;
+  startOrder = function(...args){
+    _origStartOrder.apply(this, args);
+
+    if (window._sharedStart) {
+      window._sharedStart = false;
+
+      if (!window.current) return; // safety
+      window.current.shared = true;
+      sharedMySum = 0;
+      sharedWraps = [];
+      sharedStartedAt = window.current.start || nowHHMM();
+      window._sharedProgressLeft = window.current.total;
+
+      // show S3 header (already shown by startOrder), ensure actions visible
+      showProgressHeader?.();
+      updateHeaderActions?.();
+
+      // show dock
+      const dock = document.getElementById('sharedDock');
+      if (dock) dock.style.display = 'block';
+      localStorage.setItem('sharedDockOpen','1');
+      updateSharedDockInfo();
+      setTimeout(()=> document.getElementById('sharedUnitsDock')?.focus(), 0);
+    }
+  };
+})()
+
+// Internal wrap logger for shared (doesn't fake pallet count unless you want)
+function sharedLogWrapInternal(){
+  if (!current || !current.shared) return;
+  const left = Math.max(0, (current.total||0) - sharedMySum);
+  sharedWraps.push({ left, t: nowHHMM() });
+
+  // Mirror into tempWraps ONLY to show pallet count/ETA if you want header parity:
+  // tempWraps.push({ left, t: Date.now() });
+
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
+  updateSharedDockInfo();
+  showToast?.('Wrap logged');
+}
+
+function sharedCancel(){
+  if (!confirm('Discard shared progress?')) return;
+
+  // hide dock and reset shared state
+  document.getElementById('sharedDock').style.display = 'none';
+  sharedMySum = 0;
+  sharedWraps = [];
+  sharedStartedAt = null;
+  window._sharedProgressLeft = null;
+  localStorage.removeItem('sharedDockOpen');
+}
+
+let predictive = {
+  timer: null,
+  lastTick: 0,
+  left: 0,
+  rateUh: 0,
+  firstWrapSeen: false
+};
+function shiftDateKey(){
+  const d = new Date();
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `predictive-first-order-done-${y}-${m}-${dd}`;
+}
+function isFirstOrderToday(){ return !localStorage.getItem(shiftDateKey()); }
+function markFirstOrderStarted(){ localStorage.setItem(shiftDateKey(), '1'); }
+
+function earlyRestore() {
+  try {
+    loadAll();
+    restoreBreakDraftIfAny();
+
+    // If current order is shared and user hasn’t hidden the dock, show it
+    if (window.current && window.current.shared && localStorage.getItem('sharedDockOpen') !== '0') {
+      const dock = document.getElementById('sharedDock');
+      if (dock) dock.style.display = 'flex';
+      updateSharedDockInfo?.();
+    }
+  } catch (e) {}
+}
+
+function exitShiftNoArchive(){
+  if (current) { alert('Complete or undo the current order before exiting the shift.'); return; }
+  try { predictiveStop?.(); } catch(e){}
+function openSharedPickModal(){
+  // TODO (Phase 2): open shared order modal with per-location entry + in-modal Log Wrap
+  try { showToast?.('Shared Pick coming next — button wired.'); } catch(e){}
+}
+  // Clear shift session (no archive)
+  picks = [];
+  lastClose = '';
+  current = null;
+  tempWraps = [];
+  undoStack = [];
+  shiftBreaks = [];
+  startTime = '';
+  try { localStorage.setItem('shiftActive','0'); } catch(e){}
+
+  // UI → Start Shift screen
+  const shiftCard  = document.getElementById('shiftCard');
+  const activeCard = document.getElementById('activeOrderCard');
+  const doneCard   = document.getElementById('completedCard');
+  if (shiftCard)  shiftCard.style.display  = 'block';
+  if (activeCard) activeCard.style.display = 'none';
+  if (doneCard)   doneCard.style.display   = 'none';
+
+  const hdrForm = document.getElementById('orderHeaderForm');
+  const hdrProg = document.getElementById('orderHeaderProgress');
+  const area    = document.getElementById('orderArea');
+  if (hdrForm) hdrForm.style.display = 'block';
+  if (hdrProg) hdrProg.style.display = 'none';
+  if (area)    area.style.display    = 'none';
+
+  ['btnB','btnL','btnUndo','btnComplete'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) { btnStart.style.display='inline-block'; btnStart.disabled = true; }
+
+  const fill = document.getElementById('progFill'); if (fill) fill.style.width = '0%';
+  document.getElementById('progPct')?.replaceChildren(document.createTextNode('0%'));
+  document.getElementById('progLeft')?.replaceChildren(document.createTextNode('0'));
+  document.getElementById('progPallets')?.replaceChildren(document.createTextNode('0'));
+  document.getElementById('progRate')?.replaceChildren(document.createTextNode('—'));
+  document.getElementById('progETA')?.replaceChildren(document.createTextNode('—'));
+
+  saveAll?.();
+  showToast?.('Shift ended.');
+}
+
+// Rebuild break UI if a persisted draft exists (call once after loadAll())
+function restoreBreakDraftIfAny(){
+  if (!breakDraft) return;
+  const mins = Math.round((breakDraft.targetSec || 0) / 60) || (breakDraft.type==='B' ? 20 : 30);
+
+  // rebuild bar
+  const titleEl  = document.getElementById('breakBarTitle');
+  const startEl  = document.getElementById('breakBarStart');
+  const targetEl = document.getElementById('breakBarTarget');
+  const barEl    = document.getElementById('breakBar');
+
+  if (titleEl)  titleEl.textContent  = (breakDraft.type==='B'?'Break':'Lunch');
+  if (startEl)  startEl.textContent  = breakDraft.startHHMM || '—';
+  if (targetEl) targetEl.textContent = mins+' min target';
+  if (barEl)    barEl.style.display  = 'flex';
+
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) chipBox.style.display = '';
+
+  // ensure ticking resumes
+  tickBreak();
+  if (breakTickId) clearInterval(breakTickId);
+  breakTickId = setInterval(tickBreak, 1000);
+}
+
+earlyRestore(); // <-- run BEFORE any UI work
+// Persist periodically + on tab close
+window.addEventListener('beforeunload', saveAll);
+setInterval(saveAll, 1500);
+// Last non-zero pace we painted with (for tint fallback)
+let uiLastPaceUh = 0;
+let tempWraps = [];     // wraps in current order
+let current = null;     // active order
+let startTime = "";     // shift start (HH:MM)
+let lastClose = "";     // last order close time
+let undoStack = [];     // undo actions for current order
+let historyDays = [];   // archived days
+let customCodes = [];   // user-added customer codes
+let shiftBreaks = [];   // breaks without an active order
+let learnedUL = {};     // U/Layer frequency map (persisted via KEY_LEARN)
+
+// Countback focus & values
+let cbFocus = 'layers'; // 'layers' | 'ul' | 'extras'
+let cbVals = {layers:'', ul:'', extras:''};
+/* Add minutes to a specific HH:MM (not “now”), return HH:MM */
+function addMinutesToTime(hhmm, minutesToAdd){
+  const [h,m] = (hhmm || '00:00').split(':').map(x => parseInt(x,10) || 0);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  d.setMinutes(d.getMinutes() + Math.max(0, Math.round(minutesToAdd || 0)));
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${hh}:${mm}`;
+}
+
+const KEY = 'wqt_v2722_data';
+const KEY_CODES = 'wqt_codes';
+const KEY_LEARN = 'wqt_learn_ul';
+const PRO_UNLOCK_CODE = '0000';
+let proUnlocked = false;  // Gate: Export/Import/Manage Customers
+// Persisted preference: one-time shift length (hours)
+const SHIFT_PREF = 'wqt.shiftLenH';
+function clearStartHint(){
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = '';
+}
+
+function getShiftPref(){
+  const v = localStorage.getItem(SHIFT_PREF);
+  const n = parseInt(v, 10);
+  return (n === 9 || n === 10) ? n : null;
+}
+function setShiftPref(n){
+  if (n === 9 || n === 10) localStorage.setItem(SHIFT_PREF, String(n));
+}
+// ---- Lateness logging ----
+const LATE_LOG_KEY = 'wqt.lateLog'; // { "YYYY-MM-DD": {contracted, actual, lateMin, shiftLen} }
+
+function minutesBetween(hmA, hmB){
+  const [aH,aM] = (hmA||'0:0').split(':').map(x=>parseInt(x,10)||0);
+  const [bH,bM] = (hmB||'0:0').split(':').map(x=>parseInt(x,10)||0);
+  return (bH*60 + bM) - (aH*60 + aM);
+}
+function hmToMin(hm){
+  const [h,m] = (hm||'0:0').split(':').map(x=>parseInt(x,10)||0);
+  return h*60 + m;
+}
+function minToHm(min){
+  const h = Math.floor(min/60), m = min%60;
+  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+}
+
+// ==== Local storage keys ====
+const LS = {
+  CURRENT: 'wqt.current',
+  WRAPS: 'wqt.wraps',
+  PICKS: 'wqt.picks',
+  START: 'wqt.startTime',
+  UNDO: 'wqt.undo',
+  LAST_CLOSE: 'wqt.lastClose',
+  VERSION: 'wqt.v2'
+};
+
+// Delay / Break
+let delayDraft = null; // {start:'HH:MM', cause:''}
+let breakDraft = null; // {type:'B'|'L', startHHMM, targetSec, beeping}
+let breakTickId = null;
+
+// ====== Utils ======
+function hasActiveOrder(){
+  return !!(current && current.start && current.name && (current.total|0) > 0);
+}
+function showToast(msg){ try{ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1400);}catch(e){} }
+function hm(str){ if(!str) return NaN; var a=str.split(':'), H=parseInt(a[0],10), M=parseInt(a[1],10); if(isNaN(H)||isNaN(M)) return NaN; return H + M/60; }
+function hhmmToMinutes(hhmm){
+  const v = hm(hhmm);                 // hm("18:11") → 18.1833…
+  return isNaN(v) ? 0 : Math.round(v * 60);
+}
+function showStartNote(text){
+  const host = document.getElementById('orderHeaderProgress');
+  if (!host) return;
+  let note = document.getElementById('progStartNote');
+  if (!note){
+    note = document.createElement('div');
+    note.id = 'progStartNote';
+    note.className = 'hint';
+    note.style.marginTop = '6px';
+    host.appendChild(note);
+  }
+  note.textContent = text;
+}
+
+function clearStartHint(){
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = '';
+}
+
+function nowHHMM(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function fmtMMSS(totalSec){ var s=Math.max(0,Math.round(totalSec)); var m=Math.floor(s/60), r=s%60; return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0'); }
+function pad2(n){return String(n).padStart(2,'0');}
+function minutesToHHMM(x){ const h=Math.floor(x/60), m=x%60; return pad2(h)+':'+pad2(m); }
+function toInt(s){ const n=parseInt(s||'0',10); return isNaN(n)?0:n; }
+// --- Weekly helpers (Sun–Sat) ---
+function isoToDate(iso){
+  const d = new Date((iso||'') + 'T12:00:00'); // noon avoids TZ bleed
+  return isNaN(d) ? null : d;
+}
+function dateToISO(d){ return d.toISOString().slice(0,10); }
+function fmtShort(d){ return d.toDateString().slice(0,10); } // e.g., 'Sun Oct 26'
+
+function weekBoundsFor(dateIso){
+  const d = isoToDate(dateIso) || new Date();
+  const base = new Date(d); base.setHours(12,0,0,0);
+  const dow = base.getDay();            // 0 = Sun
+  const sun = new Date(base); sun.setDate(base.getDate() - dow);
+  const sat = new Date(sun);  sat.setDate(sun.getDate() + 6);
+  return { startISO: dateToISO(sun), endISO: dateToISO(sat), startDate: sun, endDate: sat };
+}
+function inRange(iso, aISO, bISO){ return iso >= aISO && iso <= bISO; }
+// GPS-style ETA: smooth input rate (rolling avg) + blend output ETA
+function calcStableETA(leftUnits, rateNowUh){
+  if (!rateNowUh || rateNowUh <= 0 || !isFinite(rateNowUh)) return null;
+
+  // keep last 5 readings
+  etaSmooth.push(rateNowUh);
+  if (etaSmooth.length > 5) etaSmooth.shift();
+  const avgRate = etaSmooth.reduce((a,b)=>a+b,0) / etaSmooth.length;
+
+  const newETAmin = (leftUnits / avgRate) * 60;       // raw ETA (mins)
+  const blended   = (lastETAmin == null)
+      ? newETAmin
+      : (lastETAmin * 0.8 + newETAmin * 0.2);         // 80/20 damping
+
+  lastETAmin = blended;
+  return blended;
+}
+
+let elapsedModalTick = null;
+function orderActiveMinutes() {
+  if (!current || !current.start) return 0;
+
+  const startMin = hhmmToMinutes(current.start);
+  const nowMin   = hhmmToMinutes(nowHHMM());
+  let active     = Math.max(0, nowMin - startMin);
+
+  // subtract only in-order breaks (running or completed)
+  for (const b of current.breaks || []) {
+    const bStart = hhmmToMinutes(b.start);
+    const bEnd   = b.end ? hhmmToMinutes(b.end) : nowMin;
+    active -= Math.max(0, bEnd - bStart);
+  }
+  return Math.max(0, active);
+}
+
+// Reset the "New Order" form to its pristine state
+function resetNewOrderForm() {
+  const sel = document.getElementById('oCust');
+  if (sel) {
+    sel.value = '';
+    // if you use the custom dropdown button, reset its label too
+    const ddBtn = document.querySelector('#oDD .dd-toggle');
+    if (ddBtn) ddBtn.textContent = 'Select customer…';
+  }
+  const other = document.getElementById('oOther');
+  if (other) { other.value = ''; other.classList.add('hidden'); }
+
+  const total = document.getElementById('oTotal');
+  if (total) total.value = '';
+
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) { btnStart.disabled = true; btnStart.style.display = ''; }
+}
+
+
+function orderLiveRate() {
+  const total = current?.total ?? 0;
+  const lastLeft = (tempWraps.length ? tempWraps[tempWraps.length - 1].left : total);
+  const done = total - lastLeft;
+  const mins = orderActiveMinutes();
+  if (mins <= 0) return 0;
+  return (done / mins) * 60;
+}
+
+function tintProgressByPace(rateUh){
+  const fill = document.getElementById('progFill');
+  if (!fill) return;
+
+  // Resolve a robust pace
+  let r = Math.round(Number(rateUh || 0));
+  if (r <= 0) {
+    r = Math.round(
+      (predictive?.rateUh) ||
+      (typeof orderLiveRate === 'function' && orderLiveRate()) ||
+      (typeof getLiveRateUh  === 'function' && getLiveRateUh()) ||
+      uiLastPaceUh || 280
+    );
+  }
+
+  // Remember last good pace
+  if (r > 0) uiLastPaceUh = r;
+
+  // Class bands: <249 red, 249–299 amber, 300+ green
+  let cls = 'pace-bad';
+  if (r >= 300) cls = 'pace-ok';
+  else if (r >= 249) cls = 'pace-warn';
+
+  fill.classList.remove('pace-ok','pace-warn','pace-bad');
+  fill.classList.add(cls);
+}
+// Put the lateness note on the same row as the "Log / Delay" button (right side)
+function showPreOrderNote(text){
+  const delayBtn = document.getElementById('btnDelay');
+  if (!delayBtn || !delayBtn.parentElement) return;
+
+  // If ensureActionRowLayout has run, delayBtn is in #actionsRight.
+  // We want the note in the LEFT group, flush-left.
+  let container = delayBtn.parentElement;           // likely #actionsRight
+  if (container.id === 'actionsRight' && container.parentElement){
+    container = container.parentElement;            // the row wrapper
+  }
+
+  // Ensure groups exist
+  let left  = document.getElementById('actionsLeft');
+  let right = document.getElementById('actionsRight');
+  if (!left){
+    left = document.createElement('div');
+    left.id = 'actionsLeft';
+    container.insertBefore(left, container.firstChild);
+  }
+  if (!right){
+    right = document.createElement('div');
+    right.id = 'actionsRight';
+    container.appendChild(right);
+  }
+
+  // Layout the row
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'space-between';
+  container.style.gap = '12px';
+  left.style.display  = 'flex';
+  left.style.alignItems = 'center';
+  left.style.gap      = '10px';
+  right.style.display = 'flex';
+  right.style.gap     = '10px';
+
+  // Create/replace the note in LEFT group (first position)
+  let note = document.getElementById('contractNote');
+  if (!note){
+    note = document.createElement('div');
+    note.id = 'contractNote';
+    note.className = 'hint';
+  }
+  note.textContent = text;
+
+  if (note.parentElement !== left){
+    left.insertBefore(note, left.firstChild || null);
+  }
+}
+
+// Clear both the old start-hint and this pre-order note
+function clearStartHint(){
+  const hint = document.getElementById('snapHint');
+  if (hint) hint.textContent = '';
+  const cn = document.getElementById('contractNote');
+  if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
+}
+
+function formatETA(mins){
+  if (!isFinite(mins) || mins <= 0) return '—';
+  const h = Math.floor(mins/60);
+  const m = Math.round(mins%60);
+  return h ? `${h}h ${m}m` : `${m}m`;
+}
+
+function updateProgressHeader() {
+  const wrapOpen = document.getElementById('wrapModal')?.style.display === 'flex';
+  if (wrapOpen) return;
+  if (!current) return;
+
+  const total = current.total;
+
+  // Calculate remaining units: for shared mode, respect _sharedProgressLeft
+  let lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+
+  // Shared overlay: adjust "left" without changing pallet count
+  if (current?.shared && typeof window._sharedProgressLeft === 'number') {
+    lastLeft = Math.min(lastLeft, window._sharedProgressLeft); // Reflect shared progress
+  }
+
+  // Calculate progress (done units)
+  const done = total - lastLeft;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  // Update numbers: remaining units (Target - Left), Pallets (tempWraps length), and Progress %
+  const elLeft = document.getElementById('progLeft');
+  const elPal = document.getElementById('progPallets');
+  const elPct = document.getElementById('progPct');
+  
+  if (elLeft) elLeft.textContent = lastLeft; // Update remaining units
+  if (elPal) elPal.textContent = tempWraps.length; // Update pallet count
+  if (elPct) elPct.textContent = pct + '%'; // Update progress %
+
+  // Update the progress bar width based on progress
+  const fill = document.getElementById('progFill');
+  if (fill) fill.style.width = pct + '%';
+
+  // Rate display from frozen sources only
+  const rEl = document.getElementById('progRate');
+  const eEl = document.getElementById('progETA');
+
+  const displayRate = current.orderRateUh ?? current.preWrapRateUh ?? 0;
+  if (rEl) rEl.textContent = displayRate ? `${displayRate} u/h` : '—';
+
+  // ETA is frozen until Log Wrap, shared mode will inherit it
+  if (eEl) eEl.textContent = current.fixedETA || '—';
+
+  // Keep tint logic for color bands based on frozen rate
+  tintProgressByPace(displayRate);
+  updateHeaderActions?.();
+}
+
+function showProgressHeader() {
+  if (!current) return;
+  const predictiveActive = !!(predictive && predictive.timer);
+  const form = document.getElementById('orderHeaderForm');
+  const prog = document.getElementById('orderHeaderProgress');
+  if (form) form.style.display = 'none';
+  if (prog) prog.style.display = 'flex';
+
+  // Seed static bits
+  document.getElementById('progCust').textContent    = current.name;
+  document.getElementById('progQty').textContent     = current.total;
+  document.getElementById('progPallets').textContent = '0';
+  document.getElementById('progLeft').textContent    = current.total;
+  document.getElementById('progRate').textContent    = '—';
+  document.getElementById('progETA').textContent     = '—';
+  document.getElementById('progFill').style.width    = '0%';
+  document.getElementById('progPct').textContent     = '0%';
+
+  // NEW: reset ETA smoother when entering progress view (GPS-style fresh start)
+  window.etaSmooth = [];
+  window.lastETAmin = null;
+  window.lastRenderedETAmin = null;
+
+  updateProgressHeader();
+  updateHeaderActions?.();
+}
+
+/* Utility: add minutes to now → HH:MM */
+function addMinutesToNow(mins){
+  const d = new Date();
+  d.setMinutes(d.getMinutes() + Math.max(0, Math.round(mins)));
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+/* Toggle clickability/visual state of the Elapsed chip */
+function setElapsedChipClickable(on){
+  const chipBox = document.getElementById('chipElapsed');
+  if(!chipBox) return;
+  chipBox.classList.toggle('disabled', !on);
+}
+
+/* Open only when an order is running and not on break */
+function openElapsedModal(){
+  if (!current || breakDraft) return;
+  const m = document.getElementById('elapsedModal');
+  if(!m) return;
+  m.style.display = 'flex';
+  renderElapsedModalOnce();
+  if (elapsedModalTick) clearInterval(elapsedModalTick);
+  elapsedModalTick = setInterval(renderElapsedModalOnce, 600);
+}
+
+/* Close & cleanup */
+function closeElapsedModal(){
+  const m = document.getElementById('elapsedModal');
+  if(!m) return;
+  m.style.display = 'none';
+  if (elapsedModalTick) { clearInterval(elapsedModalTick); elapsedModalTick = null; }
+}
+
+/* One-frame render based on live snapshot + current order */
+function renderElapsedModalOnce(){
+  if (!current){ closeElapsedModal(); return; }
+
+  // Progress on the active order
+  const doneNow = currentOrderUnitsDone();
+  const total   = current.total || 0;
+  const remainingUnits = Math.max(0, total - doneNow);
+
+  // Elapsed since THIS order started
+  const now = nowHHMM();
+  const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
+
+  // Current ORDER rate (units/hour)
+  let orderRate = 0;
+  if (elapsedMin > 0) {
+    orderRate = (doneNow / (elapsedMin / 60)); // u/h
+  }
+
+  // Time left & ETA based on CURRENT ORDER rate
+  let minsLeft = null;
+  let etaStr = '—';
+  if (orderRate > 0 && remainingUnits > 0){
+    minsLeft = Math.round((remainingUnits / orderRate) * 60);
+    etaStr   = addMinutesToNow(minsLeft);
+  }
+
+  const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
+  setTxt('el_start', current.start || '—');
+  setTxt('el_elapsed', `${Math.floor(elapsedMin/60)}h ${String(elapsedMin%60).padStart(2,'0')}m`);
+  setTxt('el_remaining', String(remainingUnits));
+  setTxt('el_rate', `${Math.round(orderRate)} u/h`);
+  setTxt('el_timeleft', (minsLeft===null) ? '—' : `${Math.floor(minsLeft/60)}h ${String(minsLeft%60).padStart(2,'0')}m`);
+  setTxt('el_eta', etaStr);
+}
+
+function tryBeep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 880;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+    o.start();
+    setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.02); o.stop(); ctx.close(); }, 350);
+  }catch(e){ /* no-op */ }
+}
+
+// ====== Persistence ======
+function loadAll(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      picks       = Array.isArray(p.picks) ? p.picks : [];
+      historyDays = Array.isArray(p.history) ? p.history : [];
+      current     = p.current || null;
+      tempWraps   = Array.isArray(p.tempWraps) ? p.tempWraps : [];
+      startTime   = typeof p.startTime === 'string' ? p.startTime : "";
+      lastClose   = typeof p.lastClose === 'string' ? p.lastClose : "";
+      undoStack   = Array.isArray(p.undoStack) ? p.undoStack : [];
+      proUnlocked = !!p.proUnlocked;
+      shiftBreaks = Array.isArray(p.shiftBreaks) ? p.shiftBreaks : [];
+    } else {
+      // sane defaults on first run / cleared storage
+      picks = []; historyDays = []; current = null; tempWraps = [];
+      startTime = ""; lastClose = ""; undoStack = [];
+      proUnlocked = false; shiftBreaks = [];
+    }
+
+    const lraw = localStorage.getItem(KEY_LEARN);
+    learnedUL = lraw ? (JSON.parse(lraw) || {}) : {};
+
+    // load persisted break draft (UI restore is done later)
+    try {
+      const braw = localStorage.getItem('breakDraft');
+      breakDraft = braw ? (JSON.parse(braw) || null) : null;
+    } catch(e){ breakDraft = null; }
+  } catch (e) {
+    console.error(e);
+    // hard reset if corrupted
+    picks = []; historyDays = []; current = null; tempWraps = [];
+    startTime = ""; lastClose = ""; undoStack = [];
+    proUnlocked = false; shiftBreaks = []; learnedUL = {};
+    breakDraft = null;
+  }
+}
+
+function saveAll(){
+  try {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        version: '3.3.55',               // keep existing schema tag
+        savedAt: new Date().toISOString(),
+        picks,
+        history: historyDays,
+        current,
+        tempWraps,
+        startTime,
+        lastClose,
+        undoStack,
+        proUnlocked,
+        shiftBreaks
+      })
+    );
+    localStorage.setItem(KEY_LEARN, JSON.stringify(learnedUL || {}));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+setInterval(function(){ saveAll(); }, 30000);
+
+// Custom codes
+function loadCustomCodes(){ try{ var raw=localStorage.getItem(KEY_CODES); if(raw){ customCodes=JSON.parse(raw)||[]; } }catch(e){ customCodes=[]; } }
+function saveCustomCodes(){ try{ localStorage.setItem(KEY_CODES, JSON.stringify(customCodes||[])); }catch(e){} }
+
+// ====== Grouped dropdowns ======
+const DEFAULT_CODES = [
+  'ASDAVO','ASDERI','ASDFAL','ASDLUT','ASDWAS',
+  'BOOHAY',
+  'COOAVO','COOLEA','COOWEL','COOWES',
+  'MORNOR','MORWAK',
+  'OCAPUR',
+  'SAIEME','SAINOR','SAITHA',
+  'TESDID','TESWIN',
+  'WAILEY'
+];
+function upcase6(s){ return (s||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,6); }
+function isValidCode(s){ return /^[A-Z]{6}$/.test(s||''); }
+function prefix3(code){ return (code||'').slice(0,3).toUpperCase(); }
+function groupedMap(all){
+  const map={};
+  all.forEach(c=>{ const p=prefix3(c); (map[p]=map[p]||[]).push(c); });
+  Object.keys(map).forEach(k=>map[k].sort());
+  return Object.fromEntries(Object.entries(map).sort(([a],[b])=>a.localeCompare(b)));
+}
+
+function buildDropdown(ddId, selectId, otherInputId, prefix){
+  const sel = document.getElementById(selectId);
+  const dd  = document.getElementById(ddId);
+  const menu = dd.querySelector('.dd-menu');
+  const btn = dd.querySelector('.dd-toggle');
+  const otherInput = document.getElementById(otherInputId);
+
+  function setValue(val){
+    sel.value = val;
+    btn.textContent = val==='__OTHER__' ? 'Other…' : val;
+    onCustomerChange(prefix);
+    if(prefix==='o') refreshStartButton();
+    saveAll();
+    dd.classList.remove('open');
+  }
+
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.dd.open').forEach(x=>{ if(x!==dd) x.classList.remove('open'); });
+    dd.classList.toggle('open');
+    if(dd.classList.contains('open')) { menu.scrollTop = 0; }
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(!dd.contains(e.target)) dd.classList.remove('open');
+  });
+
+  function render(){
+    const uniq = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
+    const groups = groupedMap(uniq);
+
+    menu.innerHTML = '';
+
+    Object.entries(groups).forEach(([pref, codes])=>{
+      const group = document.createElement('div');
+      group.className = 'dd-group';
+
+      const h = document.createElement('h4');
+      h.innerHTML = `${pref}<span>▾</span>`;
+      const items = document.createElement('div');
+      items.className = 'dd-items';
+
+      codes.forEach(code=>{
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = code;
+        b.addEventListener('click', ()=> setValue(code));
+        items.appendChild(b);
+      });
+
+      h.addEventListener('click', ()=> {
+        items.style.display = (items.style.display === 'block') ? 'none' : 'block';
+      });
+
+      group.appendChild(h);
+      group.appendChild(items);
+      menu.appendChild(group);
+    });
+
+    const other = document.createElement('div');
+    other.className = 'dd-other';
+    const btnOther = document.createElement('button');
+    btnOther.type = 'button';
+    btnOther.textContent = 'Other…';
+    btnOther.addEventListener('click', ()=>{
+      setValue('__OTHER__');
+      otherInput?.classList.remove('hidden');
+      otherInput?.focus();
+    });
+    other.appendChild(btnOther);
+    menu.appendChild(other);
+  }
+
+  render();
+  btn.textContent = sel.value ? (sel.value==='__OTHER__' ? 'Other…' : sel.value) : 'Select customer…';
+  dd.__reload = render;
+}
+
+function reloadDropdowns(){
+  const uniq = Array.from(new Set([...(DEFAULT_CODES||[]), ...(customCodes||[])]));
+  const oSel  = document.getElementById('oCust');
+  if (oSel) {
+    oSel.innerHTML = '';
+    uniq.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      oSel.appendChild(o);
+    });
+    const other = document.createElement('option');
+    other.value = '__OTHER__'; other.textContent = 'Other…';
+    oSel.appendChild(other);
+  }
+  document.getElementById('oDD')?.__reload?.();
+}
+
+function onCustomerChange(prefix){
+  const sel   = document.getElementById('oCust');
+  const input = document.getElementById('oOther');
+  if(!sel || !input) return;
+  if(sel.value==='__OTHER__'){ input.classList.remove('hidden'); input.focus(); }
+  else { input.classList.add('hidden'); }
+  if(prefix==='o') refreshStartButton();
+  renderULayerChips();
+  saveAll();
+}
+
+function onOtherInput(prefix){
+  const sel   = document.getElementById('oCust');
+  const input = document.getElementById('oOther');
+  const dd    = document.getElementById('oDD');
+  if(!sel || !input) return;
+  const before = input.value;
+  input.value = upcase6(input.value);
+  if(before!==input.value && prefix==='o') refreshStartButton();
+  const code = input.value;
+  if(isValidCode(code)){
+    if(customCodes.indexOf(code)===-1){
+      customCodes.push(code); saveCustomCodes();
+    }
+    reloadDropdowns();
+    sel.value = code;
+    input.classList.add('hidden');
+    if(dd && dd.querySelector('.dd-toggle')) dd.querySelector('.dd-toggle').textContent = code;
+    if(prefix==='o') refreshStartButton();
+    showToast('Added '+code);
+    renderULayerChips();
+    saveAll();
+  }
+}
+
+// ====== Pro Gate ======
+function applyProGate(){
+  document.querySelectorAll('.gate-pro').forEach(el=> el.style.display = proUnlocked ? '' : 'none');
+  saveAll();
+}
+function updCalcGate(){
+  const el = document.getElementById('qcRate');
+  const raw = (el.value||'').toString().trim();
+  if(raw.replace(/\s/g,'') === PRO_UNLOCK_CODE && !proUnlocked){
+    proUnlocked = true;
+    el.value = '';
+    el.blur();
+    applyProGate();
+    showToast('Pro unlocked for this session');
+    recalcQuick();
+  }
+}
+
+// ====== Tabs ======
+function showTab(which){
+  // ---------- swap visible section ----------
+  const id = 'tab' + which.charAt(0).toUpperCase() + which.slice(1);
+  ['tabCalc','tabTracker','tabHistory'].forEach(x =>
+    document.getElementById(x).classList.toggle('hidden', x !== id)
+  );
+
+  // ---------- tab button active state ----------
+  ['tabCalcBtn','tabTrackBtn','tabHistBtn'].forEach(x =>
+    document.getElementById(x).classList.remove('active')
+  );
+  if (which === 'calc')    document.getElementById('tabCalcBtn').classList.add('active');
+  if (which === 'tracker') document.getElementById('tabTrackBtn').classList.add('active');
+  if (which === 'history') document.getElementById('tabHistBtn').classList.add('active');
+
+  // live banner only on tracker
+  const lb = document.getElementById('liveBanner');
+  if (lb) lb.classList.toggle('hidden', which !== 'tracker');
+
+  // convenience handles
+  const form = document.getElementById('orderHeaderForm');
+  const prog = document.getElementById('orderHeaderProgress');
+  const area = document.getElementById('orderArea');
+
+  // ---------- HISTORY TAB ----------
+  if (which === 'history') {
+    renderWeeklySummary();
+    initWeekCardToggle();
+    // hide order-only bottom controls on history
+    ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    saveAll();
+    return;
+  }
+
+  // ---------- TRACKER TAB ----------
+  if (which === 'tracker') {
+    // Stronger check than !!window.current
+    const inOrder = !!(current && Number.isFinite(current.total));
+
+    // Normalize header state (no animation here – just correct display)
+    if (inOrder) {
+      if (form) { form.style.display = 'none'; form.classList.add('fade'); form.classList.remove('show'); }
+      if (prog) { prog.style.display = 'flex'; prog.classList.add('fade','show'); }
+      if (area) area.style.display = 'block';
+    } else {
+      if (prog) { prog.style.display = 'none'; prog.classList.add('fade'); prog.classList.remove('show'); }
+      if (form) { form.style.display = 'block'; form.classList.add('fade','show'); }
+      if (area) area.style.display = 'none';
+    }
+
+    // Gate bottom controls by active order
+    ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.style.display = inOrder ? 'inline-block' : 'none';
+    });
+
+    // Keep header/controls accurate
+    updateProgressHeader?.();
+    updateDelayBtn?.();
+    updateEndShiftVisibility?.();
+    updateCloseEarlyVisibility?.();
+
+    saveAll();
+    return;
+  }
+
+  // ---------- CALC TAB (default) ----------
+  ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  saveAll();
+}
+
+// ====== Tracker core ======
+function snapToNearestHour(){
+  const d = new Date();
+  let h = d.getHours();
+  if (d.getMinutes() >= 30) h = (h + 1) % 24;
+  return String(h).padStart(2,'0') + ':00';
+}
+
+function startShift(lenHours){
+  try {
+    // Persist one-time 9h/10h preference
+    const existing = getShiftPref();
+    const chosen = existing || (lenHours | 0);
+    if (!existing && (chosen === 9 || chosen === 10)) setShiftPref(chosen);
+
+    // Seed hidden length field for downstream logic
+    const applyLen = getShiftPref() || (lenHours || 9);
+    const lenEl = document.getElementById('tLen');
+    if (lenEl) lenEl.value = String(applyLen);
+
+    // Defer actual start to the contracted time picker
+    openContractedStartPicker();
+  } catch (e){
+    // Safe fallback: still route through the picker
+    const lenEl = document.getElementById('tLen');
+    if (lenEl) lenEl.value = String(lenHours || 9);
+    openContractedStartPicker();
+  }
+}
+
+
+function beginShift(){
+  if (!startTime) startTime = snapToNearestHour();
+
+  // Clean any pre-shift hints/notes
+  clearStartHint?.();
+
+  // Show tracker UI
+  const shift = document.getElementById('shiftCard');
+  const active = document.getElementById('activeOrderCard');
+  const done = document.getElementById('completedCard');
+  if (shift)  shift.style.display = 'none';
+  if (active) active.style.display = 'block';
+  if (done)   done.style.display = 'block';
+
+  // Header form visible until an order starts
+  const hdrForm = document.getElementById('orderHeaderForm');
+  const hdrProg = document.getElementById('orderHeaderProgress');
+  if (hdrForm) hdrForm.style.display = '';
+  if (hdrProg) hdrProg.style.display = 'none';
+
+  // Hide order-only buttons until active
+  ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+
+  const chipBox = document.getElementById('chipElapsed');
+  if (chipBox) chipBox.style.display = 'none';
+
+  renderDone();
+  updateSummary?.();
+  updateDelayBtn?.();
+  updateEndShiftVisibility?.();
+  updateCloseEarlyVisibility?.();
+  saveAll();
+
+  // Lock the bottom action row layout
+  ensureActionRowLayout?.();
+}
+
+function openContractedStartPicker(){
+  const modal = document.getElementById('contractModal');
+  const list  = document.getElementById('contractHourList');
+  if (!modal || !list) return;
+
+  list.innerHTML = '';
+
+  // Hour choices — adjust if your site uses different windows
+  const HOURS = [6,7,8,9,10,11,12];
+  HOURS.forEach(h=>{
+    const hh = (h<10?'0':'') + h;
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.type = 'button';
+    btn.textContent = `${hh}:00`;
+    btn.onclick = () => applyContractedStart(h);
+    list.appendChild(btn);
+  });
+
+  modal.style.display = 'flex';
+}
+
+function closeContractModal(){
+  const modal = document.getElementById('contractModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function applyContractedStart(hh){
+  closeContractModal();
+
+  const prefLen = getShiftPref() || 9;
+  const lenEl = document.getElementById('tLen');
+  if (lenEl) lenEl.value = String(prefLen);
+
+  const contracted = (hh<10?'0':'') + hh + ':00';
+  const actual     = nowHHMM();
+  const cMin = hmToMin(contracted);
+  const aMin = hmToMin(actual);
+
+  // Effective start: contracted if on-time/early; actual if late
+  const effectiveMin = (aMin <= cMin) ? cMin : aMin;
+  const effectiveHM  = minToHm(effectiveMin);
+
+  // Live rate baseline
+  startTime = effectiveHM;
+
+  // Log lateness
+  const lateMin = aMin - cMin;
+  try {
+    const day = new Date().toISOString().slice(0,10);
+    const raw = localStorage.getItem(LATE_LOG_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    obj[day] = { contracted, actual, effective: effectiveHM, lateMin, shiftLen: prefLen };
+    localStorage.setItem(LATE_LOG_KEY, JSON.stringify(obj));
+  } catch(e) {}
+
+  // Show S2 (customer selection) view
+  beginShift();
+  if (typeof updateSummary === 'function') updateSummary();
+
+  // S2 note (same row as Log/Delay, left side)
+  let note = 'on time';
+  if (lateMin > 0)      note = `${lateMin}m late`;
+  else if (lateMin < 0) note = `${-lateMin}m early`;
+  showPreOrderNote?.(`Contracted ${contracted} • Actual ${actual} (${note})`);
+}
+
+
+function renderShiftChooser(){
+  const card = document.getElementById('shiftCard');
+  if (!card) return;
+
+  // This selects the row that currently holds the two buttons
+  const btnRow = card.querySelector('.col > .row');
+  if (!btnRow) return;
+
+  const pref = getShiftPref();
+  if (pref === 9 || pref === 10){
+    // Replace the two buttons with a single Start button using the saved preference
+    btnRow.innerHTML =
+      `<button class="btn ok" type="button" style="min-width:180px;" onclick="startShift(${pref})">Start ${pref}h Shift</button>`;
+  } else {
+    // Leave the original two-button chooser (first run)
+    // No-op: your HTML already has them
+  }
+  clearStartHint();
+}
+
+function refreshStartButton(){
+  const sel   = document.getElementById('oCust');
+  const other = document.getElementById('oOther');
+  const total = parseInt(document.getElementById('oTotal').value||'0',10);
+  const hasCust = sel.value && sel.value!=='__OTHER__' ||
+                  (sel.value==='__OTHER__' && /^[A-Z]{6}$/.test((other.value||'').toUpperCase()));
+  const ok = hasCust && total>0;
+
+  const btn = document.getElementById('btnStart');
+  if (btn) btn.disabled = !ok;
+
+  // NEW: mirror state to Shared Pick
+  const sharedBtn = document.getElementById('btnSharedStart');
+  if (sharedBtn) sharedBtn.disabled = !ok;
+}
+
+// Restores correct UI when page loads or state changes
+function restoreActiveOrderUI() {
+  const shiftOn  = !!startTime && window.archived !== true;
+  const inOrder  = !!(shiftOn && current && Number.isFinite(current.total));
+
+  const hdrForm   = document.getElementById('orderHeaderForm');
+  const hdrProg   = document.getElementById('orderHeaderProgress');
+  const orderArea = document.getElementById('orderArea');
+
+  const show = (id, on, disp = 'inline-block') => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = on ? disp : 'none';
+  };
+
+    if (inOrder) {
+    // Swap headers
+    if (hdrForm && hdrProg) {
+      if (typeof fadeSwap === 'function') fadeSwap(hdrForm, hdrProg, 'flex');
+      else { hdrForm.style.display = 'none'; hdrProg.style.display = 'flex'; }
+    }
+    if (orderArea) orderArea.style.display = 'block';
+
+    // ⛔ Remove any pre-order Contracted/Actual note when an order is active
+    const cn = document.getElementById('contractNote');
+    if (cn && cn.parentNode) cn.parentNode.removeChild(cn);
+
+    // Sync form inputs / dropdown label
+    const sel = document.getElementById('oCust');
+    if (sel && current.name) sel.value = current.name;
+    const tot = document.getElementById('oTotal');
+    if (tot && Number.isFinite(current.total)) tot.value = String(current.total);
+    const ddToggle = document.querySelector('#oDD .dd-toggle');
+    if (ddToggle && current.name) ddToggle.textContent = current.name;
+
+    // Seed progress header fields
+    const total    = current.total || 0;
+    const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+    const done     = total - lastLeft;
+    const pct      = total ? Math.round((done / total) * 100) : 0;
+
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('progCust', current.name || '—');
+    setTxt('progQty',  total);
+    setTxt('progLeft', lastLeft);
+    setTxt('progPallets', String(tempWraps.length));
+    setTxt('progPct', pct + '%');
+    const fill = document.getElementById('progFill'); if (fill) fill.style.width = pct + '%';
+
+    // Gated controls (order-only)
+    show('btnStart',       false);
+    show('btnUndo',        true);
+    show('btnB',           true);
+    show('btnL',           true);
+    show('btnDelay',       true);
+    show('btnCloseEarly',  true);
+
+    // Elapsed chip visible during order
+    const chipBox = document.getElementById('chipElapsed');
+    if (chipBox) chipBox.style.display = '';
+
+    // Repaint dynamic pieces
+    updateProgressHeader?.();
+    renderTimeline?.();
+    refreshWrapButton?.();
+    refreshCompleteButton?.();
+
+    // ---- Shared dock: persist visibility on restore ----
+    try {
+      const dock = document.getElementById('sharedDock');
+      const shouldShow = !!(current?.shared) && localStorage.getItem('sharedDockOpen') !== '0';
+      if (dock) dock.style.display = shouldShow ? 'flex' : 'none';
+      if (shouldShow) {
+        updateSharedDockInfo?.();
+        // (optional) focus units input for quick resume
+        setTimeout(() => document.getElementById('sharedUnitsDock')?.focus(), 0);
+      }
+    } catch(e){}
+
+    // ===== Predictive resume on refresh =====
+    try {
+      predictiveStop?.();
+      const firstWrapSeen = Array.isArray(tempWraps) && tempWraps.length > 0;
+      const totalUnits    = current.total || 0;
+      const lastUnitsLeft = firstWrapSeen
+        ? tempWraps[tempWraps.length - 1].left
+        : totalUnits;
+
+      let seedRate;
+      if (firstWrapSeen) {
+        seedRate = Math.round(
+          (typeof orderLiveRate === 'function' && orderLiveRate()) ||
+          (typeof getLiveRateUh  === 'function' && getLiveRateUh()) ||
+          280
+        );
+      } else {
+        seedRate = (typeof isFirstOrderToday === 'function' && isFirstOrderToday())
+          ? 280
+          : Math.round(
+              (typeof getLiveRateUh === 'function' && getLiveRateUh()) ||
+              280
+            );
+      }
+
+      if (lastUnitsLeft > 0) {
+        predictiveReset?.(lastUnitsLeft, seedRate, firstWrapSeen);
+        uiLastPaceUh = Math.round(predictive?.rateUh || 0) || seedRate;
+        predictiveStart?.();
+      } else {
+        predictiveStop?.();
+      }
+    } catch(e) {}
+  } else {
+    // S1/S2: show form, hide progress/area
+    if (hdrProg)   hdrProg.style.display = 'none';
+    if (orderArea) orderArea.style.display = 'none';
+    if (hdrForm)   hdrForm.style.display = '';
+
+    // Restore contracted note on S1 only (pre-order)
+    renderPreOrderNoteFromLog?.();
+
+    // Buttons hidden when idle; Delay/Close-Early only when shift is on
+    show('btnStart',        true);
+    show('btnUndo',         false);
+    show('btnB',            false);
+    show('btnL',            false);
+    show('btnDelay',        shiftOn);
+    show('btnCloseEarly',   shiftOn);
+
+    // Hide elapsed chip
+    const chipBox2 = document.getElementById('chipElapsed');
+    if (chipBox2) chipBox2.style.display = 'none';
+
+    // Ensure shared dock hidden when no active order
+    const dock = document.getElementById('sharedDock');
+    if (dock) dock.style.display = 'none';
+
+    predictiveStop?.();
+  }
+
+
+  // Always resync top controls and keep action row grouped
+  updateHeaderActions?.();
+  ensureActionRowLayout?.();
+}
+
+function startOrder() {
+  const sel   = document.getElementById('oCust');
+  const name  = sel ? sel.value : '';
+  const total = parseInt((document.getElementById('oTotal').value || '0'), 10);
+
+  if (!startTime) return alert('Set shift start before starting an order.');
+
+  const otherVal = (document.getElementById('oOther')?.value || '').toUpperCase();
+  const isOther  = (name === '__OTHER__');
+  const hasValidOther = /^[A-Z]{6}$/.test(otherVal);
+
+  if (!(name && name !== '__OTHER__') && !(isOther && hasValidOther)) {
+    return alert('Select a valid customer code');
+  }
+  if (!(total > 0)) return alert('Enter total units');
+
+  const finalName = isOther ? otherVal : name;
+
+  // create order state
+  current = {
+    name: finalName,
+    total,
+    start: nowHHMM(),
+    breaks: [],
+    notes: [],
+    // rate/ETA controlled only by Start + Log Wrap
+    preWrapRateUh: null,
+    orderRateUh: null,
+    fixedETA: null,
+    shared: false,  // Shared mode flag (set in openSharedStart())
+  };
+  tempWraps = [];
+  undoStack = [];
+
+  // --- Seed from Live Rate chip if available ---
+  (function seedFromLiveRate(){
+    const chip = document.getElementById('chipRateVal');
+    let liveUh = 0;
+    if (chip) {
+      const m = String(chip.textContent || '').match(/(\d+)/);
+      liveUh = m ? parseInt(m[1], 10) : 0;
+    }
+    if (Number.isFinite(liveUh) && liveUh > 0) {
+      current.preWrapRateUh = liveUh;
+      const mins = Math.round((total / liveUh) * 60);
+      current.fixedETA = addMinutesToNow ? addMinutesToNow(mins) : nowHHMM();
+    } else {
+      current.preWrapRateUh = null;
+      current.fixedETA = null;
+    }
+  })();
+
+  // Swap to Active Open Order using the canonical path
+  try { restoreActiveOrderUI?.(); } catch (e) {}
+
+  // Belt-and-braces card visibility
+  (function ensureCards(){
+    const shiftCard  = document.getElementById('shiftCard');
+    const activeCard = document.getElementById('activeOrderCard');
+    const doneCard   = document.getElementById('completedCard');
+    if (shiftCard)  shiftCard.style.display  = 'none';
+    if (activeCard) activeCard.style.display = 'block';
+    if (doneCard)   doneCard.style.display   = 'none';
+  })();
+
+  // Reset the safety ghost button back to "Clear today's data"
+  (function resetSafetyButton(){
+    const btn = document.querySelector('.safetybar button.btn.ghost');
+    if (!btn) return;
+    btn.textContent = "Clear today's data";
+    btn.onclick = function(){ clearToday?.(); };
+  })();
+
+  // Paint seeded rate/ETA immediately (frozen until Log Wrap)
+  const rEl = document.getElementById('progRate');
+  const eEl = document.getElementById('progETA');
+  if (rEl) {
+    const seedRate = current.orderRateUh ?? current.preWrapRateUh;
+    rEl.textContent = (seedRate && seedRate > 0) ? `${seedRate} u/h` : '—';
+  }
+  if (eEl) eEl.textContent = current.fixedETA || '—';
+
+  // Keep predictive paint (width tint etc.) alive if you still want it
+  try {
+    const totalUnits = total || 0;
+    const seed = Math.round(current.preWrapRateUh || (getLiveRateUh?.() || 0) || 280);
+    const first = isFirstOrderToday?.() === true;
+    if (first) markFirstOrderStarted?.();
+    predictiveReset?.(totalUnits, seed, /*firstWrapSeen*/ false);
+    uiLastPaceUh = Math.round(predictive?.rateUh || 0) || seed;
+    predictiveStart?.();
+  } catch (e) {}
+
+  updateProgressHeader?.();
+  updateHeaderActions?.();
+  ensureActionRowLayout?.();
+
+  // --- NEW: flip chip from "Back in" → "Elapsed" and enable Close-Early now
+  (function kickElapsedAndCloseEarly(){
+    const chip = document.getElementById('chipElapsed');
+    if (chip) {
+      chip.style.display = ''; // show chip immediately
+      const label = chip.querySelector('b');
+      if (label) label.textContent = 'Elapsed';
+    }
+    updateElapsedChip?.();            // compute initial elapsed immediately
+    setElapsedChipClickable?.(true);  // allow opening elapsed modal
+    updateCloseEarlyVisibility?.();   // enable Close Early right away
+  })();
+
+  saveAll?.();
+}
+
+// --- minimal fade swap helper ---
+function fadeSwap(hideEl, showEl, showDisplay = 'block') {
+  if (!hideEl || !showEl) return;
+  // ensure both have .fade class
+  hideEl.classList.add('fade');
+  showEl.classList.add('fade');
+
+  // make the target renderable first (so CSS can animate)
+  showEl.style.display = showDisplay;
+
+  // start fade
+  // hide -> remove .show (fade out)
+  hideEl.classList.remove('show');
+
+  // show -> next frame add .show (fade in)
+  requestAnimationFrame(() => {
+    showEl.classList.add('show');
+  });
+
+  // after transition, fully hide the old one
+  setTimeout(() => { hideEl.style.display = 'none'; }, 250);
+}
+
+function logWrap() {
+  if (!current) return alert('Start an order first');
+
+  const inp = document.getElementById('oLeft');
+  const raw = (inp.value || '').trim();
+  if (raw === '') { inp.focus(); return alert('Enter units left'); }
+
+  const left = parseInt(raw, 10);
+  if (isNaN(left)) { inp.focus(); return alert('Enter a valid number'); }
+  if (left < 0 || left > current.total) { inp.focus(); return alert('Units left must be between 0 and total'); }
+
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
+  if (left > prevLeft) { inp.focus(); return alert('Units left cannot increase vs previous wrap'); }
+
+  const done = prevLeft - left;
+  if (done <= 0) { inp.focus(); return alert('No progress since last wrap'); }
+
+  const t = nowHHMM();
+  tempWraps.push({ left, done, t });
+  undoStack.push({ type: 'wrap' });
+
+  inp.value = '';
+  refreshWrapButton();
+  renderTimeline();
+  updateSummary();
+  refreshCompleteButton();
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
+  // Switch predictive rule after a wrap
+  if (left === 0) {
+    predictiveStop(); // you already auto-complete via existing flow
+  } else {
+    const orderRate = Math.round(orderLiveRate?.() || getLiveRateUh?.() || 280);
+    predictiveReset(left, orderRate, true); // after first wrap use current order rate
+    uiLastPaceUh = Math.round(orderRate);
+    predictiveStart();
+  }
+
+
+  // 🔹 added line here — keeps buttons in sync (esp. Complete unlock)
+  updateHeaderActions?.();
+
+  // ✅ Auto-close when 0 left
+  if (left === 0) {
+    showToast('Order complete — closing...');
+    setTimeout(() => completeOrder(), 300);
+    return;
+  }
+  saveAll();
+}
+
+function undoLast() {
+  if (!current) { showToast('Nothing to undo'); return; }
+
+  const last = undoStack.pop();
+  if (!last) { showToast('Nothing to undo'); return; }
+
+  // Never allow Undo to go past the order start
+  if (last.type === 'start') {
+    undoStack.push(last);                 // restore the sentinel
+    showToast('Nothing more to undo');    // user feedback
+    return;
+  }
+
+  if (last.type === 'wrap') {
+    tempWraps.pop();
+
+  } else if (last.type === 'break') {
+    current.breaks?.pop();
+
+  } else if (last.type === 'delay' && current.__lastDelay) {
+    current.breaks = (current.breaks || []).filter(b => b !== current.__lastDelay);
+    current.__lastDelay = null;
+  }
+
+  // --- Recompute + repaint ---
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
+  if (typeof renderTimeline       === 'function') renderTimeline();
+  if (typeof updateSummary        === 'function') updateSummary();
+  if (typeof refreshCompleteButton=== 'function') refreshCompleteButton();
+  if (typeof refreshWrapButton    === 'function') refreshWrapButton();
+  if (typeof updateDelayBtn       === 'function') updateDelayBtn();
+  if (typeof updateEndShiftVisibility   === 'function') updateEndShiftVisibility();
+  if (typeof updateCloseEarlyVisibility === 'function') updateCloseEarlyVisibility();
+
+  // Predictive: re-baseline to latest known left/rate (or stop if no order)
+  if (current) {
+    const left = (typeof getCurrentLeft === 'function') ? getCurrentLeft() : (current.left ?? 0);
+    const rate = (typeof getLiveRateUh  === 'function') ? getLiveRateUh()  : 0;
+    if (typeof predictiveReset === 'function') predictiveReset(left, rate);
+  } else {
+    if (typeof predictiveStop === 'function') predictiveStop();
+  }
+
+  if (typeof saveAll === 'function') saveAll();
+}
+
+
+function refreshCompleteButton(){
+  ['btnComplete', 'btnCompleteTop'].forEach(id=>{
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = !current;
+    btn.style.display = current ? 'inline-block' : 'none';
+  });
+}
+// ===== Predictive progress & live ETA =====
+const SEL = {
+  rateText:  'progRate',   // text: "—" or "823 u/h"
+  etaText:   'progETA',    // text: "—" or "17:52"
+  leftLabel: 'progLeft',   // text: remaining units
+  progFill:  'progFill',   // inner fill div of the progress bar
+};
+
+function getCurrentLeft(){
+  if (!current || !current.total) return 0;
+  return (tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total);
+}
+
+// Prefer per-order live rate; fall back to whole-shift snapshot
+function getLiveRateUh(){
+  const rOrder = Math.round(orderLiveRate() || 0);
+  if (rOrder > 0) return rOrder;
+  if (typeof computeLiveRateSnapshot === 'function') {
+    const snap = computeLiveRateSnapshot();
+    if (snap && snap.live > 0) return snap.live;
+  }
+  return NaN;
+}
+
+function fmtETA(ms){
+  if (!isFinite(ms)) return '—';
+  const d = new Date(ms);
+  return d.toTimeString().slice(0,5); // "HH:MM"
+}
+function setText(id, txt){ const el=document.getElementById(id); if(el) el.textContent = txt; }
+function setProgress(pct){
+  const el = document.getElementById(SEL.progFill);
+  if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%';
+}
+function updateLeftLabel(left){
+  const el = document.getElementById(SEL.leftLabel);
+  if (el) el.textContent = String(left);
+}
+
+function predictiveReset(leftNow, rateUh){
+  if (!current || !current.total) return;
+  predictive.leftAtBase = Math.max(0, leftNow);
+  predictive.baseTs = Date.now();
+  predictive.rateUh = Math.max(0, rateUh || getLiveRateUh() || 0);
+  predictiveTick(true); // reflect immediately
+}
+function predictiveStart(){
+  predictiveStop();
+  predictive.timer = setInterval(predictiveTick, 1000);
+}
+function predictiveStop(){
+  if (predictive.timer) clearInterval(predictive.timer);
+  predictive.timer = null;
+}
+// Minutes to add to ETA while a break/lunch is active.
+// At break start we add the full target (20/30). If you overrun, it grows with elapsed.
+function breakExtensionMinutes(){
+  if (!window.breakDraft) return 0;
+  const elapsedMin = Math.round((hm(nowHHMM()) - hm(breakDraft.startHHMM)) * 60);
+  const targetMin  = Math.round((breakDraft.targetSec || 0) / 60);
+  return Math.max(targetMin, elapsedMin);
+}
+function predictiveTick(){
+  if (!current || !current.total) return;
+
+  // 1) Track the freshest live rate (order rate preferred, else shift snapshot)
+  const liveUh = getLiveRateUh();
+  if (isFinite(liveUh) && liveUh > 0) predictive.rateUh = liveUh;
+
+  // 2) Predict remaining units from baseline
+  const perSec     = predictive.rateUh > 0 ? (predictive.rateUh / 3600) : 0;
+  const elapsedSec = (Date.now() - predictive.baseTs) / 1000;
+
+  let leftPred = Math.max(0, Math.round(predictive.leftAtBase - perSec * elapsedSec));
+  leftPred = Math.min(leftPred, current.total);
+
+  // 3) Compute progress and paint UI
+  const done = (current.total - leftPred);
+  const pct  = current.total ? (done / current.total) * 100 : 0;
+
+  // bar + % label
+  setProgress(pct);
+  const pctEl = document.getElementById('progPct');
+  if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+
+  // "Left" label
+  updateLeftLabel(leftPred);
+
+  // live rate + ETA
+  if (isFinite(predictive.rateUh) && predictive.rateUh > 0 && perSec > 0) {
+    setText(SEL.rateText, Math.round(predictive.rateUh) + ' u/h');
+    const secToGo = leftPred / perSec;
+    setText(SEL.etaText, fmtETA(Date.now() + secToGo * 1000));
+  } else {
+    setText(SEL.rateText, '—');
+    setText(SEL.etaText, '—');
+  }
+
+  // chip/colour class for the bar fill (keeps colour live)
+  tintProgressByPace(predictive.rateUh || 0);
+}
+
+setInterval(()=>{
+  // Only let the header repaint if predictive is NOT running
+  if (current && !(predictive && predictive.timer)) {
+    try { updateProgressHeader(); } catch(e){}
+  }
+}, 1000);
+
+function completeOrder() {
+  if (!current)   return alert('Start an order first');
+  if (!startTime) return alert('Add shift start first');
+
+  const closeHHMM = nowHHMM();
+
+  // Capture final remainder as wrap
+  const total    = current.total || 0;
+  const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+  if (lastLeft > 0) {
+    // final segment equals "what was left" before closing
+    tempWraps.push({ left: 0, done: lastLeft, t: closeHHMM });
+    undoStack.push({ type: 'wrap' });
+  }
+
+  const palletsCount = tempWraps.length || 1;
+  const unitsDone    = total;
+  const exclMins     = (current.breaks || []).reduce((a,b)=>a+(b.minutes||0),0);
+
+  // Archive
+  const archived = {
+    name:    current.name,
+    units:   unitsDone,
+    pallets: palletsCount,
+    start:   current.start,
+    close:   closeHHMM,
+    excl:    exclMins,
+    log:     { wraps: tempWraps.slice(), breaks: (current.breaks || []).slice() }
+  };
+  picks.push(archived);
+  lastClose = closeHHMM;
+
+  // Stop prediction & clear state
+  predictiveStop();
+  current   = null;
+  tempWraps = [];
+  undoStack = [];
+
+    // Hide active order UI
+  const hide = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+  hide('orderArea');
+  hide('btnUndo');
+  hide('btnComplete');
+
+  // Restore header form (fresh new-order panel), hide progress header
+  const hdrForm = document.getElementById('orderHeaderForm');
+  const hdrProg = document.getElementById('orderHeaderProgress');
+  if (hdrForm && hdrProg) fadeSwap(hdrProg, hdrForm, 'block');
+
+  // Reset inputs & Start button state for a brand-new order
+  resetNewOrderForm();
+
+  // Keep Completed Orders section visible and re-render it
+  if (typeof renderDone === 'function') renderDone();
+  const completedCard = document.getElementById('completedCard');
+  if (completedCard) completedCard.style.display = 'block';
+
+  // Update chips and gated actions for "no active order"
+  if (typeof updateSummary === 'function') updateSummary();
+  if (typeof updateDelayBtn === 'function') updateDelayBtn();
+  if (typeof updateEndShiftVisibility === 'function') updateEndShiftVisibility();
+  if (typeof updateCloseEarlyVisibility === 'function') updateCloseEarlyVisibility();
+
+  showToast('Order closed at ' + closeHHMM);
+
+  // Reset progress header visuals for when the next order starts
+  const pct  = document.getElementById('progPct');
+  const fill = document.getElementById('progFill');
+  if (pct)  pct.textContent = '0%';
+  if (fill) fill.style.width = '0%';
+  saveAll();
+}
+
+function updateDelayBtn(){
+  const el = document.getElementById('btnDelay');
+  if (!el) return;
+  const shiftOn = !!startTime && window.archived !== true;
+  el.style.display = shiftOn ? 'inline-block' : 'none';
+}
+
+function openDelayModal(){
+  const shiftOn = !!startTime && window.archived !== true;
+  if (!shiftOn) return alert('Start your shift to log notes/delays');
+
+  delayDraft = { start: nowHHMM(), cause: '' };
+
+  const s = document.getElementById('delayStart');
+  const c = document.getElementById('delayCause');
+
+  // ✅ display readonly timestamp instead of editable input
+  if (s) s.textContent = delayDraft.start;
+  if (c) c.value = '';
+
+  document.getElementById('delayModal').style.display = 'flex';
+}
+
+function closeDelayModal(){ document.getElementById('delayModal').style.display='none'; }
+function cancelDelay(){ delayDraft=null; closeDelayModal(); }
+function submitDelay(){
+  if (!delayDraft){ closeDelayModal(); return; }
+
+  const end = nowHHMM();
+  const minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
+  const cause = (document.getElementById('delayCause').value||'').trim();
+
+  if (current && Number.isFinite(current.total)) {
+    // attach to current order
+    current.breaks = current.breaks || [];
+    const entry = { type:'D', start: delayDraft.start, end, minutes, cause };
+    current.breaks.push(entry);
+    current.__lastDelay = entry;
+    undoStack.push?.({ type:'delay' });
+    renderTimeline?.(); updateSummary?.(); saveAll?.();
+  } else {
+    // shift-level delay (no active order)
+    try {
+      const key = 'shiftDelays';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.push({ type:'D', start: delayDraft.start, end, minutes, cause });
+      localStorage.setItem(key, JSON.stringify(arr));
+    } catch(e){}
+  }
+
+  delayDraft = null;
+  closeDelayModal();
+  showToast?.(`Delay logged (${minutes}m)`);
+}
+function updateSharedDockInfo() {
+  const info = document.getElementById('sharedDockInfo');
+  const remaining = Math.max(0, sharedSession.total - sharedMySum);
+  
+  if (info) info.textContent = `Target: ${sharedSession.total} | Left: ${remaining}`;
+
+  // Disable the submit button if all units have been submitted
+  const sBtn = document.getElementById('sharedSubmitBtn');
+  if (sBtn) sBtn.disabled = remaining <= 0;
+}
+
+function sharedSubmitUnits() {
+  const input   = document.getElementById('sharedUnitsDock');
+  const wrapTick= document.getElementById('sharedWrapTick');
+  const val     = parseInt(input.value || '0', 10);
+
+  if (!(val > 0)) return alert('Enter units first');
+
+  // Remaining vs target
+  const remaining = Math.max(0, (sharedSession.total || 0) - sharedMySum);
+  if (remaining === 0) { showToast?.('Target already reached.'); return; }
+
+  const add = Math.min(val, remaining);
+  sharedMySum += add;
+
+  // Record submission in the shared session log
+  sharedSession.entries.push({ units: add, t: nowHHMM() });
+
+  // ---- KEY: push a synthetic wrap into tempWraps so progress/elapsed update like Log Wrap ----
+  // previous left (from last wrap) and new left after this submit
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current?.total || sharedSession.total || 0);
+  const newLeft  = Math.max(0, (current?.total || sharedSession.total || 0) - sharedMySum);
+
+  if (newLeft !== prevLeft) {
+    tempWraps.push({ left: newLeft, done: Math.max(0, prevLeft - newLeft), t: nowHHMM() });
+  }
+
+  // Optional: if user ticked “Wrap”, mirror to shared wraps too and clear the tick
+  if (wrapTick?.checked) {
+    (sharedSession.wraps ||= []).push({ left: newLeft, t: nowHHMM() });
+    wrapTick.checked = false;
+  }
+
+  // UI refresh
+  input.value = '';
+  window._sharedProgressLeft = newLeft;          // keep the overlay in sync
+  predictiveReset?.(newLeft);                    // update creeping baseline
+  updateProgressHeader?.();                      // bar/%/left
+  updateElapsedChip?.();                         // elapsed chip reflects new progress
+  updateSharedDockInfo();                        // dock “Target | Mine | Left” and disable when done
+  const totalUnitsChip = document.getElementById('chipTotalVal');
+  if (totalUnitsChip) totalUnitsChip.textContent = sharedMySum;
+
+  showToast?.('Unit submitted.');
+}
+
+
+// Save a text note (no delay timing). Works with or without an active order.
+function submitNote(){
+  const txt = (document.getElementById('delayCause').value || '').trim();
+  if (!txt) { showToast?.('Enter a note'); return; }
+
+  const t = nowHHMM();
+  if (current && Number.isFinite(current.total)) {
+    // store on the active order timeline
+    current.breaks = current.breaks || [];
+    current.breaks.push({ type:'N', t, note: txt });
+    undoStack.push?.({ type:'note' });
+    renderTimeline?.();
+    updateSummary?.();
+    saveAll?.();
+  } else {
+    // shift-level note (no active order). Persist separately.
+    try {
+      const key = 'shiftNotes';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.push({ t, note: txt });
+      localStorage.setItem(key, JSON.stringify(arr));
+    } catch(e){}
+  }
+
+  showToast?.('Note saved');
+  closeDelayModal();
+}
+
+// ====== Break timer (banner) ======
+function openBreakModal(kind){ startBreak(kind); }
+
+function startBreak(kind){
+  var mins = (kind==='B') ? 20 : 30;
+  var start = nowHHMM();
+  breakDraft = {type:kind, startHHMM:start, targetSec: mins*60, beeping:false};
+
+  // persist across refresh
+  try { localStorage.setItem('breakDraft', JSON.stringify(breakDraft)); } catch(e){}
+
+  document.getElementById('breakBarTitle').textContent = (kind==='B'?'Break':'Lunch');
+  document.getElementById('breakBarStart').textContent = start;
+  document.getElementById('breakBarTarget').textContent = mins+' min target';
+  document.getElementById('breakBar').style.display = 'flex';
+
+  document.getElementById('chipElapsed').style.display = '';
+  tickBreak();
+  if(breakTickId) clearInterval(breakTickId);
+  breakTickId = setInterval(tickBreak, 1000);
+
+  // PREDICTIVE: pause creeping during breaks
+  predictiveStop();
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
+}
+
+function hasActiveOrder(){ 
+  return !!(window.current && Number.isFinite(window.current.total)); 
+}
+
+function submitBreak(){
+  if(!breakDraft){ return cancelBreak(); }
+  var end = nowHHMM();
+  var minutes = Math.max(1, Math.round((hm(end)-hm(breakDraft.startHHMM))*60));
+  var entry = {type: breakDraft.type, start: breakDraft.startHHMM, end, minutes};
+
+  if(current){
+    current.breaks.push(entry);
+    undoStack.push({type:'break'});
+    renderTimeline();
+  } else {
+    shiftBreaks.push(entry);
+  }
+
+  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+
+  // clear persisted draft
+  try { localStorage.removeItem('breakDraft'); } catch(e){}
+
+  breakDraft = null;
+
+  document.getElementById('breakBar').style.display = 'none';
+
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (current) {
+    if (chipBox) chipBox.style.display = '';
+    updateElapsedChip();
+  } else {
+    if (chipBox) chipBox.style.display = 'none';
+    if (chipVal) chipVal.textContent = '—';
+  }
+
+  updateSummary();
+  showToast('Break logged ('+minutes+'m)');
+  saveAll();
+
+  // PREDICTIVE: resume from current true left
+  if (current) {
+    predictiveReset(getCurrentLeft(), getLiveRateUh());
+    predictiveStart();
+  }
+}
+function cancelBreak(){
+  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+
+  // clear persisted draft
+  try { localStorage.removeItem('breakDraft'); } catch(e){}
+
+  breakDraft = null;
+  document.getElementById('breakBar').style.display = 'none';
+
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+
+  if (current) {
+    if (chipBox) chipBox.style.display = '';
+    updateElapsedChip();
+  } else {
+    if (chipBox) chipBox.style.display = 'none';
+    if (chipVal) chipVal.textContent = '—';
+  }
+
+  // PREDICTIVE: resume from current true left
+  if (current) {
+    predictiveReset(getCurrentLeft(), getLiveRateUh());
+    predictiveStart();
+  }
+}
+
+function tickBreak() {
+  if (!breakDraft) return;
+
+  const now = nowHHMM();
+  const elapsedMin = Math.round((hm(now) - hm(breakDraft.startHHMM)) * 60);
+  const targetMin  = Math.round((breakDraft.targetSec || 0) / 60);
+  const diff = targetMin - elapsedMin;
+
+  const breakDisplay = diff >= 0 ? `${diff} min` : `-${Math.abs(diff)} min over`;
+
+  const breakBar = document.getElementById('breakBarCountdown');
+  const chip     = document.getElementById('chipElapsedVal');
+  const chipBox  = document.getElementById('chipElapsed');
+
+  const chipLabel = chipBox?.querySelector('b');
+  if (chipLabel) chipLabel.textContent = 'Back in';
+
+  if (breakBar) breakBar.textContent = breakDisplay;
+  if (chip)     chip.textContent     = breakDisplay;
+
+  if (chipBox) {
+    chipBox.classList.remove('green', 'amber');
+    chipBox.classList.add(diff >= 0 ? 'green' : 'amber');
+  }
+
+  if (diff === 0 && !breakDraft.beeping) {
+    breakDraft.beeping = true;
+    tryBeep?.();
+  }
+
+  // Keep header ETA reflecting planned/overrun break in real time
+  if (typeof updateProgressHeader === 'function') updateProgressHeader();
+}
+
+
+// ====== Completed orders & history ======
+function renderTimeline(){
+  const tl = document.getElementById('orderTimeline');
+  if (!tl) return;
+  tl.innerHTML = '';
+
+  // tiny escaper (local to this function)
+  const esc = s => String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+
+  // Order start
+  if (current) {
+    const row0 = document.createElement('div');
+    row0.className = 'tick';
+    row0.innerHTML = `<span>🟢 Order started</span><span class="meta">${current.start || ''}</span>`;
+    tl.appendChild(row0);
+  }
+  
+  // Breaks / Delays / Notes
+  (current?.breaks || []).forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'tick';
+
+    if (b.type === 'N') {
+      // 📝 Note — single timestamp (no duration)
+      const t   = b.t || '';
+      const txt = (b.note || '').trim();
+      row.innerHTML = `<span>📝 Note${txt ? ' — ' + esc(txt) : ''}</span><span class="meta">${t}</span>`;
+    } else if (b.type === 'D') {
+      // ⏱️ Delay — start → end • Xm (guarded)
+      const cause = b.cause ? ': ' + esc(b.cause) : '';
+      const start = b.start || '';
+      const end   = b.end   || '';
+      const mins  = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
+      const meta  = (start && end) ? `${start} → ${end}${mins ? ' • ' + mins : ''}` : (start || end || '');
+      row.innerHTML = `<span>⏱️ Delay${cause}</span><span class="meta">${meta}</span>`;
+    } else {
+      // ☕ Break / Lunch — start → end • Xm (guarded)
+      const label = (b.type === 'B') ? 'Break' : 'Lunch';
+      const start = b.start || '';
+      const end   = b.end   || '';
+      const mins  = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
+      const meta  = (start && end) ? `${start} → ${end}${mins ? ' • ' + mins : ''}` : (start || end || '');
+      row.innerHTML = `<span>☕ ${label}</span><span class="meta">${meta}</span>`;
+    }
+
+    tl.appendChild(row);
+  });
+
+  // Wraps
+  tempWraps.forEach((w, i) => {
+    const row = document.createElement('div');
+    row.className = 'tick';
+    row.innerHTML = `<span>📦 Wrap ${i+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t || ''}</span>`;
+    tl.appendChild(row);
+  });
+}
+
+// --- Close Early buttons visibility
+function updateCloseEarlyVisibility(){
+  const btn = document.getElementById('btnCloseEarly');
+  if (!btn) return;
+  const on = !!(current && Number.isFinite(current.total));
+  btn.style.display = on ? 'inline-block' : 'none';
+  btn.disabled = !on;
+}
+
+// --- Modal open/close
+function openCloseEarlyModal(){
+  if (!current) return;
+  const r = document.getElementById('ceReason');
+  document.getElementById('ceRemaining').value = '';
+  document.getElementById('ceWrapped').checked = false;
+  if (r) r.value = '';
+  document.getElementById('closeEarlyModal').style.display = 'flex';
+}
+function closeCloseEarlyModal(){
+  const m = document.getElementById('closeEarlyModal');
+  if (m) m.style.display = 'none';
+}
+
+// --- Finalize Close Early
+function submitCloseEarly(){
+  if (!current) return closeCloseEarlyModal?.();
+
+  // 1) read + validate
+  const remEl = document.getElementById('ceRemaining');
+  const remaining = parseInt((remEl?.value || '0'), 10);
+  if (!Number.isFinite(remaining) || remaining < 0) {
+    return alert('Enter remaining units (0 or more).');
+  }
+
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current.total || 0);
+  if (remaining > prevLeft) {
+    return alert(`Remaining cannot exceed current left (${prevLeft}).`);
+  }
+
+  const wrapped  = !!document.getElementById('ceWrapped')?.checked;
+  const reasonEl = document.getElementById('ceReason');
+  const reason   = (reasonEl && reasonEl.value || '').trim();
+
+  // reason only required when closing with units left
+  if (remaining > 0 && reason.length < 3) {
+    if (reasonEl) reasonEl.focus();
+    return alert('Please add a short reason for closing early.');
+  }
+
+  // 2) optional final wrap (only if we actually reduced left)
+  let addedWrap = false;
+  if (wrapped) {
+    if (remaining < prevLeft) {
+      tempWraps.push({ left: remaining, done: prevLeft - remaining, t: nowHHMM() });
+      addedWrap = true;
+    } else {
+      return alert('No progress since last wrap. Uncheck “Wrapped last pallet” or adjust Remaining.');
+    }
+  }
+
+  // 3) confirm (if helper exists) then archive
+  const closeHHMM   = nowHHMM();
+  const unitsDone   = (current.total || 0) - remaining;
+  const palletsCnt  = tempWraps.length || 1;
+
+  const ok = (typeof confirmCloseSummary === 'function') ? confirmCloseSummary({
+    name: current.name, unitsDone, pallets: palletsCnt,
+    start: current.start, close: closeHHMM, remaining, earlyReason: reason
+  }) : true;
+
+  if (ok === false) {
+    if (addedWrap) tempWraps.pop();
+    return;
+  }
+
+  const exclMins = (current.breaks || []).reduce((a,b)=> a + (b.minutes || 0), 0);
+  picks.push({
+    name: current.name,
+    units: unitsDone,
+    pallets: palletsCnt,
+    start: current.start,
+    close: closeHHMM,
+    remaining,
+    excl: exclMins,
+    earlyReason: reason || '',
+    closedEarly: true,
+    log: { wraps: tempWraps.slice(0), breaks: (current.breaks || []).slice(0) }
+  });
+  lastClose = closeHHMM;
+
+  // 4) reset state + UI (bring back new-order header form)
+  predictiveStop?.();
+  current   = null;
+  tempWraps = [];
+  undoStack = [];
+
+  // hide active area
+  const area = document.getElementById('orderArea');
+  if (area) area.style.display = 'none';
+
+  // swap progress header -> header form
+  const hdrForm = document.getElementById('orderHeaderForm');
+  const hdrProg = document.getElementById('orderHeaderProgress');
+  if (hdrForm && hdrProg) {
+    if (typeof fadeSwap === 'function') fadeSwap(hdrProg, hdrForm, 'block');
+    else { hdrProg.style.display = 'none'; hdrForm.style.display = 'block'; }
+  }
+
+  // reset inputs for a fresh order (use helper if present)
+  if (typeof resetNewOrderForm === 'function') {
+    resetNewOrderForm();
+  } else {
+    const oLeft  = document.getElementById('oLeft');   if (oLeft)  oLeft.value  = '';
+    const oTotal = document.getElementById('oTotal');  if (oTotal) oTotal.value = '';
+    const sel    = document.getElementById('oCust');   if (sel)    sel.value    = '';
+    const ddT    = document.querySelector('#oDD .dd-toggle');
+    if (ddT) ddT.textContent = 'Select customer…';
+  }
+
+  // buttons/chips
+  const btnUndo     = document.getElementById('btnUndo');     if (btnUndo) btnUndo.style.display = 'none';
+  const btnStartTop = document.getElementById('btnStart');    if (btnStartTop) { btnStartTop.style.display = 'inline-block'; btnStartTop.disabled = true; }
+  const btnComplete = document.getElementById('btnComplete'); if (btnComplete) btnComplete.style.display = 'none';
+  const chipBox     = document.getElementById('chipElapsed'); if (chipBox) chipBox.style.display = 'none';
+
+  // close modal + refresh
+  closeCloseEarlyModal?.();
+  renderDone?.();
+  updateSummary?.();
+  updateDelayBtn?.();
+  updateEndShiftVisibility?.();
+  updateCloseEarlyVisibility?.();
+  saveAll?.();
+  showToast?.('Order closed');
+
+  // keep action row grouped
+  ensureActionRowLayout?.();
+}
+
+function renderDone(){
+  var tb=document.getElementById('doneBody'); tb.innerHTML='';
+  picks.forEach(function(o,i){
+    var s=hm(o.start), e=hm(o.close);
+    var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+    var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+    var tr = document.createElement('tr'); tr.className='clickable'; tr.dataset.idx=i;
+    tr.innerHTML = '<td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td>';
+    tb.appendChild(tr);
+    var logTr = document.createElement('tr'); logTr.className='logrow'; logTr.id='logrow_'+i;
+    var logTd = document.createElement('td'); logTd.colSpan=7;
+    var html = '<div class="logwrap"><div class="hint">Order log</div>';
+    (o.log?.breaks||[]).forEach(function(b){
+      if(b.type==='D'){
+        html += '<div class="tick"><span>⏱️ Delay'+(b.cause?': '+b.cause.replace(/</g,'&lt;'):'')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+      } else {
+        html += '<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+      }
+    });
+    (o.log?.wraps||[]).forEach(function(w,wi){ 
+      html += '<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; 
+    });
+
+    if (o.earlyReason && o.earlyReason.trim().length > 0) {
+      html += `<div class="tick"><span>📝 Early Close Reason:</span><span class="meta">${o.earlyReason.replace(/</g,'&lt;')}</span></div>`;
+    }
+
+    html += '</div>';
+    logTd.innerHTML = html;
+    logTr.appendChild(logTd);
+    tb.appendChild(logTr);
+    tr.addEventListener('click', function(){
+      var row=document.getElementById('logrow_'+i);
+      row.style.display = (row.style.display==='table-row') ? 'none' : 'table-row';
+    });
+  });
+  document.getElementById('completedCard').style.display = picks.length? 'block':'none';
+}
+function renderWeeklySummary(){
+  try{
+    const todayISOstr = todayISO();
+    const { startISO, endISO, startDate, endDate } = weekBoundsFor(todayISOstr);
+
+    const weekDays = (historyDays||[]).filter(d => d && d.date && inRange(d.date, startISO, endISO));
+
+    const floorToQuarter = (mins)=> Math.max(0, Math.floor(mins/15)*15);
+    const num = (v)=> Number.isFinite(+v) ? +v : 0;
+
+    let totalUnits  = 0;
+    let totalHours  = 0;
+    let overtimeMin = 0;
+
+    weekDays.forEach(d=>{
+      const units = num(d.totalUnits);
+      const hours = num(d.shiftLen);
+
+      const workedMin    = num(d.workedMin) || num(d.elapsedMin) || Math.round(hours*60);
+      const scheduledMin = num(d.scheduledMin) || Math.round((hours || 9)*60);
+
+      totalUnits += units;
+      if (hours > 0) totalHours += hours;
+
+      const delta = workedMin - scheduledMin;
+      if (delta > 0) overtimeMin += floorToQuarter(delta);
+    });
+
+    const weighted   = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
+    const overtimeH  = (overtimeMin/60);
+
+    const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
+    const hintEl = document.getElementById('weekRangeHint');
+    if(hintEl) hintEl.textContent = `Week: ${fmtShort(startDate)} – ${fmtShort(endDate)}`;
+
+    setTxt('weekWeighted', weighted ? (weighted+' u/h') : '— u/h');
+    // simple mean removed: no write to #weekMean
+    setTxt('weekUnits',    String(totalUnits));
+    setTxt('weekHours',    (totalHours||0).toFixed(1));
+    setTxt('weekDays',     String(weekDays.length));
+    setTxt('weekOvertime', overtimeH.toFixed(2) + ' h');
+
+    const card = document.getElementById('weekCard');
+    if(card){
+      card.classList.remove('ok','warn','bad');
+      if(weighted>=300) card.classList.add('ok');
+      else if(weighted>=249) card.classList.add('warn');
+      else card.classList.add('bad');
+    }
+  }catch(e){
+    console.warn('renderWeeklySummary error', e);
+  }
+}
+
+// ====== History render ======
+function renderHistory(){
+  var host=document.getElementById('histList'); host.innerHTML='';
+  if(!historyDays.length){
+    host.innerHTML='<div class="hint">No archived days yet.</div>';
+    renderWeeklySummary();
+    return;
+  }
+  var days=historyDays.slice(0).reverse();
+  days.forEach(function(d,diRev){
+    const di = historyDays.length - 1 - diRev;
+    var head=document.createElement('div'); var boxState=d.dayRate>=300?'ok':(d.dayRate>=249?'warn':'bad');
+    head.className='accHead '+boxState;
+
+    const leftDiv=document.createElement('div'); leftDiv.className='left';
+    leftDiv.innerHTML = `<span class="tag">${new Date(d.date+'T12:00:00').toDateString().slice(0,15)}</span>
+      <span>Units: <b>${d.totalUnits||0}</b></span>
+      <span>Day Avg: <b>${d.dayRate||0}</b> u/h</span>`;
+    head.appendChild(leftDiv);
+
+    const del = document.createElement('button');
+    del.textContent = '✖';
+    del.className = 'btn slim ghost gate-pro';
+    del.title = 'Delete day';
+    del.onclick = (e)=>{ e.stopPropagation(); if(!confirm('Delete this archived day? This cannot be undone.')) return; historyDays.splice(di,1); saveAll(); renderHistory(); showToast('Day deleted'); };
+    head.appendChild(del);
+
+    const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▾';
+    head.appendChild(chev);
+
+    var body=document.createElement('div'); body.className='accBody';
+
+    var table=document.createElement('table');
+    table.innerHTML='<thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>';
+    var tbody=document.createElement('tbody');
+
+    (d.picks||[]).forEach(function(o,i){
+      var s=hm(o.start), e=hm(o.close);
+      var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+      var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+      var tr=document.createElement('tr'); tr.className='clickable'; tr.dataset.idx=i;
+      tr.innerHTML='<td>'+(i+1)+'</td><td>'+o.name+'</td><td>'+o.units+'</td><td>'+o.pallets+'</td><td>'+o.start+'</td><td>'+o.close+'</td><td>'+rate+' u/h</td>';
+      var logTr=document.createElement('tr'); logTr.className='logrow'; logTr.id='hlog_'+di+'_'+i;
+      var td=document.createElement('td'); td.colSpan=7;
+      var html='<div class="logwrap"><div class="hint">Order log</div>';
+      (o.log?.breaks||[]).forEach(function(b){
+        if(b.type==='D'){
+          html+='<div class="tick"><span>⏱️ Delay'+(b.cause?': '+b.cause.replace(/</g,'&lt;'):'')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+        } else {
+          html+='<div class="tick"><span>☕ '+(b.type==='B'?'Break':'Lunch')+'</span><span class="meta">'+b.start+' → '+b.end+' • '+b.minutes+'m</span></div>';
+        }
+      });
+      (o.log?.wraps||[]).forEach(function(w,wi){ html+='<div class="tick"><span>📦 Wrap '+(wi+1)+': <b>'+w.done+'</b> done, <b>'+w.left+'</b> left</span><span class="meta">'+w.t+'</span></div>'; });
+      html+='</div>';
+      td.innerHTML=html; logTr.appendChild(td);
+
+      tbody.appendChild(tr); tbody.appendChild(logTr);
+      tr.addEventListener('click', function(){
+        var row=document.getElementById('hlog_'+di+'_'+i);
+        row.style.display = (row.style.display==='table-row') ? 'none' : 'table-row';
+      });
+    });
+
+    table.appendChild(tbody); body.appendChild(table);
+
+    const subAcc = document.createElement('div'); subAcc.className='accordion';
+    const subHead = document.createElement('div'); subHead.className='accHead'; subHead.innerHTML='<div class="left"><span>Notes & Downtime</span></div><span class="chev">▾</span>';
+    const subBody = document.createElement('div'); subBody.className='accBody';
+
+    const notes = document.createElement('div');
+    notes.className='logwrap';
+    let notesHtml = '<div class="hint">Notes</div>';
+
+    (d.shiftBreaks||[]).forEach(b=>{
+      notesHtml += `<div class="tick"><span>☕ ${(b.type==='B')?'Break':'Lunch'}</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span></div>`;
+    });
+    (d.picks||[]).forEach(o=>{
+      (o.log?.breaks||[]).forEach(b=>{
+        if(b.type==='B' || b.type==='L'){
+          notesHtml += `<div class="tick"><span>☕ ${(b.type==='B')?'Break':'Lunch'} (${o.name})</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span></div>`;
+        } else if(b.type==='D'){
+          notesHtml += `<div class="tick"><span>⏱️ Delay${b.cause?': '+b.cause.replace(/</g,'&lt;'):''} (${o.name})</span><span class="meta">${b.start} → ${b.end} • ${b.minutes}m</span></div>`;
+        }
+      });
+    });
+    (d.downtimes||[]).forEach(g=>{
+      notesHtml += `<div class="tick"><span>⏳ Downtime</span><span class="meta">${g.from} → ${g.to} • ${g.minutes}m</span></div>`;
+    });
+
+    notes.innerHTML = notesHtml;
+    subBody.appendChild(notes);
+
+    subAcc.appendChild(subHead);
+    subAcc.appendChild(subBody);
+    body.appendChild(subAcc);
+
+    var wrap=document.createElement('div'); wrap.className='accordion'; wrap.appendChild(head); wrap.appendChild(body); host.appendChild(wrap);
+
+    // Toggles
+    head.addEventListener('click', function(){ var open=body.style.display==='block'; body.style.display=open?'none':'block'; head.querySelector('.chev').textContent=open?'▾':'▴'; });
+    subHead.addEventListener('click', function(){ var open=subBody.style.display==='block'; subBody.style.display=open?'none':'block'; subHead.querySelector('.chev').textContent=open?'▾':'▴'; });
+  });
+  applyProGate();
+  // Force-hide controls when no active shift/order
+  document.getElementById('btnDelay').style.display = 'none';
+  document.getElementById('btnCloseEarly').style.display = 'none';
+}
+
+// ====== End Shift & History mgmt ======
+function updateEndShiftVisibility(){
+  var btn=document.getElementById('btnEndShift');
+  var trackerVisible=!document.getElementById('tabTracker').classList.contains('hidden');
+  var show=trackerVisible && !current && picks.length>0;
+  btn.style.display=show?'inline-block':'none';
+}
+function computeDowntimes(picksArr, shiftBreaksArr){
+  function toMin(hhmm){ return Math.round(hm(hhmm)*60); }
+  function overlap(a1,a2,b1,b2){ return Math.max(0, Math.min(a2,b2)-Math.max(a1,b1)); }
+  const gaps=[];
+  const sorted = picksArr.slice().sort((a,b)=>hm(a.start)-hm(b.start));
+  for(let i=0;i<sorted.length-1;i++){
+    const endMin = toMin(sorted[i].close);
+    const nextStartMin = toMin(sorted[i+1].start);
+    let gap = nextStartMin - endMin;
+    if(gap>0){
+      let cut=0;
+      (shiftBreaksArr||[]).forEach(b=>{ cut += overlap(endMin, nextStartMin, toMin(b.start), toMin(b.end)); });
+      gap = Math.max(0, gap - cut);
+      if(gap>=1){ gaps.push({from: minutesToHHMM(endMin), to: minutesToHHMM(nextStartMin), minutes: gap}); }
+    }
+  }
+  return gaps;
+}
+function endShift(){
+  if(current){ return alert('Complete or undo the current order before ending the shift.'); }
+  if(!picks.length){ return alert('No completed orders to archive.'); }
+  var dateStr=todayISO();
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var totalUnits=picks.reduce((a,b)=>a+b.units,0);
+  var downtimes = computeDowntimes(picks, shiftBreaks);
+  var snapshot={date:dateStr,start:startTime||'',end:lastClose||'',shiftLen,totalUnits,dayRate:shiftLen>0?Math.round(totalUnits/shiftLen):0,picks:picks.slice(0),shiftBreaks:shiftBreaks.slice(0),downtimes};
+  historyDays.push(snapshot); saveAll(); renderHistory();
+  renderWeeklySummary();
+
+  // Reset session
+  predictiveStop(); // PREDICTIVE: ensure stopped
+  picks=[]; lastClose=''; current=null; tempWraps=[]; undoStack=[]; shiftBreaks=[];
+  document.getElementById('orderArea').style.display='none';
+  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('btnStart').style.display='inline-block';
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnComplete').style.display='none';
+  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
+  document.getElementById('completedCard').style.display='none';
+  document.getElementById('shiftCard').style.display='block';
+  startTime='';
+  renderDone(); updateSummary(); showToast('Shift archived to History'); showTab('history'); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
+}
+
+function clearToday(){
+  if (!confirm("Clear today's order data? Your shift will remain active.")) return;
+
+  // Stop any running predictive/grace timers
+  try { predictiveStop?.(); } catch(e){}
+  try {
+    if (window._predictiveGraceTimer) {
+      clearTimeout(window._predictiveGraceTimer);
+      window._predictiveGraceTimer = null;
+    }
+  } catch(e){}
+
+  // Wipe order-specific in-memory state (KEEP the shift running)
+  current = null;
+  tempWraps = [];
+  picks = [];
+  undoStack = [];
+  lastClose = '';
+  shiftBreaks = [];
+  try { localStorage.setItem('shiftActive','1'); } catch(e){} // keep durable flag on
+
+  // UI → Active Shift, no open order: show New-Order header form
+  const shiftCard  = document.getElementById('shiftCard');
+  const activeCard = document.getElementById('activeOrderCard');
+  const doneCard   = document.getElementById('completedCard');
+  if (shiftCard)  shiftCard.style.display  = 'none';
+  if (activeCard) activeCard.style.display = 'block';
+  if (doneCard)   doneCard.style.display   = 'none';
+
+  const hdrForm = document.getElementById('orderHeaderForm');
+  const hdrProg = document.getElementById('orderHeaderProgress');
+  const area    = document.getElementById('orderArea');
+  if (hdrForm) hdrForm.style.display = 'block';
+  if (hdrProg) hdrProg.style.display = 'none';
+  if (area)    area.style.display    = 'none';
+
+  // Reset header fields to clean slate
+  document.getElementById('progRate')?.replaceChildren(document.createTextNode('—'));
+  document.getElementById('progETA')?.replaceChildren(document.createTextNode('—'));
+  const fill = document.getElementById('progFill'); if (fill) fill.style.width = '0%';
+  document.getElementById('progPct')?.replaceChildren(document.createTextNode('0%'));
+  document.getElementById('progLeft')?.replaceChildren(document.createTextNode('0'));
+  document.getElementById('progPallets')?.replaceChildren(document.createTextNode('0'));
+
+  // Clear form inputs
+  const oCust  = document.getElementById('oCust');   if (oCust)  oCust.value  = '';
+  const oOther = document.getElementById('oOther');  if (oOther) oOther.value = '';
+  const oTotal = document.getElementById('oTotal');  if (oTotal) oTotal.value = '';
+  const oLeft  = document.getElementById('oLeft');   if (oLeft)  oLeft.value  = '';
+
+  // Flip ghost button → "Exit Shift" (non-archiving)
+  (function setExitShiftButton(){
+    const btn = document.querySelector('.safetybar button.btn.ghost');
+    if (!btn) return;
+    btn.textContent = 'Exit Shift';
+    btn.onclick = function(){ exitShiftNoArchive?.(); };
+  })();
+
+  // Persist + land on Tracker
+  saveAll?.();
+  if (typeof showTab === 'function') showTab('tracker');
+
+  ensureActionRowLayout?.();
+}
+
+// ====== Export / Import (gated) ======
+function exportCSV(){
+  let rows = [['#','Customer','Units','Pallets','Start','Closed','OrderRate']];
+  picks.forEach((o,i)=>{
+    var s=hm(o.start), e=hm(o.close);
+    var excl=(o.log && Array.isArray(o.log.breaks))? o.log.breaks.reduce((a,b)=>a+(b.minutes||0),0) : (o.excl||0);
+    var net=(e>s)?(e-s)-(excl)/60:0.01; var rate=Math.round(o.units/Math.max(0.01,net));
+    rows.push([i+1,o.name,o.units,o.pallets,o.start,o.close,rate]);
+  });
+  let csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  let blob = new Blob([csv], {type:'text/csv'});
+  let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'today_picks.csv'; a.click();
+}
+function exportJSON(){
+  let data = {version:'3.3.55', savedAt:new Date().toISOString(), history:historyDays, current, picks, startTime, lastClose, customCodes, shiftBreaks};
+  let blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'wqt_export.json'; a.click();
+}
+(function attachImport(){
+  const inp = document.getElementById('impFile');
+  if(!inp) return;
+  inp.addEventListener('change', function(){
+    const f = inp.files && inp.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = function(){
+      try {
+        const obj = JSON.parse(reader.result||'{}');
+        if(obj && obj.history && Array.isArray(obj.history)){
+          historyDays = obj.history;
+          picks = Array.isArray(obj.picks)? obj.picks: [];
+          current = obj.current || null;
+          startTime = obj.startTime || '';
+          lastClose = obj.lastClose || '';
+          if(Array.isArray(obj.customCodes)) customCodes = obj.customCodes;
+          shiftBreaks = Array.isArray(obj.shiftBreaks)? obj.shiftBreaks : [];
+          saveAll(); renderHistory(); renderDone(); reloadDropdowns(); updateSummary();
+          showToast('Import complete');
+        } else {
+          alert('Invalid JSON file');
+        }
+      } catch(e){
+        alert('Import failed: '+e.message);
+      }
+      inp.value = '';
+    };
+    reader.readAsText(f);
+  });
+})();
+
+// ====== Manage Customers (gated) ======
+function toggleManageCustomers(){
+  var card=document.getElementById('manageCustomersCard');
+  if(!card) return;
+  var open = card.classList.contains('hidden');
+  card.classList.toggle('hidden', !open);
+  if(open) renderCustomTags();
+}
+function renderCustomTags(){
+  var box=document.getElementById('custTags'); if(!box) return;
+  box.innerHTML='';
+  (customCodes||[]).forEach((code)=>{
+    var tag=document.createElement('span'); tag.className='tag';
+    var btn=document.createElement('button'); btn.textContent='✖'; btn.title='Remove'; btn.addEventListener('click', function(){ removeCustomCode(code); });
+    tag.textContent = code+' '; tag.appendChild(btn);
+    box.appendChild(tag);
+  });
+}
+function removeCustomCode(code){
+  customCodes = (customCodes||[]).filter(c=>c!==code);
+  saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('Removed '+code);
+}
+function clearAllCustom(){
+  if(!confirm('Remove ALL custom customers?')) return;
+  customCodes=[]; saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('All custom customers cleared');
+}
+
+// ====== Live banner ======
+function currentOrderUnitsDone(){
+  if (!current) return 0;
+
+  // Ignore any live input — only use logged wraps
+  if (tempWraps.length > 0) {
+    const left = tempWraps[tempWraps.length - 1].left;
+    return (current.total || 0) - left;
+  }
+
+  // No wraps yet, so 0 progress
+  return 0;
+}
+
+function updateSummary(){
+  var closedUnits=picks.reduce((a,b)=>a+b.units,0);
+  var progress=currentOrderUnitsDone();
+  var totalUnits = closedUnits + progress;
+  var s=hm(startTime);
+  var endHHMM = current ? nowHHMM() : lastClose;
+  var e=hm(endHHMM);
+  var live=(!isNaN(s)&&!isNaN(e)&&e>s)? Math.round(totalUnits/(e-s)) : 0;
+  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
+  var dayAvg=shiftLen>0? Math.round(totalUnits/shiftLen):0;
+
+  var chipRate=document.getElementById('chipRate'); var chipVal=document.getElementById('chipRateVal'); chipVal.textContent=live? (live+' u/h'):'—';
+  chipRate.classList.remove('good','warn','bad');
+  if(live>=300) chipRate.classList.add('good');
+  else if(live>=249) chipRate.classList.add('warn');
+  else chipRate.classList.add('bad');
+
+  document.getElementById('chipTotalVal').textContent=totalUnits;
+
+  const elapsedMin = (!isNaN(s)&&!isNaN(e)&&e>s) ? Math.round((e - s)*60) : 0;
+  const eh = Math.floor(elapsedMin/60), em = elapsedMin%60;
+
+  updateEndShiftVisibility(); updateCloseEarlyVisibility();
+}
+
+function updateElapsedChip() {
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (!chipBox || !chipVal) return;
+
+  // If a break is active, tickBreak() manages the display
+  if (breakDraft) return;
+
+  // Only show elapsed while an order is active
+  if (!current || !current.start) {
+    chipBox.style.display = 'none';
+    chipVal.textContent = '—';
+    chipBox.classList.remove('green','amber');
+    return;
+  }
+
+  // Order running → show "Elapsed" from order start
+  const label = chipBox.querySelector('b');
+  if (label) label.textContent = 'Elapsed';
+
+  const now = nowHHMM();
+  const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
+
+  chipVal.textContent = `${elapsedMin} min`;
+  chipBox.classList.remove('green','amber');
+  chipBox.style.display = '';
+}
+
+function computeLiveRateSnapshot(){
+  // Same math as updateSummary’s “live” chip, but returns a number
+  var closedUnits = picks.reduce((a,b)=>a+b.units,0);
+  var progress    = currentOrderUnitsDone();
+  var totalUnits  = closedUnits + progress;
+
+  var s = hm(startTime), e = hm(nowHHMM());
+  if (isNaN(s) || isNaN(e) || e <= s) return 0;
+
+  return Math.round(totalUnits / (e - s)); // u/h
+}
+// --- Live modal state ---
+let liveModalTick = null;
+let liveOverrideLeft = null; // preview-only remaining units; NOT persisted
+
+function computeLiveSnapshot() {
+  // Always “now” → matches the chip’s intent
+  const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+  const progress    = currentOrderUnitsDone(); // in-progress order contribution
+  const totalUnits  = closedUnits + progress;
+
+  const s = hm(startTime);
+  const e = hm(nowHHMM());          // <— live end point
+  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
+
+  const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
+  const elapsedMin = hours > 0 ? Math.round(hours * 60) : 0;
+
+  return { totalUnits, hours, elapsedMin, live };
+}
+
+function fmtElapsed(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return `${h}h ${String(m).padStart(2,'0')}m`;
+}
+
+function paintRatePill(el, rate){
+  if(!el) return;
+  el.parentElement?.classList?.remove('good','warn','bad');
+  if(rate >= 300) el.parentElement?.classList?.add('good');
+  else if(rate >= 249) el.parentElement?.classList?.add('warn');
+  else el.parentElement?.classList?.add('bad');
+}
+
+function renderLiveModalOnce() {
+  // Base snapshot
+  const closedUnits = picks.reduce((a,b)=>a+b.units, 0);
+
+  // Progress: either real-time or preview using override "left"
+  let progress = currentOrderUnitsDone();
+  if (current && liveOverrideLeft !== null && !isNaN(liveOverrideLeft)) {
+    const max = current.total || 0;
+    const left = Math.max(0, Math.min(liveOverrideLeft, max));
+    progress = (current.total || 0) - left;
+  }
+
+  const totalUnits = closedUnits + progress;
+
+  const s = hm(startTime);
+  const e = hm(nowHHMM());
+  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
+  const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
+  const elapsedMin = hours > 0 ? Math.round(hours * 60) : 0;
+
+  const totEl = document.getElementById('live_totUnits');
+  const elEl  = document.getElementById('live_elapsed');
+  const rEl   = document.getElementById('live_rate');
+  const fEl   = document.getElementById('live_formula');
+
+  if (totEl) totEl.textContent = String(totalUnits);
+  if (elEl)  elEl.textContent  = hours ? fmtElapsed(elapsedMin) : '—';
+  if (rEl)   rEl.textContent   = (live || 0) + ' u/h';
+  if (fEl)   fEl.textContent   = hours
+      ? `Live = ${totalUnits} ÷ ${hours.toFixed(2)} h = ${live} u/h`
+      : 'Live = Total Units ÷ Hours';
+
+  paintRatePill(rEl, live);
+
+  // Preview hint
+  const hint = document.getElementById('live_hint');
+  if (hint) hint.textContent = (liveOverrideLeft !== null) ? 'Preview only — not saved.' : '';
+}
+function openLiveUpdateModal(){
+  if (!current) { alert('No active order to update. Start an order first.'); return; }
+
+  const max = current.total || 0;
+  const suggested = tempWraps.length ? tempWraps[tempWraps.length-1].left : max;
+
+  const modal = document.getElementById('liveUpdateModal');
+  const input = document.getElementById('liveLeftInput');
+  const hint  = document.getElementById('liveUpdateHint');
+
+  if (hint)  hint.textContent = `Enter a whole number between 0 and ${max}`;
+  if (input) {
+    input.value = suggested;
+    input.min = 0;
+    input.max = String(max);
+  }
+
+  if (modal) {
+    modal.style.display = 'flex';
+    setTimeout(()=> input?.focus(), 0);
+  }
+}
+
+function closeLiveUpdateModal(){
+  const modal = document.getElementById('liveUpdateModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function submitLiveUpdateLeft(){
+  if (!current) return closeLiveUpdateModal();
+
+  const max = current.total || 0;
+  const raw = (document.getElementById('liveLeftInput').value || '').trim();
+  const val = parseInt(raw, 10);
+
+  if (isNaN(val) || val < 0 || val > max) {
+    alert(`Enter a whole number between 0 and ${max}`);
+    return;
+  }
+
+  // Preview-only override for the Live modal
+  liveOverrideLeft = val;
+  renderLiveModalOnce();
+  closeLiveUpdateModal();
+}
+
+function livePromptLeft(){
+  if (!current) { alert('No active order to preview. Start an order first.'); return; }
+  const max = current.total || 0;
+  // suggest last 'left' if any, else the total
+  const suggested = tempWraps.length ? tempWraps[tempWraps.length-1].left : max;
+
+  const val = prompt(`How many units remain on ${current.name}? (0–${max})`, String(suggested));
+  if (val === null) return; // cancelled
+
+  const left = parseInt(val, 10);
+  if (isNaN(left) || left < 0 || left > max) {
+    alert('Enter a whole number between 0 and ' + max);
+    return;
+  }
+
+  // Set preview-only override and rerender
+  liveOverrideLeft = left;
+  renderLiveModalOnce();
+}
+
+function closeLiveModal(){
+  const m = document.getElementById('liveModal');
+  if(!m) return;
+  m.style.display = 'none';
+  if (liveModalTick) { clearInterval(liveModalTick); liveModalTick = null; }
+  liveOverrideLeft = null;   // clear preview when closing
+}
+
+// ====== Countback keypad logic ======
+// IMPORTANT: max 2 digits per field + auto-advance
+const CB_MAX = { layers: 2, ul: 2, extras: 2 };
+
+function getActiveCustomerCode(){
+  // Prefer QuickCalc customer if it exists (you currently don't render it)
+  const qcSel = document.getElementById('qcCustomer');
+  if (qcSel) {
+    const qcOther = document.getElementById('qcOther');
+    let code = qcSel.value;
+    if (code === '__OTHER__') code = upcase6((qcOther?.value)||'');
+    if (isValidCode(code)) return code;
+  }
+
+  // Otherwise use Tracker's active selector
+  const oSel = document.getElementById('oCust');
+  if (oSel) {
+    const oOther = document.getElementById('oOther');
+    let code = oSel.value;
+    if (code === '__OTHER__') code = upcase6((oOther?.value)||'');
+    if (isValidCode(code)) return code;
+  }
+
+  // Fallback: generic bucket
+  return '__GEN__';
+}
+function renderULayerChips(){
+  const box = document.getElementById('cbChips'); if(!box) return;
+  box.innerHTML='';
+  const code = getActiveCustomerCode();
+  const freq = learnedUL[code] || {};
+  const entries = Object.entries(freq).filter(([v,c])=>c>=2).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  entries.forEach(([v])=>{
+    const b=document.createElement('button'); b.className='btn slim'; b.type='button'; b.textContent=v+'/layer';
+    b.addEventListener('click', ()=>{ cbVals.ul = String(v); updateCbDisplays(); computeCbTotal(); });
+    box.appendChild(b);
+  });
+}
+function cbSetFocus(which){
+  cbFocus = which;
+  document.getElementById('cbHint').textContent = (which==='layers'?'Typing Layers…':which==='ul'?'Typing U/Layer…':'Typing Extras…');
+}
+function cbTap(d){
+  // append digit with 2-char cap
+  const cap = CB_MAX[cbFocus] || 2;
+  cbVals[cbFocus] = (cbVals[cbFocus]||'') + d;
+  if (cbVals[cbFocus].length > cap) cbVals[cbFocus] = cbVals[cbFocus].slice(0, cap);
+
+  // Special smart-advance for LAYERS: 1–19
+  if (cbFocus === 'layers') {
+    const s = cbVals.layers;
+
+    // If first digit is 0 and a second digit exists (e.g., '08'), normalize to single-digit '8'
+    if (s.length === 2 && s[0] === '0') {
+      cbVals.layers = s[1];
+    }
+
+    // After typing first digit:
+    if (cbVals.layers.length === 1) {
+      const first = cbVals.layers[0];
+      // If first digit is 2–9, that's a complete layer count → auto-next now
+      if (first >= '2' && first <= '9') {
+        updateCbDisplays();
+        computeCbTotal();
+        cbNextField();
+        return;
+      }
+      // If first digit is '1', wait for second digit (10–19) before moving on
+    }
+
+    // After second digit with leading '1', clamp to 10–19 and next
+    if (cbVals.layers.length === 2 && cbVals.layers[0] === '1') {
+      // clamp 10–19 just in case
+      const n = Math.min(19, Math.max(10, toInt(cbVals.layers)));
+      cbVals.layers = String(n);
+      updateCbDisplays();
+      computeCbTotal();
+      cbNextField();
+      return;
+    }
+  }
+
+  // Default behavior for UL & EXTRAS (2 digits then next)
+  updateCbDisplays();
+  computeCbTotal();
+  if (cbVals[cbFocus].length >= cap) cbNextField();
+}
+function cbBack(){
+  const s = cbVals[cbFocus]||'';
+  cbVals[cbFocus] = s.slice(0,-1);
+  updateCbDisplays();
+  computeCbTotal();
+}
+function cbReset(){
+  cbVals = {layers:'', ul:'', extras:''};
+  cbSetFocus('layers');
+  updateCbDisplays();
+  computeCbTotal();
+}
+function cbNextField(){
+  if (cbFocus === 'layers') cbSetFocus('ul');
+  else if (cbFocus === 'ul') cbSetFocus('extras');
+  else cbSetFocus('extras');
+}
+function updateCbDisplays(){
+  document.getElementById('cbLayers').textContent = cbVals.layers || '0';
+  document.getElementById('cbUL').textContent     = cbVals.ul     || '0';
+  document.getElementById('cbExtras').textContent = cbVals.extras || '0';
+}
+function computeCbTotal(){
+  const L = toInt(cbVals.layers), U = toInt(cbVals.ul), E = toInt(cbVals.extras);
+  const total = (L*U)+E;
+  document.getElementById('cbTotal').textContent = total;
+  return total;
+}
+
+function refreshWrapButton() {
+  const inp = document.getElementById('oLeft');
+  const btn = document.querySelector('#orderArea button[onclick="logWrap()"]');
+  if (!btn || !inp) return;
+
+  const val = inp.value.trim();
+  if (val === '0') {
+    btn.textContent = 'Close Order';
+    btn.classList.add('ok');
+  } else {
+    btn.textContent = 'Log Wrap';
+    btn.classList.remove('ok');
+  }
+}
+
+// 🔁 Make it react live
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('oLeft');
+  if (inp) inp.addEventListener('input', refreshWrapButton);
+});
+
+// ====== QuickCalc live result ======
+function recalcQuick(){
+  const DEFAULT_RATE = 300;
+  const units = toInt(document.getElementById('qcUnits').value);
+  const rawRate = (document.getElementById('qcRate').value||'').trim();
+  const rate = /^\d+$/.test(rawRate) && parseInt(rawRate,10)>0 ? parseInt(rawRate,10) : DEFAULT_RATE;
+
+  const timeHours = rate>0 ? (units / rate) : 0;
+  const totalMinutes = Math.round(timeHours*60);
+  const hh = Math.floor(totalMinutes/60);
+  const mm = totalMinutes % 60;
+
+  document.getElementById('qcTime').textContent = units>0 ? (hh+'h '+String(mm).padStart(2,'0')+'m') : '—';
+  document.getElementById('qcRateUsed').textContent = rate + ' u/h';
+  const uEcho = document.getElementById('qcUnitsEcho');
+if (uEcho) uEcho.textContent = units || 0;
+}
+function openLiveModal(){
+  const m = document.getElementById('liveModal');
+  if(!m) return;
+
+  m.style.display = 'flex';
+  // fresh preview state each open
+  liveOverrideLeft = null;
+
+  renderLiveModalOnce();
+
+  if (liveModalTick) clearInterval(liveModalTick);
+  // keep the numbers live while the modal is open
+  liveModalTick = setInterval(renderLiveModalOnce, 600);
+}
+
+function initWeekCardToggle(){
+  const card    = document.getElementById('weekCard');
+  const header  = document.getElementById('weekHeader');
+  const content = document.getElementById('weekContent');
+  const chev    = document.getElementById('weekChevron');
+  if(!card || !header || !content) return;
+
+  function apply(collapsed){
+    card.classList.toggle('collapsed', collapsed);
+    header.setAttribute('aria-expanded', String(!collapsed));
+    if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+    localStorage.setItem('weekCardCollapsed', collapsed ? '1' : '0');
+  }
+
+  // Re-apply saved state every time we call this (safe)
+  const saved = localStorage.getItem('weekCardCollapsed');
+  apply(saved === null ? true : saved === '1');
+
+  // Prevent duplicate listeners across tab switches
+  if (card.dataset.bound === '1') return;
+
+  const toggle = ()=> apply(!card.classList.contains('collapsed'));
+  header.addEventListener('click', toggle);
+  header.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+
+  card.dataset.bound = '1';
+}
+function ensureActionRowLayout(){
+  const delayBtn = document.getElementById('btnDelay');
+  if (!delayBtn || !delayBtn.parentElement) return;
+
+  const row = delayBtn.parentElement;
+
+  // Create groups once
+  let left = document.getElementById('actionsLeft');
+  let right = document.getElementById('actionsRight');
+  if (!left){
+    left = document.createElement('div');
+    left.id = 'actionsLeft';
+    row.insertBefore(left, row.firstChild);
+  }
+  if (!right){
+    right = document.createElement('div');
+    right.id = 'actionsRight';
+    row.appendChild(right);
+  }
+
+  // Lock row layout
+  row.style.display = 'flex';
+  row.style.alignItems = 'center';
+  row.style.justifyContent = 'space-between';
+  row.style.gap = '12px';
+
+  // Move buttons into groups (hidden states are fine)
+  const btnB   = document.getElementById('btnB');
+  const btnL   = document.getElementById('btnL');
+  const btnCE  = document.getElementById('btnCloseEarly');
+  const btnDel = document.getElementById('btnDelay');
+  const btnUn  = document.getElementById('btnUndo');
+
+  [btnB, btnL, btnCE].forEach(el => { if (el && el.parentNode !== left) left.appendChild(el); });
+  [btnDel, btnUn].forEach(el => { if (el && el.parentNode !== right) right.appendChild(el); });
+
+  left.style.display  = 'flex';
+  left.style.gap      = '10px';
+  right.style.display = 'flex';
+  right.style.gap     = '10px';
+}
+
+// ====== Boot ======
+document.addEventListener('DOMContentLoaded', function () {
+  try {
+    // ── 1) Restore persisted state FIRST ────────────────────────────
+    loadCustomCodes();
+    loadAll(); // hydrates: startTime, current, tempWraps, picks, historyDays, etc.
+    const hadShift = !!startTime;
+    const hadOpen  = !!(current && Number.isFinite(current.total));
+    // ── 2) Build customer dropdowns (safe post-restore) ─────────────
+    buildDropdown('oDD','oCust','oOther','o');
+    reloadDropdowns();
+    // ── 3) Wire modals & inputs ─────────────────────────────────────
+    document.getElementById('chipElapsed')?.addEventListener('click', openElapsedModal);
+    document.getElementById('elapsedModal')?.addEventListener('click', (e)=>{
+      if (e.target?.id === 'elapsedModal') closeElapsedModal();
+    });
+    document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
+    document.getElementById('oLeft') ?.addEventListener('input', refreshWrapButton);
+    document.getElementById('liveUpdateModal')?.addEventListener('click', (e)=>{
+      if (e.target?.id === 'liveUpdateModal') closeLiveUpdateModal();
+    });
+    document.getElementById('chipRate')?.addEventListener('click', openLiveModal);
+    document.getElementById('liveModal')?.addEventListener('click', (e)=>{
+      if (e.target?.id === 'liveModal') closeLiveModal();
+    });
+    // ── 4) Pro gate & static renders that don't mutate core state ───
+    applyProGate();
+    // ── 5) Shift/Order shell visibility based on restored flags ─────
+    const shift  = document.getElementById('shiftCard');
+    const active = document.getElementById('activeOrderCard');
+    const done   = document.getElementById('completedCard');
+    if (hadShift && window.archived !== true) {
+      if (shift)  shift.style.display  = 'none';
+      if (active) active.style.display = 'block';
+      if (done)   done.style.display   = (picks.length ? 'block' : 'none');
+    } else {
+      // No shift yet → hide order-only controls by default
+      ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    }
+    renderShiftChooser();
+    // ── 6) Decide header: progress vs new-order form ────────────────
+    if (hadOpen && window.archived !== true) {
+      // We have an active order: ensure progress header/UI is shown
+      restoreActiveOrderUI();
+      // Seed labels (defensive)
+      const ddToggle = document.querySelector('#oDD .dd-toggle');
+      if (ddToggle && current?.name) ddToggle.textContent = current.name;
+      const oTot = document.getElementById('oTotal');
+      if (oTot && Number.isFinite(current.total)) oTot.value = String(current.total);
+      // Elapsed chip ON
+      const chip = document.getElementById('chipElapsed');
+      if (chip?.style) chip.style.display = '';
+      updateElapsedChip?.();
+      setElapsedChipClickable?.(true);
+      showTab('tracker'); // keep user on Tracker with live header visible
+      showToast('Shift restored – continue where you left off');
+    } else {
+      // No open order yet → show the new-order header/form and hide area
+      const hdrForm = document.getElementById('orderHeaderForm');
+      const hdrProg = document.getElementById('orderHeaderProgress');
+      const area    = document.getElementById('orderArea');
+      if (hdrForm) hdrForm.style.display = 'block';
+      if (hdrProg) hdrProg.style.display = 'none';
+      if (area)    area.style.display    = 'none';
+      const chip = document.getElementById('chipElapsed');
+      if (chip?.style) chip.style.display = 'none';
+      const v = document.getElementById('chipElapsedVal'); if (v) v.textContent = '—';
+      setElapsedChipClickable?.(false);
+    }
+    // ── 7) Heavy renders AFTER state/UI decision (prevents flips) ───
+    renderHistory();
+    renderWeeklySummary();
+    initWeekCardToggle();
+    renderDone();
+    renderULayerChips();
+    // ── 8) Start button validation (order of entry agnostic) ────────
+    ['oTotal','oOther'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      ['input','change','keyup','blur'].forEach(ev=> el.addEventListener(ev, refreshStartButton));
+    });
+    document.getElementById('oCust')?.addEventListener('change', refreshStartButton);
+    document.querySelector('#oDD .dd-menu')  ?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
+    document.querySelector('#oDD .dd-toggle')?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
+    refreshStartButton();
+    // ── 9) Live summary + timer loop ────────────────────────────────
+    setInterval(function () {
+      updateSummary(); // keep Live Rate fresh every minute, regardless of tab/break
+
+      // Elapsed chip behavior: live only when not on a break
+      if (breakDraft) {
+        setElapsedChipClickable?.(false);
+      } else if (current) {
+        updateElapsedChip?.();
+        setElapsedChipClickable?.(true);
+      } else {
+        setElapsedChipClickable?.(false);
+      }
+    }, 60000);
+
+    // ── 10) QuickCalc wiring ────────────────────────────────────────
+    const qcRateEl  = document.getElementById('qcRate');
+    const qcUnitsEl = document.getElementById('qcUnits');
+    if (qcRateEl){
+      qcRateEl.addEventListener('input', ()=>{ updCalcGate(); recalcQuick(); });
+      qcRateEl.addEventListener('change', ()=>{ updCalcGate(); recalcQuick(); });
+    }
+    if (qcUnitsEl){
+      qcUnitsEl.addEventListener('input',  recalcQuick);
+      qcUnitsEl.addEventListener('change', recalcQuick);
+    }
+    // Countback & keyboard input
+    cbSetFocus('layers'); updateCbDisplays(); computeCbTotal();
+    document.addEventListener('keydown', (e)=>{
+      const tag = (e.target?.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+      if (/^[0-9]$/.test(e.key)) { cbTap(e.key); e.preventDefault(); }
+      else if (e.key === 'Backspace') { cbBack(); e.preventDefault(); }
+      else if (e.key === ' ' || e.key === 'Enter') { cbNextField(); e.preventDefault(); }
+    });
+    // Initial compute for QuickCalc
+    recalcQuick();
+    // Final pass refresh (stable snapshot)
+    updateSummary();
+    updateDelayBtn();
+    updateEndShiftVisibility();
+    updateCloseEarlyVisibility();
+    updateElapsedChip();
+    saveAll?.();
+  } catch (err) {
+    console.error(err);
+    showToast('Error on load: ' + (err.message || err));
+  }
+});
+function openWrapModal(){
+  if (!current) return;
+  const m   = document.getElementById('wrapModal');
+  const inp = document.getElementById('wrapLeftInput');
+
+  const total    = current.total || 0;
+  const lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
+
+  if (inp) {
+    inp.value = '';
+    inp.placeholder = String(lastLeft);
+    // ensure only one listener (avoid dupes)
+    inp.removeEventListener('input', refreshWrapModalBtn);
+    inp.addEventListener('input', refreshWrapModalBtn);
+  }
+  if (m) m.style.display = 'flex';
+  setTimeout(()=>inp?.focus(), 10);
+  refreshWrapModalBtn(); // set initial label
+}
+
+function refreshWrapModalBtn(){
+  const inp  = document.getElementById('wrapLeftInput');
+  const btn  = document.querySelector('#wrapModal .actions .btn.ok');
+  const hint = document.getElementById('wrapHint');
+  if (!inp || !btn) return;
+
+  const isZero = (inp.value || '').trim() === '0';
+  btn.textContent = isZero ? 'Complete' : 'Save Wrap';
+  if (hint) hint.textContent = isZero ? 'Ready to complete this order.' : 'Type 0 to enable Complete.';
+}
+
+function closeWrapModal(){
+  const m   = document.getElementById('wrapModal');
+  const inp = document.getElementById('wrapLeftInput');
+  if (m) m.style.display = 'none';
+  inp?.removeEventListener('input', refreshWrapModalBtn);
+}
+
+function submitWrapLeft(){
+  const inp = document.getElementById('wrapLeftInput');
+  const v   = Math.max(0, toInt(inp?.value));
+  const oLeft = document.getElementById('oLeft');
+  if (oLeft) oLeft.value = String(v);
+
+  // --- Snapshot OrderRate + frozen ETA at the wrap moment ---
+  if (current) {
+    // Prefer the true orderLiveRate() (excludes in-order breaks)
+    let rateSnap = 0;
+    try {
+      rateSnap = Math.round(orderLiveRate?.() || 0);
+      if (!rateSnap || rateSnap <= 0) {
+        // fallback to chip / predictive if available
+        const chip = document.getElementById('chipRateVal');
+        const m = chip ? String(chip.textContent||'').match(/(\d+)/) : null;
+        const chipUh = m ? parseInt(m[1],10) : 0;
+        rateSnap = chipUh || Math.round(predictive?.rateUh || 0) || 0;
+      }
+    } catch(e){ rateSnap = 0; }
+
+    // lock it in; if no good reading, keep prior seed
+    if (rateSnap > 0) current.orderRateUh = rateSnap;
+
+    // recompute frozen ETA against LEFT at this wrap
+    const leftNow = Math.max(0, v);
+    const useRate = current.orderRateUh || current.preWrapRateUh || 0;
+    if (useRate > 0) {
+      const mins = Math.round((leftNow / useRate) * 60);
+      current.fixedETA = addMinutesToTime(nowHHMM(), mins);
+    }
+
+    // paint immediately
+    const rEl = document.getElementById('progRate');
+    const eEl = document.getElementById('progETA');
+    if (rEl) rEl.textContent = useRate ? `${useRate} u/h` : '—';
+    if (eEl) eEl.textContent = current.fixedETA || '—';
+  }
+
+  closeWrapModal();
+
+  refreshWrapButton?.();
+  logWrap?.();                 // persists the new 'left' into tempWraps, timeline, etc.
+  updateHeaderActions?.();
+  showToast?.('Wrap logged');
+}
+
+function updateHeaderActions(){
+  const inOrder = hasActiveOrder?.() || !!(current && Number.isFinite(current?.total));
+  const wrapBtn = document.getElementById('btnWrapTop');
+  if (wrapBtn) wrapBtn.disabled = !inOrder;
+}
+
+</script>
+<!-- Contracted Start Picker -->
+<div id="contractModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center; z-index:9999;">
+  <div style="background:#141821; border:1px solid #243244; border-radius:14px; padding:16px; width:min(520px,92%);">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <h3 style="margin:0;">What time are you contracted to start?</h3>
+      <button class="btn" type="button" onclick="closeContractModal()">✕</button>
+    </div>
+    <div id="contractHourList" class="row" style="flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
+    <div class="hint" style="margin-top:10px;">
+      We’ll log this as your contracted time, and also log the actual start (now). Live Rate uses the actual start.
+    </div>
+  </div>
+</div>
+</body>
+</html>
