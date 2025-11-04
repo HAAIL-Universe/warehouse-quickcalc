@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v3.3.55 (Patched)</title>
+<title>Warehouse QuickCalc & Tracker v4 (Patched)</title>
 <style>
 :root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
 * { box-sizing: border-box; }
@@ -281,7 +281,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 </head>
 <body>
 <div class="wrap">
-  <h1><b>Warehouse QuickCalc & Tracker v3.8</b></h1>
+  <h1><b>Warehouse QuickCalc & Tracker v4</b></h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -2618,42 +2618,50 @@ function updateSharedDockInfo() {
 }
 
 function sharedSubmitUnits() {
-  const input = document.getElementById('sharedUnitsDock');
-  const wrapTick = document.getElementById('sharedWrapTick');
-  const val = parseInt(input.value || '0', 10);
+  const input   = document.getElementById('sharedUnitsDock');
+  const wrapTick= document.getElementById('sharedWrapTick');
+  const val     = parseInt(input.value || '0', 10);
 
   if (!(val > 0)) return alert('Enter units first');
 
-  // Calculate remaining units in the shared session
-  const remaining = Math.max(0, sharedSession.total - sharedMySum);
-  if (remaining === 0) {
-    showToast?.('Target already reached.');
-    return;
-  }
+  // Remaining vs target
+  const remaining = Math.max(0, (sharedSession.total || 0) - sharedMySum);
+  if (remaining === 0) { showToast?.('Target already reached.'); return; }
 
   const add = Math.min(val, remaining);
   sharedMySum += add;
 
-  // Add the new entry for this unit submission
+  // Record submission in the shared session log
   sharedSession.entries.push({ units: add, t: nowHHMM() });
 
-  input.value = ''; // Clear the input field
+  // ---- KEY: push a synthetic wrap into tempWraps so progress/elapsed update like Log Wrap ----
+  // previous left (from last wrap) and new left after this submit
+  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current?.total || sharedSession.total || 0);
+  const newLeft  = Math.max(0, (current?.total || sharedSession.total || 0) - sharedMySum);
 
-  // Update the progress bar
-  window._sharedProgressLeft = Math.max(0, sharedSession.total - sharedMySum);
-  updateProgressHeader?.(); // Update the progress bar with the new units
-
-  // Update the Total Units chip
-  const totalUnitsChip = document.getElementById('chipTotalVal');
-  if (totalUnitsChip) {
-    totalUnitsChip.textContent = sharedMySum;  // Update the Total Units chip with the shared units so far
+  if (newLeft !== prevLeft) {
+    tempWraps.push({ left: newLeft, done: Math.max(0, prevLeft - newLeft), t: nowHHMM() });
   }
 
-  // Show current progress in the shared dock info
-  updateSharedDockInfo();
+  // Optional: if user ticked “Wrap”, mirror to shared wraps too and clear the tick
+  if (wrapTick?.checked) {
+    (sharedSession.wraps ||= []).push({ left: newLeft, t: nowHHMM() });
+    wrapTick.checked = false;
+  }
+
+  // UI refresh
+  input.value = '';
+  window._sharedProgressLeft = newLeft;          // keep the overlay in sync
+  predictiveReset?.(newLeft);                    // update creeping baseline
+  updateProgressHeader?.();                      // bar/%/left
+  updateElapsedChip?.();                         // elapsed chip reflects new progress
+  updateSharedDockInfo();                        // dock “Target | Mine | Left” and disable when done
+  const totalUnitsChip = document.getElementById('chipTotalVal');
+  if (totalUnitsChip) totalUnitsChip.textContent = sharedMySum;
 
   showToast?.('Unit submitted.');
 }
+
 
 // Save a text note (no delay timing). Works with or without an active order.
 function submitNote(){
