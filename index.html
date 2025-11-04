@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -504,22 +505,31 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
   </section>
     <!-- Shared Pick Bottom Dock (only visible in shared mode) -->
-  <div id="sharedDock" style="
-    position:sticky; bottom:0; left:0; right:0; z-index:30;
+    <div id="sharedDock" style="
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
     background: rgba(20,22,28,0.95); border-top:1px solid #2b2f3a;
     padding:12px; display:none; backdrop-filter:saturate(120%) blur(4px);
   ">
-    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-      <button class="btn" type="button" id="sharedCancelBtn" onclick="sharedCancel()">Cancel</button>
-
-      <div style="display:flex; align-items:center; gap:8px;">
-        <label style="font-size:12px; opacity:.8;">Units</label>
-        <input id="sharedUnitsDock" type="number" min="1" style="width:110px; text-align:center; font-size:1.1em;">
+    <div style="
+      display:flex; align-items:center; width:100%;
+      justify-content:space-between; gap:8px; flex-wrap:nowrap; min-height:48px;
+    ">
+      <!-- LEFT (Units) -->
+      <div style="display:flex; align-items:center; gap:6px; flex:1 1 0; min-width:160px;">
+        <input id="sharedUnitsDock" type="number" min="1" placeholder="Units"
+              style="width:96px; height:36px; text-align:center; font-size:1em;">
       </div>
-      <button class="btn" type="button" id="sharedSubmitBtn" onclick="sharedSubmitUnits()">Submit</button>
-      <button class="btn ghost" type="button" title="Hide bar" onclick="hideSharedDock()">✖</button>
-      <div id="sharedDockInfo" style="margin-left:auto; font-size:.9em; opacity:.85;">
-        <!-- live summary -->
+
+      <!-- CENTER (Submit) -->
+      <div style="display:flex; justify-content:center; flex:1 1 0;">
+        <button class="btn slim ok" type="button" id="sharedSubmitBtn"
+                onclick="sharedSubmitUnits()">Submit</button>
+      </div>
+
+      <!-- RIGHT (Hide + Info) -->
+      <div style="display:flex; align-items:center; gap:6px; justify-content:flex-end; flex:1 1 0; min-width:160px;">
+        <button class="btn slim ghost" type="button" title="Hide bar" onclick="hideSharedDock()">✖</button>
+        <div id="sharedDockInfo" style="font-size:.9em; opacity:.85;"></div>
       </div>
     </div>
   </div>
@@ -771,7 +781,8 @@ function resetEtaSmoother(){
 function hideSharedDock(){
   const dock = document.getElementById('sharedDock');
   if (dock) dock.style.display = 'none';
-  localStorage.setItem('sharedDockOpen','0'); // remember hidden
+  document.body.style.paddingBottom = '';
+  localStorage.setItem('sharedDockOpen','0');
 }
 
 // ---- Early restore & safety nets (v3.5) ----
@@ -899,6 +910,7 @@ function openSharedStart() {
 
   // Show the shared dock (bottom bar)
   document.getElementById('sharedDock').style.display = 'flex';
+  document.body.style.paddingBottom = '84px';
   localStorage.setItem('sharedDockOpen','1');
   updateSharedDockInfo();
   setTimeout(() => document.getElementById('sharedUnitsDock').focus(), 0);
@@ -954,6 +966,7 @@ function sharedCancel(){
 
   // hide dock and reset shared state
   document.getElementById('sharedDock').style.display = 'none';
+  document.body.style.paddingBottom = '';
   sharedMySum = 0;
   sharedWraps = [];
   sharedStartedAt = null;
@@ -985,6 +998,7 @@ function earlyRestore() {
     if (window.current && window.current.shared && localStorage.getItem('sharedDockOpen') !== '0') {
       const dock = document.getElementById('sharedDock');
       if (dock) dock.style.display = 'flex';
+      document.body.style.paddingBottom = '84px';
       updateSharedDockInfo?.();
     }
   } catch (e) {}
@@ -2632,7 +2646,7 @@ function updateSharedDockInfo() {
   const info = document.getElementById('sharedDockInfo');
   const remaining = Math.max(0, sharedSession.total - sharedMySum);
   
-  if (info) info.textContent = `Target: ${sharedSession.total} | Left: ${remaining}`;
+  if (info) info.textContent = `Left: ${remaining}`;
 
   // Disable the submit button if all units have been submitted
   const sBtn = document.getElementById('sharedSubmitBtn');
@@ -2640,11 +2654,11 @@ function updateSharedDockInfo() {
 }
 
 function sharedSubmitUnits() {
-  const input   = document.getElementById('sharedUnitsDock');
-  const wrapTick= document.getElementById('sharedWrapTick');
-  const val     = parseInt(input.value || '0', 10);
+  const input = document.getElementById('sharedUnitsDock');
+  const val   = parseInt(input.value || '0', 10);
 
   if (!(val > 0)) return alert('Enter units first');
+  if (!sharedSession) return alert('Shared session not active.');
 
   // Remaining vs target
   const remaining = Math.max(0, (sharedSession.total || 0) - sharedMySum);
@@ -2656,34 +2670,20 @@ function sharedSubmitUnits() {
   // Record submission in the shared session log
   sharedSession.entries.push({ units: add, t: nowHHMM() });
 
-  // ---- KEY: push a synthetic wrap into tempWraps so progress/elapsed update like Log Wrap ----
-  // previous left (from last wrap) and new left after this submit
-  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current?.total || sharedSession.total || 0);
-  const newLeft  = Math.max(0, (current?.total || sharedSession.total || 0) - sharedMySum);
-
-  if (newLeft !== prevLeft) {
-    tempWraps.push({ left: newLeft, done: Math.max(0, prevLeft - newLeft), t: nowHHMM() });
-  }
-
-  // Optional: if user ticked “Wrap”, mirror to shared wraps too and clear the tick
-  if (wrapTick?.checked) {
-    (sharedSession.wraps ||= []).push({ left: newLeft, t: nowHHMM() });
-    wrapTick.checked = false;
-  }
-
+  // NO synthetic wraps here – wrap is manual only via Log Wrap
   // UI refresh
   input.value = '';
-  window._sharedProgressLeft = newLeft;          // keep the overlay in sync
-  predictiveReset?.(newLeft);                    // update creeping baseline
-  updateProgressHeader?.();                      // bar/%/left
-  updateElapsedChip?.();                         // elapsed chip reflects new progress
-  updateSharedDockInfo();                        // dock “Target | Mine | Left” and disable when done
+  const newLeft = Math.max(0, (sharedSession.total || 0) - sharedMySum);
+  window._sharedProgressLeft = newLeft;
+  predictiveReset?.(newLeft);
+  updateProgressHeader?.();
+  updateElapsedChip?.();
+  updateSharedDockInfo?.();
   const totalUnitsChip = document.getElementById('chipTotalVal');
   if (totalUnitsChip) totalUnitsChip.textContent = sharedMySum;
 
   showToast?.('Unit submitted.');
 }
-
 
 // Save a text note (no delay timing). Works with or without an active order.
 function submitNote(){
