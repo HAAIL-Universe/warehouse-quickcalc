@@ -524,7 +524,7 @@ td.small { font-size:12px; color:#9fb3c8; }
       </label>
 
       <button class="btn" type="button" id="sharedSubmitBtn" onclick="sharedSubmitUnits()">Submit</button>
-
+      <button class="btn ghost" type="button" title="Hide bar" onclick="hideSharedDock()">✖</button>
       <div id="sharedDockInfo" style="margin-left:auto; font-size:.9em; opacity:.85;">
         <!-- live summary -->
       </div>
@@ -775,6 +775,11 @@ function resetEtaSmoother(){
   lastETAmin = null;
   lastRenderedETAmin = null;
 }
+function hideSharedDock(){
+  const dock = document.getElementById('sharedDock');
+  if (dock) dock.style.display = 'none';
+  localStorage.setItem('sharedDockOpen','0'); // remember hidden
+}
 
 // ---- Early restore & safety nets (v3.5) ----
 // ===== Predictive config/state =====
@@ -834,7 +839,6 @@ function sharedLogWrap() {
   updateProgressHeader?.();  // Ensure progress bar reflects wrap
   updateSharedDockInfo();    // Update dock info
 }
-
 
 function closeSharedPickModal(){
   document.getElementById('sharedModal').style.display = 'none';
@@ -902,6 +906,7 @@ function openSharedStart() {
 
   // Show the shared dock (bottom bar)
   document.getElementById('sharedDock').style.display = 'flex';
+  localStorage.setItem('sharedDockOpen','1');
   updateSharedDockInfo();
   setTimeout(() => document.getElementById('sharedUnitsDock').focus(), 0);
 }
@@ -930,7 +935,7 @@ function openSharedStart() {
       // show dock
       const dock = document.getElementById('sharedDock');
       if (dock) dock.style.display = 'block';
-
+      localStorage.setItem('sharedDockOpen','1');
       updateSharedDockInfo();
       setTimeout(()=> document.getElementById('sharedUnitsDock')?.focus(), 0);
     }
@@ -960,6 +965,7 @@ function sharedCancel(){
   sharedWraps = [];
   sharedStartedAt = null;
   window._sharedProgressLeft = null;
+  localStorage.removeItem('sharedDockOpen');
 }
 
 let predictive = {
@@ -979,11 +985,18 @@ function markFirstOrderStarted(){ localStorage.setItem(shiftDateKey(), '1'); }
 
 function earlyRestore() {
   try {
-    // You already have loadAll(); reuse it to hydrate globals
     loadAll();
     restoreBreakDraftIfAny();
+
+    // If current order is shared and user hasn’t hidden the dock, show it
+    if (window.current && window.current.shared && localStorage.getItem('sharedDockOpen') !== '0') {
+      const dock = document.getElementById('sharedDock');
+      if (dock) dock.style.display = 'flex';
+      updateSharedDockInfo?.();
+    }
   } catch (e) {}
 }
+
 function exitShiftNoArchive(){
   if (current) { alert('Complete or undo the current order before exiting the shift.'); return; }
   try { predictiveStop?.(); } catch(e){}
@@ -2014,7 +2027,7 @@ function restoreActiveOrderUI() {
     el.style.display = on ? disp : 'none';
   };
 
-  if (inOrder) {
+    if (inOrder) {
     // Swap headers
     if (hdrForm && hdrProg) {
       if (typeof fadeSwap === 'function') fadeSwap(hdrForm, hdrProg, 'flex');
@@ -2066,6 +2079,18 @@ function restoreActiveOrderUI() {
     refreshWrapButton?.();
     refreshCompleteButton?.();
 
+    // ---- Shared dock: persist visibility on restore ----
+    try {
+      const dock = document.getElementById('sharedDock');
+      const shouldShow = !!(current?.shared) && localStorage.getItem('sharedDockOpen') !== '0';
+      if (dock) dock.style.display = shouldShow ? 'flex' : 'none';
+      if (shouldShow) {
+        updateSharedDockInfo?.();
+        // (optional) focus units input for quick resume
+        setTimeout(() => document.getElementById('sharedUnitsDock')?.focus(), 0);
+      }
+    } catch(e){}
+
     // ===== Predictive resume on refresh =====
     try {
       predictiveStop?.();
@@ -2099,7 +2124,6 @@ function restoreActiveOrderUI() {
         predictiveStop?.();
       }
     } catch(e) {}
-
   } else {
     // S1/S2: show form, hide progress/area
     if (hdrProg)   hdrProg.style.display = 'none';
@@ -2118,11 +2142,16 @@ function restoreActiveOrderUI() {
     show('btnCloseEarly',   shiftOn);
 
     // Hide elapsed chip
-    const chipBox = document.getElementById('chipElapsed');
-    if (chipBox) chipBox.style.display = 'none';
+    const chipBox2 = document.getElementById('chipElapsed');
+    if (chipBox2) chipBox2.style.display = 'none';
+
+    // Ensure shared dock hidden when no active order
+    const dock = document.getElementById('sharedDock');
+    if (dock) dock.style.display = 'none';
 
     predictiveStop?.();
   }
+
 
   // Always resync top controls and keep action row grouped
   updateHeaderActions?.();
