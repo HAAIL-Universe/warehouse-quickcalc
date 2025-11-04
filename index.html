@@ -1374,7 +1374,7 @@ function updateProgressHeader() {
   const wrapOpen = document.getElementById('wrapModal')?.style.display === 'flex';
   if (wrapOpen) return;
   if (!current) return;
-
+  if (predictive && predictive.timer) return;
   const total = current.total;
 
   // Calculate remaining units: for shared mode, respect _sharedProgressLeft
@@ -1486,21 +1486,47 @@ function renderElapsedModalOnce(){
   const total   = current.total || 0;
   const remainingUnits = Math.max(0, total - doneNow);
 
-  // Elapsed since THIS order started
-  const now = nowHHMM();
-  const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
-
-  // Current ORDER rate (units/hour)
-  let orderRate = 0;
-  if (elapsedMin > 0) {
-    orderRate = (doneNow / (elapsedMin / 60)); // u/h
+  // Elapsed ACTIVE minutes (exclude breaks if available)
+  let elapsedMin;
+  try {
+    if (typeof orderActiveMinutes === 'function') {
+      elapsedMin = orderActiveMinutes() || 0;
+    } else {
+      // Fallback: naive elapsed minus any available break accumulator
+      const now = nowHHMM();
+      const naive = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
+      const brMin = (typeof getBreakMinutesSinceOrderStart === 'function') ? (getBreakMinutesSinceOrderStart() || 0) : 0;
+      elapsedMin = Math.max(0, naive - brMin);
+    }
+  } catch(e){
+    // Last-resort fallback
+    const now = nowHHMM();
+    elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
   }
 
-  // Time left & ETA based on CURRENT ORDER rate
+  // Current ORDER rate (u/h) from active minutes
+  let orderRate = 0;
+  if (elapsedMin > 0) {
+    orderRate = (doneNow / (elapsedMin / 60));
+  }
+
+  // Time left & ETA using the same smoothing + break extension as header
   let minsLeft = null;
   let etaStr = '—';
   if (orderRate > 0 && remainingUnits > 0){
-    minsLeft = Math.round((remainingUnits / orderRate) * 60);
+    let estMin;
+    try {
+      if (typeof calcStableETA === 'function') {
+        estMin = calcStableETA(remainingUnits, orderRate);
+      }
+    } catch(e){
+      estMin = undefined;
+    }
+    if (!isFinite(estMin)) {
+      estMin = (remainingUnits / orderRate) * 60;
+    }
+    const breakExt = (typeof breakExtensionMinutes === 'function') ? (breakExtensionMinutes() || 0) : 0;
+    minsLeft = Math.max(0, Math.round(estMin + breakExt));
     etaStr   = addMinutesToNow(minsLeft);
   }
 
@@ -1508,7 +1534,7 @@ function renderElapsedModalOnce(){
   setTxt('el_start', current.start || '—');
   setTxt('el_elapsed', `${Math.floor(elapsedMin/60)}h ${String(elapsedMin%60).padStart(2,'0')}m`);
   setTxt('el_remaining', String(remainingUnits));
-  setTxt('el_rate', `${Math.round(orderRate)} u/h`);
+  setTxt('el_rate', (orderRate > 0) ? `${Math.round(orderRate)} u/h` : '—');
   setTxt('el_timeleft', (minsLeft===null) ? '—' : `${Math.floor(minsLeft/60)}h ${String(minsLeft%60).padStart(2,'0')}m`);
   setTxt('el_eta', etaStr);
 }
@@ -2475,7 +2501,7 @@ function predictiveTick(){
   const liveUh = getLiveRateUh();
   if (isFinite(liveUh) && liveUh > 0) predictive.rateUh = liveUh;
 
-  // 2) Predict remaining units from baseline
+  // 2) Predict remaining units from baseline (for progress bar only)
   const perSec     = predictive.rateUh > 0 ? (predictive.rateUh / 3600) : 0;
   const elapsedSec = (Date.now() - predictive.baseTs) / 1000;
 
@@ -2494,18 +2520,42 @@ function predictiveTick(){
   // "Left" label
   updateLeftLabel(leftPred);
 
-  // live rate + ETA
-  if (isFinite(predictive.rateUh) && predictive.rateUh > 0 && perSec > 0) {
-    setText(SEL.rateText, Math.round(predictive.rateUh) + ' u/h');
-    const secToGo = leftPred / perSec;
-    setText(SEL.etaText, fmtETA(Date.now() + secToGo * 1000));
+  // 4) Live rate + ETA (use smoother + break extension when available)
+  const rateUh = predictive.rateUh || 0;
+  if (isFinite(rateUh) && rateUh > 0) {
+    setText(SEL.rateText, Math.round(rateUh) + ' u/h');
+
+    let etaMin;
+    try {
+      // Prefer your rolling smoother if present: calcStableETA(leftUnits, rateUh) -> minutes
+      if (typeof calcStableETA === 'function') {
+        etaMin = calcStableETA(leftPred, rateUh);
+      }
+    } catch(e) {
+      etaMin = undefined;
+    }
+    if (!isFinite(etaMin)) {
+      // Fallback to instantaneous estimate
+      const secToGo = (perSec > 0) ? (leftPred / perSec) : Infinity;
+      etaMin = isFinite(secToGo) ? (secToGo / 60) : Infinity;
+    }
+
+    // Add any planned/active break extension (returns minutes) if available
+    const breakExt = (typeof breakExtensionMinutes === 'function') ? (breakExtensionMinutes() || 0) : 0;
+    etaMin = isFinite(etaMin) ? (etaMin + breakExt) : etaMin;
+
+    if (isFinite(etaMin)) {
+      setText(SEL.etaText, fmtETA(Date.now() + etaMin * 60 * 1000));
+    } else {
+      setText(SEL.etaText, '—');
+    }
   } else {
     setText(SEL.rateText, '—');
     setText(SEL.etaText, '—');
   }
 
-  // chip/colour class for the bar fill (keeps colour live)
-  tintProgressByPace(predictive.rateUh || 0);
+  // 5) chip/colour class for the bar fill (keeps colour live)
+  tintProgressByPace(rateUh);
 }
 
 setInterval(()=>{
@@ -2653,36 +2703,41 @@ function updateSharedDockInfo() {
   if (sBtn) sBtn.disabled = remaining <= 0;
 }
 
-function sharedSubmitUnits() {
+function sharedSubmitUnits(){
   const input = document.getElementById('sharedUnitsDock');
-  const val   = parseInt(input.value || '0', 10);
-
+  const val   = parseInt(input?.value || '0', 10);
   if (!(val > 0)) return alert('Enter units first');
-  if (!sharedSession) return alert('Shared session not active.');
 
-  // Remaining vs target
-  const remaining = Math.max(0, (sharedSession.total || 0) - sharedMySum);
-  if (remaining === 0) { showToast?.('Target already reached.'); return; }
+  if (!current || !current.total) return;
+  if (!current.shared) current.shared = true; // safety
+
+  const total     = current.total || 0;
+  const remaining = Math.max(0, total - (window.sharedMySum || 0));
+  if (remaining === 0) { showToast?.('Target already reached.'); input.value=''; return; }
 
   const add = Math.min(val, remaining);
-  sharedMySum += add;
 
-  // Record submission in the shared session log
-  sharedSession.entries.push({ units: add, t: nowHHMM() });
+  // SINGLE SOURCE OF TRUTH for shared progress
+  window.sharedMySum = (window.sharedMySum || 0) + add;
 
-  // NO synthetic wraps here – wrap is manual only via Log Wrap
-  // UI refresh
+  // Log entry (optional but useful for history)
+  try { window.sharedSession?.entries?.push?.({ units: add, t: nowHHMM(), kind: 'submit' }); } catch(e){}
+
+  // Update UI immediately
+  const left = Math.max(0, total - (window.sharedMySum || 0));
+  try { updateLeftLabel?.(left); } catch(e){}
+  try { updateProgressHeader?.(); } catch(e){}
+  try { updateElapsedChip?.(); } catch(e){}              // ← makes Elapsed/Remaining reflect the submit
+  try {
+    // If predictive loop is running, re-baseline so progress & ETA stay accurate
+    if (window.predictive?.timer) {
+      window.predictive.leftAtBase = left;
+      window.predictive.baseTs     = Date.now();
+    }
+  } catch(e){}
+
+  try { updateSharedDockInfo?.(); } catch(e){}
   input.value = '';
-  const newLeft = Math.max(0, (sharedSession.total || 0) - sharedMySum);
-  window._sharedProgressLeft = newLeft;
-  predictiveReset?.(newLeft);
-  updateProgressHeader?.();
-  updateElapsedChip?.();
-  updateSharedDockInfo?.();
-  const totalUnitsChip = document.getElementById('chipTotalVal');
-  if (totalUnitsChip) totalUnitsChip.textContent = sharedMySum;
-
-  showToast?.('Unit submitted.');
 }
 
 // Save a text note (no delay timing). Works with or without an active order.
@@ -3441,18 +3496,30 @@ function clearAllCustom(){
   customCodes=[]; saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('All custom customers cleared');
 }
 
-// ====== Live banner ======
 function currentOrderUnitsDone(){
   if (!current) return 0;
 
-  // Ignore any live input — only use logged wraps
-  if (tempWraps.length > 0) {
-    const left = tempWraps[tempWraps.length - 1].left;
-    return (current.total || 0) - left;
+  // Shared orders: trust sharedMySum (clamped to total)
+  if (current.shared) {
+    const total = current.total || 0;
+    const mine  = Number(window.sharedMySum || 0);
+    return Math.max(0, Math.min(total, isFinite(mine) ? mine : 0));
   }
 
-  // No wraps yet, so 0 progress
-  return 0;
+  // Non-shared: prefer last wrap's "left", else sum picks
+  const total = current.total || 0;
+  if (Array.isArray(window.tempWraps) && window.tempWraps.length){
+    const last = window.tempWraps[window.tempWraps.length - 1];
+    const left = Number(last?.left);
+    if (isFinite(left)) return Math.max(0, total - Math.max(0, left));
+  }
+
+  // Fallback: sum picks/entries that carry units
+  let done = 0;
+  if (Array.isArray(window.picks)) {
+    for (const p of window.picks) done += (+p.units || 0);
+  }
+  return Math.max(0, Math.min(total, done));
 }
 
 function updateSummary(){
