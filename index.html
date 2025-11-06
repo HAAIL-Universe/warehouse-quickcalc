@@ -1,9 +1,11 @@
+
+
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v4 (Patched)</title>
+<title>Warehouse QuickCalc & Tracker v4.2(Patched)</title>
 <style>
 :root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
 * { box-sizing: border-box; }
@@ -280,7 +282,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 </head>
 <body>
 <div class="wrap">
-  <h1><b>Warehouse QuickCalc & Tracker v4</b></h1>
+  <h1><b>Warehouse QuickCalc & Tracker v4.2</b></h1>
 
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
@@ -1196,6 +1198,26 @@ function addMinutesToTime(hhmm, minutesToAdd){
   const hh = String(d.getHours()).padStart(2,'0');
   const mm = String(d.getMinutes()).padStart(2,'0');
   return `${hh}:${mm}`;
+}
+// Minimal toggle for per-day delete mode used by the Clear History button
+window._histDeleteMode = false;
+
+function clearHistory(){
+  // flip mode
+  window._histDeleteMode = !window._histDeleteMode;
+
+  // re-render list so per-day ✖ visibility matches the mode
+  renderHistory();
+
+  // update the top button label
+  const topBtn = document.querySelector('button[onclick="clearHistory()"]');
+  if (topBtn) topBtn.textContent = window._histDeleteMode ? 'Done' : 'Clear History';
+
+  // if history is empty, auto-exit delete mode and normalize label
+  if (!historyDays.length) {
+    window._histDeleteMode = false;
+    if (topBtn) topBtn.textContent = 'Clear History';
+  }
 }
 
 const KEY = 'wqt_v2722_data';
@@ -3448,22 +3470,48 @@ function renderHistory(){
 
     // Day Avg based on ACTUAL worked hours (to the minute)
     const workedHours = workedMin / 60;
-    const dayAvgWorked = (workedHours > 0) ? Math.round((num(d.totalUnits)||0) / workedHours) : 0;
+    const dayAvgWorked = (workedHours > 0) ? Math.round(((Number(d.totalUnits)||0) / workedHours)) : 0;
 
-    leftDiv.innerHTML = `<span class="tag">${new Date(d.date+'T12:00:00').toDateString().slice(0,15)}</span>
-      <span>Units: <b>${d.totalUnits||0}</b></span>
-      <span>Day Avg: <b>${dayAvgWorked}</b> u/h</span>
-      <span>Worked: <b>${fmtElapsed(workedMin)}</b>${otMin ? ` • OT: <b>${(otMin/60).toFixed(2)} h</b>` : ''}</span>`;
+    // Header layout: date on line 1, meta row under it
+    leftDiv.innerHTML =
+      `<span class="tag">${new Date(d.date+'T12:00:00').toDateString().slice(0,15)}</span>
+      <div class="meta-row">
+        <span>Units: <b>${d.totalUnits||0}</b></span>
+        <span>Day Avg: <b>${dayAvgWorked}</b> u/h</span>
+        <span>Worked: <b>${fmtElapsed(workedMin)}</b>${otMin ? ` • OT: <b>${(otMin/60).toFixed(2)} h</b>` : ''}</span>
+      </div>`;
     head.appendChild(leftDiv);
 
+    // Per-day delete button (only visible in delete-mode)
     const del = document.createElement('button');
     del.textContent = '✖';
     del.className = 'btn slim ghost gate-pro';
     del.title = 'Delete day';
-    del.onclick = (e)=>{ e.stopPropagation(); if(!confirm('Delete this archived day? This cannot be undone.')) return; historyDays.splice(di,1); saveAll(); renderHistory(); showToast('Day deleted'); };
+
+    // <<< visibility fix: honor delete-mode & neutralize the gate-pro hider >>>
+    if (window._histDeleteMode) {
+      del.style.display = 'inline-block';
+      del.classList.remove('gate-pro');   // avoid CSS hiding it
+    } else {
+      del.style.display = 'none';
+      if (!del.classList.contains('gate-pro')) del.classList.add('gate-pro');
+    }
+    // <<< end visibility fix >>>
+
+    del.onclick = (e)=>{
+      e.stopPropagation();
+      if(!confirm('Delete this archived day? This cannot be undone.')) return;
+      historyDays.splice(di,1);
+      saveAll();
+      renderHistory();
+      showToast('Day deleted');
+    };
     head.appendChild(del);
 
-    const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▾';
+    // Chevron (expand/collapse)
+    const chev = document.createElement('span');
+    chev.className = 'chev';
+    chev.textContent = '▾';
     head.appendChild(chev);
 
     var body=document.createElement('div'); body.className='accBody';
