@@ -1,3 +1,5 @@
+
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -3814,8 +3816,9 @@ function computeLiveSnapshot() {
   const progress    = currentOrderUnitsDone(); // in-progress order contribution
   const totalUnits  = closedUnits + progress;
 
-  const s = hm(getSnappedStartHHMM());
-  const e = hm(nowHHMM());          // <— live end point
+  const snappedHHMM = getSnappedStartHHMM();
+  const s = hm(snappedHHMM);
+  const e = hm(nowHHMM());
   const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
 
   const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
@@ -3844,18 +3847,22 @@ function renderLiveModalOnce() {
   // Progress: either real-time or preview using override "left"
   let progress = currentOrderUnitsDone();
   if (current && liveOverrideLeft !== null && !isNaN(liveOverrideLeft)) {
-    const max = current.total || 0;
+    const max  = current.total || 0;
     const left = Math.max(0, Math.min(liveOverrideLeft, max));
-    progress = (current.total || 0) - left;
+    progress   = (current.total || 0) - left;
   }
 
   const totalUnits = closedUnits + progress;
 
-  const s = hm(startTime);
+  // Use snapped (quarter-hour) start
+  const snappedHHMM = (typeof getSnappedStartHHMM === 'function')
+    ? getSnappedStartHHMM()
+    : startTime;
+
+  const s = hm(snappedHHMM);        // decimal hours
   const e = hm(nowHHMM());
-  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
-  const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
-  const elapsedMin = hours > 0 ? Math.round(hours * 60) : 0;
+  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;  // elapsed AFTER snap
+  const live  = hours > 0 ? Math.round(totalUnits / hours) : 0;
 
   const totEl = document.getElementById('live_totUnits');
   const elEl  = document.getElementById('live_elapsed');
@@ -3863,18 +3870,49 @@ function renderLiveModalOnce() {
   const fEl   = document.getElementById('live_formula');
 
   if (totEl) totEl.textContent = String(totalUnits);
-  if (elEl)  elEl.textContent  = hours ? fmtElapsed(elapsedMin) : '—';
   if (rEl)   rEl.textContent   = (live || 0) + ' u/h';
-  if (fEl)   fEl.textContent   = hours
-      ? `Live = ${totalUnits} ÷ ${hours.toFixed(2)} h = ${live} u/h`
-      : 'Live = Total Units ÷ Hours';
-
   paintRatePill(rEl, live);
+
+  // Header: show pending quarter-hour until live begins
+  const hdr = document.getElementById('liveTitle');
+  const nowVal  = e;
+  const snapVal = s;
+  const beforeStart = (!isNaN(nowVal) && !isNaN(snapVal) && nowVal < snapVal);
+
+  if (hdr) {
+    hdr.textContent = beforeStart
+      ? `Live Rate – starts at ${snappedHHMM}`
+      : 'Live Rate – Now';
+  }
+
+  // Elapsed: countdown until snap, then normal elapsed
+  if (elEl) {
+    if (beforeStart) {
+      const remainingMin = Math.max(0, Math.ceil((snapVal - nowVal) * 60));
+      elEl.textContent = `-${fmtElapsed(remainingMin)}`;
+      // keep the countdown ticking once per second until start
+      setTimeout(renderLiveModalOnce, 1000);
+    } else {
+      const elapsedMin = Math.round(hours * 60);
+      elEl.textContent = hours ? fmtElapsed(elapsedMin) : '—';
+    }
+  }
+
+  // Remove the "Formula" block to de-bulk the bottom area
+  if (fEl) {
+    const maybeLabel = fEl.previousElementSibling;
+    if (maybeLabel && maybeLabel.classList.contains('hint')) {
+      maybeLabel.style.display = 'none';
+    }
+    fEl.textContent = '';
+    fEl.style.display = 'none';
+  }
 
   // Preview hint
   const hint = document.getElementById('live_hint');
   if (hint) hint.textContent = (liveOverrideLeft !== null) ? 'Preview only — not saved.' : '';
 }
+
 function openLiveUpdateModal(){
   if (!current) { alert('No active order to update. Start an order first.'); return; }
 
