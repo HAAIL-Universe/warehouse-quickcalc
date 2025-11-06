@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -288,13 +287,10 @@ td.small { font-size:12px; color:#9fb3c8; }
     <button id="tabTrackBtn" class="tabbtn" type="button" onclick="showTab('tracker')">Tracker</button>
     <button id="tabHistBtn" class="tabbtn" type="button" onclick="showTab('history')">History</button>
   </div>
-
   <div id="liveBanner" class="rateBanner hidden">
     <div id="chipRate" class="rateChip"><b>Live Rate</b><div id="chipRateVal">—</div></div>
     <div id="chipTotal" class="rateChip"><b>Total Units</b><div id="chipTotalVal">0</div></div>
-    <div id="chipElapsed" class="rateChip" style="display:none;"><b>Back in</b><div id="chipElapsedVal">—</div></div>
   </div>
-
   <!-- QuickCalc -->
   <section id="tabCalc">
     <!-- Countback calculator (moved ABOVE QuickCalc) -->
@@ -376,8 +372,8 @@ td.small { font-size:12px; color:#9fb3c8; }
       <div class="row" style="align-items:flex-end;">
         <div class="col">
           <div class="row" style="gap:8px; justify-content:center;">
-            <button class="btn ok" type="button" style="min-width:140px;" onclick="startShift(9)">Start 9h Shift</button>
-            <button class="btn" type="button" style="min-width:140px;" onclick="startShift(10)">Start 10h Shift</button>
+            <button class="btn ok" type="button" style="min-width:140px;" onclick="openDynamicStartPicker(9)">Start 9h Shift</button>
+            <button class="btn"     type="button" style="min-width:140px;" onclick="openDynamicStartPicker(10)">Start 10h Shift</button>
           </div>
           <div id="snapHint" class="hint"></div>
         </div>
@@ -469,25 +465,6 @@ td.small { font-size:12px; color:#9fb3c8; }
       </table>
     </div>
     <!-- Shared Pick Modal -->
-    <div id="sharedModal" class="modal" style="display:none;">
-      <div class="modal-content" style="max-width:420px;">
-        <h3>Shared Order</h3>
-        <p id="sharedHeader"></p>
-
-        <div style="margin-top:12px;">
-          <label>Units at this location</label>
-          <input id="sharedUnits" type="number" min="1" style="width:100%;font-size:1.2em;text-align:center;">
-        </div>
-
-        <div class="row" style="margin-top:10px;justify-content:space-between;">
-          <button class="btn" type="button" onclick="sharedAddUnits()">Submit</button>
-          <button class="btn" type="button" onclick="sharedLogWrap()">Log Wrap</button>
-          <button class="btn danger" type="button" onclick="closeSharedPickModal()">Finish</button>
-        </div>
-
-        <div id="sharedSummary" style="margin-top:10px;font-size:0.9em;color:#aaa;"></div>
-      </div>
-    </div>
     <div class="bottom-actions">
       <div class="left">
         <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log / Delay</button>
@@ -504,30 +481,35 @@ td.small { font-size:12px; color:#9fb3c8; }
       <button class="btn ghost" type="button" onclick="clearToday()">Clear today's data</button>
     </div>
   </section>
-    <!-- Shared Pick Bottom Dock (only visible in shared mode) -->
+  <!-- Shared Pick Bottom Dock (only visible in shared mode) -->
   <div id="sharedDock" style="
-    position:sticky; bottom:0; left:0; right:0; z-index:30;
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
     background: rgba(20,22,28,0.95); border-top:1px solid #2b2f3a;
     padding:12px; display:none; backdrop-filter:saturate(120%) blur(4px);
   ">
-    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-      <button class="btn" type="button" id="sharedCancelBtn" onclick="sharedCancel()">Cancel</button>
+    <div style="
+      display:flex; align-items:center; width:100%;
+      justify-content:space-between; gap:10px; flex-wrap:nowrap; min-height:48px;
+    ">
 
-      <div style="display:flex; align-items:center; gap:8px;">
-        <label style="font-size:12px; opacity:.8;">Units</label>
-        <input id="sharedUnitsDock" type="number" min="1" style="width:110px; text-align:center; font-size:1.1em;">
+      <!-- LEFT (Hide) -->
+      <div style="display:flex; align-items:center; justify-content:flex-start; flex:0 0 auto;">
+        <button class="btn slim ghost" type="button" title="Hide bar" onclick="hideSharedDock()">✖</button>
       </div>
 
-      <label style="display:flex; align-items:center; gap:6px; font-size:.9em;">
-        <input id="sharedWrapTick" type="checkbox" style="width:16px;height:16px;">
-        Wrap
-      </label>
-
-      <button class="btn" type="button" id="sharedSubmitBtn" onclick="sharedSubmitUnits()">Submit</button>
-      <button class="btn ghost" type="button" title="Hide bar" onclick="hideSharedDock()">✖</button>
-      <div id="sharedDockInfo" style="margin-left:auto; font-size:.9em; opacity:.85;">
-        <!-- live summary -->
+      <!-- CENTER (Units + Current tag) -->
+      <div style="display:flex; align-items:center; gap:10px; flex:1 1 auto; justify-content:center;">
+        <input id="sharedUnitsDock" type="number" min="1" placeholder="Units"
+              style="width:96px; height:36px; text-align:center; font-size:1em;">
+        <div id="sharedDockInfo" style="font-size:.9em; opacity:.85; white-space:nowrap;">Current: 0</div>
       </div>
+
+      <!-- RIGHT (Submit + Log Current) -->
+      <div style="display:flex; justify-content:flex-end; gap:8px; flex:0 0 auto;">
+        <button class="btn slim ok" type="button" id="sharedSubmitBtn"
+                onclick="sharedSubmitUnits()">Submit</button>
+      </div>
+
     </div>
   </div>
   <!-- Bottom Break Bar -->
@@ -683,41 +665,6 @@ td.small { font-size:12px; color:#9fb3c8; }
     </div>
   </div>
 </div>
-<!-- Elapsed / ETA Modal -->
-<div id="elapsedModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="elapsedTitle" style="display:none;">
-  <div class="box" style="max-width:520px;">
-    <div class="hdr">
-      <h3 id="elapsedTitle">Order Timer</h3>
-      <button class="btn slim ghost" type="button" onclick="closeElapsedModal()">✖</button>
-    </div>
-    <div class="fld">
-      <div class="row">
-        <div class="col">
-          <div class="pill"><h3>Order Start</h3><p id="el_start">—</p></div>
-        </div>
-        <div class="col">
-          <div class="pill"><h3>Elapsed</h3><p id="el_elapsed">—</p></div>
-        </div>
-        <div class="col">
-          <div class="pill"><h3>Remaining</h3><p id="el_remaining">—</p></div>
-        </div>
-      </div>
-    </div>
-    <div class="fld">
-      <div class="row">
-        <div class="col">
-          <div class="pill"><h3>Current Order Rate</h3><p id="el_rate">— u/h</p></div>
-        </div>
-        <div class="col">
-          <div class="pill"><h3>Predicted Time Left</h3><p id="el_timeleft">—</p></div>
-        </div>
-        <div class="col">
-          <div class="pill"><h3>ETA (finish)</h3><p id="el_eta">—</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 <!-- Close Early Modal -->
 <div id="closeEarlyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="closeEarlyTitle">
   <div class="box">
@@ -730,7 +677,7 @@ td.small { font-size:12px; color:#9fb3c8; }
       <input id="ceRemaining" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
     </div>
     <div class="fld">
-      <label>Reason (required if 0 units or under 70% expected time)</label>
+      <label>Reason (required)</label>
       <textarea id="ceReason" placeholder="Explain why closing early…"></textarea>
     </div>
     <div class="fld" style="display:flex;align-items:center;gap:8px;">
@@ -762,6 +709,16 @@ td.small { font-size:12px; color:#9fb3c8; }
   </div>
 </div>
 <div id="toast" class="toast">Saved</div>
+<!-- Contracted/Dynamic Start Picker -->
+<div id="contractModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="contractTitle" style="display:none;">
+  <div class="box" style="max-width:420px;">
+    <div class="hdr">
+      <h3 id="contractTitle">Select Contracted Start</h3>
+      <button class="btn slim ghost" type="button" onclick="closeContractModal()">✖</button>
+    </div>
+    <div id="contractHourList" class="fld" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+  </div>
+</div>
 <script>
 // ====== State ======
 let picks = [];         // closed orders
@@ -778,7 +735,8 @@ function resetEtaSmoother(){
 function hideSharedDock(){
   const dock = document.getElementById('sharedDock');
   if (dock) dock.style.display = 'none';
-  localStorage.setItem('sharedDockOpen','0'); // remember hidden
+  document.body.style.paddingBottom = '';
+  localStorage.setItem('sharedDockOpen','0');
 }
 
 // ---- Early restore & safety nets (v3.5) ----
@@ -810,6 +768,98 @@ function openSharedPickModal(){
   document.getElementById('sharedSummary').textContent = 'No entries yet.';
   document.getElementById('sharedModal').style.display = 'flex';
 }
+// ─── Dynamic Start Picker (contracted start) ──────────────────────────────────
+window._chosenShiftLen = null;
+window._chosenStartHHMM = null;
+
+function closeContractModal(){
+  const modal = document.getElementById('contractModal');
+  if (modal) modal.style.display = 'none';
+}
+function snapForwardQuarter(hhmm) {
+  const h = hm(hhmm);                   // hours as float
+  if (isNaN(h)) return hhmm;
+  const minutes = Math.round(h * 60);   // integer minutes
+  const snapped = Math.ceil(minutes / 15) * 15; // snap forward
+  const HH = Math.floor(snapped / 60) % 24;
+  const MM = snapped % 60;
+  return (HH < 10 ? '0' : '') + HH + ':' + (MM < 10 ? '0' : '') + MM;
+}
+function getSnappedStartHHMM() {
+  return snapForwardQuarter(startTime || nowHHMM());
+}
+
+function applyContractedStart(hhmm){
+  closeContractModal();
+
+  const prefLen = getShiftPref() || 9;
+  const lenEl = document.getElementById('tLen');
+  if (lenEl) lenEl.value = String(prefLen);
+
+  // Backward compatible: numeric hour → HH:00, else use string
+  const contracted = (typeof hhmm === 'number')
+    ? ((hhmm<10?'0':'') + hhmm + ':00')
+    : String(hhmm);
+
+  const actual = nowHHMM();
+  const cMin = hmToMin(contracted);
+  const aMin = hmToMin(actual);
+
+  // Effective start = contracted if on-time/early; else actual if late
+  const effectiveMin = (aMin <= cMin) ? cMin : aMin;
+  const effectiveHM  = minToHm(effectiveMin);
+
+  // Baseline live rate
+  startTime = effectiveHM;
+
+  // Lateness log
+  const lateMin = aMin - cMin;
+  try {
+    const day = new Date().toISOString().slice(0,10);
+    const raw = localStorage.getItem(LATE_LOG_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    obj[day] = { contracted, actual, effective: effectiveHM, lateMin, shiftLen: prefLen };
+    localStorage.setItem(LATE_LOG_KEY, JSON.stringify(obj));
+  } catch(e) {}
+
+  // Proceed to S2 and show note
+  beginShift();
+  if (typeof updateSummary === 'function') updateSummary();
+
+  let note = 'on time';
+  if (lateMin > 0)      note = `${lateMin}m late`;
+  else if (lateMin < 0) note = `${-lateMin}m early`;
+  showPreOrderNote?.(`Contracted ${hmTo12(contracted)} • Actual ${hmTo12(actual)} (${note})`);
+}
+
+// ─── Patch startShift to honour chosen HH:MM ──────────────────────────────────
+// We avoid changing your original logic; we just enforce startTime after startShift.
+(function wrapStartShiftToUseChosenStart(){
+  if (typeof startShift !== 'function') {
+    // Retry after scripts finish loading (in case ordering differs)
+    setTimeout(wrapStartShiftToUseChosenStart, 0);
+    return;
+  }
+  const _origStartShift = startShift;
+  startShift = function(len){
+    // If a chosen time exists, apply BEFORE calling original
+    // (in case original reads startTime for UI).
+    if (window._chosenStartHHMM) {
+      window.startTime = window._chosenStartHHMM;
+      try { localStorage.setItem('shiftActive','1'); } catch(e){}
+    }
+
+    _origStartShift.call(this, len);
+
+    // And ensure it sticks if original overwrote it
+    if (window._chosenStartHHMM) {
+      window.startTime = window._chosenStartHHMM;
+      try { localStorage.setItem('shiftActive','1'); } catch(e){}
+      // Clear the choice so future shifts use live snapping again
+      window._chosenStartHHMM = null;
+    }
+  };
+})();
 
 function sharedAddUnits() {
   const input = document.getElementById('sharedUnits');
@@ -828,16 +878,6 @@ function sharedAddUnits() {
 
   // Update the total units display
   document.getElementById('chipTotalVal').textContent = sum;
-}
-
-function sharedLogWrap() {
-  const left = Math.max(0, sharedSession.total - sharedMySum);
-  sharedSession.wraps.push({ left, t: nowHHMM() });
-
-  // Update wrap state and visual info
-  showToast?.('Wrap logged for shared order.');
-  updateProgressHeader?.();  // Ensure progress bar reflects wrap
-  updateSharedDockInfo();    // Update dock info
 }
 
 function closeSharedPickModal(){
@@ -903,9 +943,13 @@ function openSharedStart() {
   document.getElementById('progFill').style.width = '0%';
   updateProgressHeader?.();
   updateHeaderActions?.();
-
+  // init shared counters
+  window.sharedMySum = 0;
+  window.sharedBlock = 0;
+  updateSharedDockInfo?.();
   // Show the shared dock (bottom bar)
   document.getElementById('sharedDock').style.display = 'flex';
+  document.body.style.paddingBottom = '84px';
   localStorage.setItem('sharedDockOpen','1');
   updateSharedDockInfo();
   setTimeout(() => document.getElementById('sharedUnitsDock').focus(), 0);
@@ -927,6 +971,10 @@ function openSharedStart() {
       sharedWraps = [];
       sharedStartedAt = window.current.start || nowHHMM();
       window._sharedProgressLeft = window.current.total;
+      // init shared counters
+      window.sharedMySum = 0;
+      window.sharedBlock = 0;
+      updateSharedDockInfo?.();
 
       // show S3 header (already shown by startOrder), ensure actions visible
       showProgressHeader?.();
@@ -942,31 +990,28 @@ function openSharedStart() {
   };
 })()
 
-// Internal wrap logger for shared (doesn't fake pallet count unless you want)
-function sharedLogWrapInternal(){
-  if (!current || !current.shared) return;
-  const left = Math.max(0, (current.total||0) - sharedMySum);
-  sharedWraps.push({ left, t: nowHHMM() });
-
-  // Mirror into tempWraps ONLY to show pallet count/ETA if you want header parity:
-  // tempWraps.push({ left, t: Date.now() });
-
-  if (typeof updateProgressHeader === 'function') updateProgressHeader();
-  updateSharedDockInfo();
-  showToast?.('Wrap logged');
-}
-
 function sharedCancel(){
   if (!confirm('Discard shared progress?')) return;
 
   // hide dock and reset shared state
   document.getElementById('sharedDock').style.display = 'none';
+  document.body.style.paddingBottom = '';
+
   sharedMySum = 0;
+  window.sharedBlock = 0;
   sharedWraps = [];
   sharedStartedAt = null;
   window._sharedProgressLeft = null;
+
+  // Clear persistence flags/values
   localStorage.removeItem('sharedDockOpen');
+  localStorage.removeItem('sharedMySum');
+  localStorage.removeItem('sharedBlock');
+
+  // Optional: refresh header to remove overlay immediately
+  try { updateSharedDockInfo?.(); updateProgressHeader?.(); } catch(e){}
 }
+
 
 let predictive = {
   timer: null,
@@ -992,18 +1037,61 @@ function earlyRestore() {
     if (window.current && window.current.shared && localStorage.getItem('sharedDockOpen') !== '0') {
       const dock = document.getElementById('sharedDock');
       if (dock) dock.style.display = 'flex';
-      updateSharedDockInfo?.();
+      document.body.style.paddingBottom = '84px';
+
+      // restore persisted shared counters
+      const sm = parseInt(localStorage.getItem('sharedMySum') || '0', 10);
+      const sb = parseInt(localStorage.getItem('sharedBlock') || '0', 10);
+      window.sharedMySum = (isFinite(sm) && sm >= 0) ? sm : 0;
+      window.sharedBlock = (isFinite(sb) && sb >= 0) ? sb : 0;
+
+      // mirror left overlay & progress bar so header matches restored progress
+      if (current && Number.isFinite(+current.total)) {
+        const total = +current.total;
+        const left  = Math.max(0, total - (window.sharedMySum || 0));
+        window._sharedProgressLeft = left;
+
+        try {
+          updateLeftLabel?.(left);
+          const pct = total ? ((total - left) / total) * 100 : 0;
+          setProgress?.(pct);
+          const pctEl = document.getElementById('progPct');
+          if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+        } catch(e){}
+
+        // resume predictive so Rate/ETA reappear after refresh
+        try {
+          const rateUh = Math.round(orderLiveRate?.() || getLiveRateUh?.() || 0);
+          predictiveReset?.(left, rateUh);
+          predictiveStart?.();
+        } catch(e){}
+      }
+
+      try { updateSharedDockInfo?.(); } catch(e){}
+    }
+
+    // If an order is open, make sure the order UI is rendered (buttons, chips, etc.)
+    if (current && Number.isFinite(+current.total)) {
+      try {
+        restoreActiveOrderUI?.();
+        updateHeaderActions?.();
+        updateSummary?.();
+        updateElapsedChip?.();
+      } catch(e){}
     }
   } catch (e) {}
 }
-
-function exitShiftNoArchive(){
-  if (current) { alert('Complete or undo the current order before exiting the shift.'); return; }
-  try { predictiveStop?.(); } catch(e){}
+// Standalone: shared pick modal opener (keep this at top level)
 function openSharedPickModal(){
   // TODO (Phase 2): open shared order modal with per-location entry + in-modal Log Wrap
   try { showToast?.('Shared Pick coming next — button wired.'); } catch(e){}
 }
+
+// Exit shift without archiving; return UI to Start state
+function exitShiftNoArchive(){
+  if (current) { alert('Complete or undo the current order before exiting the shift.'); return; }
+  try { predictiveStop?.(); } catch(e){}
+
   // Clear shift session (no archive)
   picks = [];
   lastClose = '';
@@ -1045,6 +1133,14 @@ function openSharedPickModal(){
 
   saveAll?.();
   showToast?.('Shift ended.');
+
+  // After exiting shift, repurpose the ghost button as a one-click restart
+  (function setRestartButton(){
+    const btn = document.querySelector('.safetybar button.btn.ghost');
+    if (!btn) return;
+    btn.textContent = 'Refresh App';
+    btn.onclick = function(){ location.reload(); }; // hard reload to clean state
+  })();
 }
 
 // Rebuild break UI if a persisted draft exists (call once after loadAll())
@@ -1367,27 +1463,19 @@ function updateProgressHeader() {
   const wrapOpen = document.getElementById('wrapModal')?.style.display === 'flex';
   if (wrapOpen) return;
   if (!current) return;
-
-  const total = current.total;
-
-  // Calculate remaining units: for shared mode, respect _sharedProgressLeft
-  let lastLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : total;
-
-  // Shared overlay: adjust "left" without changing pallet count
-  if (current?.shared && typeof window._sharedProgressLeft === 'number') {
-    lastLeft = Math.min(lastLeft, window._sharedProgressLeft); // Reflect shared progress
-  }
+  if (predictive && predictive.timer) return;
+  const total   = current.total;
+  const lastLeft = getCurrentLeft();
 
   // Calculate progress (done units)
   const done = total - lastLeft;
-  const pct = total ? Math.round((done / total) * 100) : 0;
+  const pct  = total ? Math.round((done / total) * 100) : 0;
 
-  // Update numbers: remaining units (Target - Left), Pallets (tempWraps length), and Progress %
-  const elLeft = document.getElementById('progLeft');
+  // Update numbers ...
+  updateLeftLabel(lastLeft);                    // ← single writer
   const elPal = document.getElementById('progPallets');
   const elPct = document.getElementById('progPct');
-  
-  if (elLeft) elLeft.textContent = lastLeft; // Update remaining units
+
   if (elPal) elPal.textContent = tempWraps.length; // Update pallet count
   if (elPct) elPct.textContent = pct + '%'; // Update progress %
 
@@ -1422,7 +1510,7 @@ function showProgressHeader() {
   document.getElementById('progCust').textContent    = current.name;
   document.getElementById('progQty').textContent     = current.total;
   document.getElementById('progPallets').textContent = '0';
-  document.getElementById('progLeft').textContent    = current.total;
+  updateLeftLabel(getCurrentLeft());
   document.getElementById('progRate').textContent    = '—';
   document.getElementById('progETA').textContent     = '—';
   document.getElementById('progFill').style.width    = '0%';
@@ -1479,21 +1567,47 @@ function renderElapsedModalOnce(){
   const total   = current.total || 0;
   const remainingUnits = Math.max(0, total - doneNow);
 
-  // Elapsed since THIS order started
-  const now = nowHHMM();
-  const elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
-
-  // Current ORDER rate (units/hour)
-  let orderRate = 0;
-  if (elapsedMin > 0) {
-    orderRate = (doneNow / (elapsedMin / 60)); // u/h
+  // Elapsed ACTIVE minutes (exclude breaks if available)
+  let elapsedMin;
+  try {
+    if (typeof orderActiveMinutes === 'function') {
+      elapsedMin = orderActiveMinutes() || 0;
+    } else {
+      // Fallback: naive elapsed minus any available break accumulator
+      const now = nowHHMM();
+      const naive = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
+      const brMin = (typeof getBreakMinutesSinceOrderStart === 'function') ? (getBreakMinutesSinceOrderStart() || 0) : 0;
+      elapsedMin = Math.max(0, naive - brMin);
+    }
+  } catch(e){
+    // Last-resort fallback
+    const now = nowHHMM();
+    elapsedMin = Math.max(0, Math.round((hm(now) - hm(current.start)) * 60));
   }
 
-  // Time left & ETA based on CURRENT ORDER rate
+  // Current ORDER rate (u/h) from active minutes
+  let orderRate = 0;
+  if (elapsedMin > 0) {
+    orderRate = (doneNow / (elapsedMin / 60));
+  }
+
+  // Time left & ETA using the same smoothing + break extension as header
   let minsLeft = null;
   let etaStr = '—';
   if (orderRate > 0 && remainingUnits > 0){
-    minsLeft = Math.round((remainingUnits / orderRate) * 60);
+    let estMin;
+    try {
+      if (typeof calcStableETA === 'function') {
+        estMin = calcStableETA(remainingUnits, orderRate);
+      }
+    } catch(e){
+      estMin = undefined;
+    }
+    if (!isFinite(estMin)) {
+      estMin = (remainingUnits / orderRate) * 60;
+    }
+    const breakExt = (typeof breakExtensionMinutes === 'function') ? (breakExtensionMinutes() || 0) : 0;
+    minsLeft = Math.max(0, Math.round(estMin + breakExt));
     etaStr   = addMinutesToNow(minsLeft);
   }
 
@@ -1501,7 +1615,7 @@ function renderElapsedModalOnce(){
   setTxt('el_start', current.start || '—');
   setTxt('el_elapsed', `${Math.floor(elapsedMin/60)}h ${String(elapsedMin%60).padStart(2,'0')}m`);
   setTxt('el_remaining', String(remainingUnits));
-  setTxt('el_rate', `${Math.round(orderRate)} u/h`);
+  setTxt('el_rate', (orderRate > 0) ? `${Math.round(orderRate)} u/h` : '—');
   setTxt('el_timeleft', (minsLeft===null) ? '—' : `${Math.floor(minsLeft/60)}h ${String(minsLeft%60).padStart(2,'0')}m`);
   setTxt('el_eta', etaStr);
 }
@@ -1907,6 +2021,25 @@ function beginShift(){
   // Lock the bottom action row layout
   ensureActionRowLayout?.();
 }
+// --- 12h time helpers (no seconds) ---
+function to12hLabel(hh, mm='00') {
+  let H = parseInt(hh, 10);
+  const ap = (H >= 12) ? 'pm' : 'am';
+  H = ((H + 11) % 12) + 1;      // 0 → 12, 13 → 1
+  return `${H}${ap}`;           // 7am, 12pm
+}
+
+function hmTo12(hm){
+  const [h, mRaw] = String(hm||'').split(':');
+  const H = parseInt(h, 10) || 0;
+  const M = parseInt(mRaw, 10) || 0;
+  const ap = (H >= 12) ? 'pm' : 'am';
+  const hour12 = ((H + 11) % 12) + 1;
+  // show minutes only if non-zero or explicitly requested
+  return (M === 0)
+    ? `${hour12}${ap}`          // 7am … 12pm
+    : `${hour12}:${String(M).padStart(2,'0')}${ap}`; // 11:43am
+}
 
 function openContractedStartPicker(){
   const modal = document.getElementById('contractModal');
@@ -1915,15 +2048,31 @@ function openContractedStartPicker(){
 
   list.innerHTML = '';
 
-  // Hour choices — adjust if your site uses different windows
-  const HOURS = [6,7,8,9,10,11,12];
-  HOURS.forEach(h=>{
-    const hh = (h<10?'0':'') + h;
+  // Base at the current hour (FLOOR) so offsets are stable
+  const now = new Date();
+  const mins = now.getMinutes();
+  const snapped = new Date(now);
+  snapped.setMinutes(0, 0, 0); // 11:20 -> 11:00, 11:45 -> 11:00
+
+  // Option B: if we're past the top of the hour, include +1h and highlight it.
+  // Keep exactly 6 buttons.
+  const justOnHour = (mins === 0);
+  const OFFSETS = justOnHour ? [-5, -4, -3, -2, -1, 0] : [-4, -3, -2, -1, 0, +1];
+  const HIGHLIGHT = justOnHour ? 0 : +1;
+
+  OFFSETS.forEach(off => {
+    const d = new Date(snapped);
+    d.setHours(d.getHours() + off);
+
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = '00';
+
     const btn = document.createElement('button');
     btn.className = 'btn';
+    if (off === HIGHLIGHT) btn.classList.add('ok'); // highlight per Option B
     btn.type = 'button';
-    btn.textContent = `${hh}:00`;
-    btn.onclick = () => applyContractedStart(h);
+    btn.textContent = to12hLabel(hh, mm);                // plain hour text
+    btn.onclick = () => applyContractedStart(`${hh}:${mm}`);
     list.appendChild(btn);
   });
 
@@ -1938,14 +2087,23 @@ function closeContractModal(){
 function applyContractedStart(hh){
   closeContractModal();
 
+  // Normalize input: allow "11" or "11:00"
+  let contractedHM;
+  if (typeof hh === 'string' && hh.includes(':')) {
+    contractedHM = hh.slice(0,5);                   // "HH:MM"
+  } else {
+    const H = parseInt(hh, 10);
+    const HH = Number.isFinite(H) ? String(H).padStart(2,'0') : '00';
+    contractedHM = `${HH}:00`;
+  }
+
   const prefLen = getShiftPref() || 9;
   const lenEl = document.getElementById('tLen');
   if (lenEl) lenEl.value = String(prefLen);
 
-  const contracted = (hh<10?'0':'') + hh + ':00';
-  const actual     = nowHHMM();
-  const cMin = hmToMin(contracted);
-  const aMin = hmToMin(actual);
+  const actualHM  = nowHHMM();
+  const cMin = hmToMin(contractedHM);
+  const aMin = hmToMin(actualHM);
 
   // Effective start: contracted if on-time/early; actual if late
   const effectiveMin = (aMin <= cMin) ? cMin : aMin;
@@ -1960,7 +2118,7 @@ function applyContractedStart(hh){
     const day = new Date().toISOString().slice(0,10);
     const raw = localStorage.getItem(LATE_LOG_KEY);
     const obj = raw ? JSON.parse(raw) : {};
-    obj[day] = { contracted, actual, effective: effectiveHM, lateMin, shiftLen: prefLen };
+    obj[day] = { contracted: contractedHM, actual: actualHM, effective: effectiveHM, lateMin, shiftLen: prefLen };
     localStorage.setItem(LATE_LOG_KEY, JSON.stringify(obj));
   } catch(e) {}
 
@@ -1968,13 +2126,14 @@ function applyContractedStart(hh){
   beginShift();
   if (typeof updateSummary === 'function') updateSummary();
 
-  // S2 note (same row as Log/Delay, left side)
-  let note = 'on time';
-  if (lateMin > 0)      note = `${lateMin}m late`;
-  else if (lateMin < 0) note = `${-lateMin}m early`;
-  showPreOrderNote?.(`Contracted ${contracted} • Actual ${actual} (${note})`);
+  // S2 note (left side near Log/Delay), formatted in 12h without seconds
+  const contracted12 = hmTo12?.(contractedHM) || contractedHM;
+  const actual12     = hmTo12?.(actualHM)     || actualHM;
+  const noteText = lateMin > 0 ? `${lateMin}m late`
+                 : lateMin < 0 ? `${-lateMin}m early`
+                 : 'on time';
+  showPreOrderNote?.(`Contracted ${contracted12} • Actual ${actual12} (${noteText})`);
 }
-
 
 function renderShiftChooser(){
   const card = document.getElementById('shiftCard');
@@ -2254,20 +2413,6 @@ function startOrder() {
   updateProgressHeader?.();
   updateHeaderActions?.();
   ensureActionRowLayout?.();
-
-  // --- NEW: flip chip from "Back in" → "Elapsed" and enable Close-Early now
-  (function kickElapsedAndCloseEarly(){
-    const chip = document.getElementById('chipElapsed');
-    if (chip) {
-      chip.style.display = ''; // show chip immediately
-      const label = chip.querySelector('b');
-      if (label) label.textContent = 'Elapsed';
-    }
-    updateElapsedChip?.();            // compute initial elapsed immediately
-    setElapsedChipClickable?.(true);  // allow opening elapsed modal
-    updateCloseEarlyVisibility?.();   // enable Close Early right away
-  })();
-
   saveAll?.();
 }
 
@@ -2313,34 +2458,76 @@ function logWrap() {
 
   const t = nowHHMM();
   tempWraps.push({ left, done, t });
+  
   undoStack.push({ type: 'wrap' });
 
   inp.value = '';
   refreshWrapButton();
   renderTimeline();
-  updateSummary();
+
+  // --- STATIC SNAPSHOT & UI SYNC (single-picker) ---
+  try {
+    const total      = current.total | 0;
+    const doneSoFar  = Math.max(0, total - left);                         // ground truth
+    const elapsedMin = Math.max(1, minutesBetween(current.start, nowHHMM())); // avoid ÷0
+    const rateSnap   = Math.round(doneSoFar / (elapsedMin / 60));         // u/h
+
+    // 1) Freeze per-order rate from ground truth (matches Elapsed modal)
+    current.orderRateUh = rateSnap > 0 ? rateSnap : 0;
+
+    // 2) Re-baseline predictive and keep it aligned with the frozen snapshot
+    if (left === 0) {
+      // finishing: stop predictive; header/ETA will be handled by complete flow
+      predictiveStop?.();
+    } else {
+      predictiveReset?.(left, current.orderRateUh || undefined);
+      if (predictive && current.orderRateUh > 0) predictive.rateUh = current.orderRateUh;
+      predictiveStart?.();
+      predictiveTick?.();
+    }
+    // --- sync live chips after a wrap ---
+    try { updateSummary?.(); } catch(e){}      // refresh Live Rate + Total Units chips
+    try {
+      const closedUnits = Array.isArray(picks) ? picks.reduce((a,b)=> a + (+b.units || 0), 0) : 0;
+      const progress    = currentOrderUnitsDone?.() || 0;
+      const totalUnits  = closedUnits + progress;
+      const chip = document.getElementById('chipTotalVal');
+      if (chip) chip.textContent = String(totalUnits);
+    } catch(e){}
+    try { updateElapsedChip?.(); } catch(e){}  // refresh Elapsed chip
+    try { tintProgressByPace?.(current.orderRateUh); } catch(e){} // keep bar color aligned
+
+    // 3) Paint header rate + ETA now so S2 matches modal instantly
+    const rEl = document.getElementById('progRate');
+    const eEl = document.getElementById('progETA');
+    if (current.orderRateUh > 0) {
+      const minsLeft = Math.round((left / current.orderRateUh) * 60);
+      const etaHHMM  = addMinutesToTime(nowHHMM(), minsLeft);
+      if (rEl) rEl.textContent = `${current.orderRateUh} u/h`;
+      if (eEl) eEl.textContent = etaHHMM;
+    } else {
+      rEl?.replaceChildren(document.createTextNode('—'));
+      eEl?.replaceChildren(document.createTextNode('—'));
+    }
+  } catch(e){}
+
+  // 4) Event-driven chips (no lag)
+  updateSummary();                 // Live Rate chip repaint
+  updateElapsedChip?.();           // Elapsed chip snapshot
+  setElapsedChipClickable?.(true);
   refreshCompleteButton();
   if (typeof updateProgressHeader === 'function') updateProgressHeader();
-  // Switch predictive rule after a wrap
-  if (left === 0) {
-    predictiveStop(); // you already auto-complete via existing flow
-  } else {
-    const orderRate = Math.round(orderLiveRate?.() || getLiveRateUh?.() || 280);
-    predictiveReset(left, orderRate, true); // after first wrap use current order rate
-    uiLastPaceUh = Math.round(orderRate);
-    predictiveStart();
-  }
 
-
-  // 🔹 added line here — keeps buttons in sync (esp. Complete unlock)
+  // Buttons/complete state
   updateHeaderActions?.();
 
   // ✅ Auto-close when 0 left
   if (left === 0) {
-    showToast('Order complete — closing...');
+    showToast?.('Order complete — closing...');
     setTimeout(() => completeOrder(), 300);
     return;
   }
+
   saveAll();
 }
 
@@ -2409,7 +2596,15 @@ const SEL = {
 
 function getCurrentLeft(){
   if (!current || !current.total) return 0;
-  return (tempWraps.length ? tempWraps[tempWraps.length-1].left : current.total);
+  // Base: last wrap's left, or full total if no wraps yet
+  let left = tempWraps.length ? tempWraps[tempWraps.length - 1].left : current.total;
+
+  // Shared overlay: reflect in-progress shared submissions (no pallet increment)
+  if (current.shared && typeof window._sharedProgressLeft === 'number') {
+    left = Math.min(left, window._sharedProgressLeft);
+  }
+
+  return Math.max(0, left);
 }
 
 // Prefer per-order live rate; fall back to whole-shift snapshot
@@ -2464,12 +2659,17 @@ function breakExtensionMinutes(){
 function predictiveTick(){
   if (!current || !current.total) return;
 
-  // 1) Track the freshest live rate (order rate preferred, else shift snapshot)
-  const liveUh = getLiveRateUh();
-  if (isFinite(liveUh) && liveUh > 0) predictive.rateUh = liveUh;
+  // 1) Use static per-order rate if available; DO NOT re-sample live here
+  const staticUh = (current && isFinite(current.orderRateUh) && current.orderRateUh > 0)
+    ? current.orderRateUh
+    : (isFinite(predictive.rateUh) && predictive.rateUh > 0 ? predictive.rateUh : 0);
+  // Keep predictive aligned with frozen snapshot to avoid repaint drift
+  if (current?.orderRateUh > 0 && predictive && predictive.rateUh !== current.orderRateUh) {
+    predictive.rateUh = current.orderRateUh;
+  }
 
-  // 2) Predict remaining units from baseline
-  const perSec     = predictive.rateUh > 0 ? (predictive.rateUh / 3600) : 0;
+  // 2) Predict remaining units from baseline with the static rate
+  const perSec     = staticUh > 0 ? (staticUh / 3600) : 0;
   const elapsedSec = (Date.now() - predictive.baseTs) / 1000;
 
   let leftPred = Math.max(0, Math.round(predictive.leftAtBase - perSec * elapsedSec));
@@ -2479,28 +2679,29 @@ function predictiveTick(){
   const done = (current.total - leftPred);
   const pct  = current.total ? (done / current.total) * 100 : 0;
 
-  // bar + % label
-  setProgress(pct);
-  const pctEl = document.getElementById('progPct');
-  if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+  // update progress bar + text
+  try {
+    const fill = document.getElementById('progFill');
+    if (fill) fill.style.width = pct.toFixed(1) + '%';
+    const pctEl = document.getElementById('progPct');
+    if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+    // (optional) keep progLeft hidden but internally correct
+    const leftLabel = document.getElementById('progLeft');
+    if (leftLabel) leftLabel.textContent = String(leftPred);
+  } catch(e){}
 
-  // "Left" label
-  updateLeftLabel(leftPred);
-
-  // live rate + ETA
-  if (isFinite(predictive.rateUh) && predictive.rateUh > 0 && perSec > 0) {
-    setText(SEL.rateText, Math.round(predictive.rateUh) + ' u/h');
-    const secToGo = leftPred / perSec;
-    setText(SEL.etaText, fmtETA(Date.now() + secToGo * 1000));
-  } else {
-    setText(SEL.rateText, '—');
-    setText(SEL.etaText, '—');
-  }
-
-  // chip/colour class for the bar fill (keeps colour live)
-  tintProgressByPace(predictive.rateUh || 0);
+  // Recompute ETA display using staticUh (keeps end-time stable; rate is frozen)
+  try {
+    if (staticUh > 0) {
+      const minsLeft = (leftPred / staticUh) * 60;
+      const endHHMM  = addMinutesToTime(nowHHMM(), minsLeft);
+      document.getElementById('progRate')?.replaceChildren(document.createTextNode(Math.round(staticUh)+' u/h'));
+      document.getElementById('progETA') ?.replaceChildren(document.createTextNode(endHHMM));
+    }
+  } catch(e){}
+  try { updateSummary?.(); } catch(_) {}
+  try { tintProgressByPace?.(staticUh); } catch(e){}
 }
-
 setInterval(()=>{
   // Only let the header repaint if predictive is NOT running
   if (current && !(predictive && predictive.timer)) {
@@ -2637,61 +2838,129 @@ function submitDelay(){
 }
 function updateSharedDockInfo() {
   const info = document.getElementById('sharedDockInfo');
-  const remaining = Math.max(0, sharedSession.total - sharedMySum);
-  
-  if (info) info.textContent = `Target: ${sharedSession.total} | Mine: ${sharedMySum} | Left: ${remaining}`;
 
-  // Disable the submit button if all units have been submitted
+  const total     = (current && current.total) ? +current.total : 0;
+  const mySum     = Math.max(0, window.sharedMySum  || 0);
+  const block     = Math.max(0, window.sharedBlock  || 0);
+  const remaining = Math.max(0, total - mySum);
+
+  if (info) {
+    if (current?.shared) info.textContent = `Current: ${block}`;
+    else                 info.textContent = `Left: ${remaining}`;
+  }
+
   const sBtn = document.getElementById('sharedSubmitBtn');
   if (sBtn) sBtn.disabled = remaining <= 0;
 }
 
-function sharedSubmitUnits() {
-  const input   = document.getElementById('sharedUnitsDock');
-  const wrapTick= document.getElementById('sharedWrapTick');
-  const val     = parseInt(input.value || '0', 10);
-
+function sharedSubmitUnits(){
+  const input = document.getElementById('sharedUnitsDock');
+  const val   = parseInt(input?.value || '0', 10);
   if (!(val > 0)) return alert('Enter units first');
 
-  // Remaining vs target
-  const remaining = Math.max(0, (sharedSession.total || 0) - sharedMySum);
-  if (remaining === 0) { showToast?.('Target already reached.'); return; }
+  if (!current || !current.total) return;
+  if (!current.shared) current.shared = true;
+
+  const total     = current.total || 0;
+  const remaining = Math.max(0, total - (window.sharedMySum || 0));
+  if (remaining === 0) { showToast?.('Target already reached.'); input.value=''; return; }
 
   const add = Math.min(val, remaining);
-  sharedMySum += add;
 
-  // Record submission in the shared session log
-  sharedSession.entries.push({ units: add, t: nowHHMM() });
+  // single source of truth for shared progress
+  window.sharedMySum = (window.sharedMySum || 0) + add;
+  window.sharedBlock = (window.sharedBlock || 0) + add; 
+  // persist partial shared progress
+  localStorage.setItem('sharedMySum', window.sharedMySum);
+  localStorage.setItem('sharedBlock', window.sharedBlock);
+  // log entry
+  try { window.sharedSession?.entries?.push?.({ units: add, t: nowHHMM(), kind: 'submit' }); } catch(e){}
 
-  // ---- KEY: push a synthetic wrap into tempWraps so progress/elapsed update like Log Wrap ----
-  // previous left (from last wrap) and new left after this submit
-  const prevLeft = tempWraps.length ? tempWraps[tempWraps.length - 1].left : (current?.total || sharedSession.total || 0);
-  const newLeft  = Math.max(0, (current?.total || sharedSession.total || 0) - sharedMySum);
+  // --- compute new LEFT and reflect immediately ---
+  const left = Math.max(0, total - (window.sharedMySum || 0));
 
-  if (newLeft !== prevLeft) {
-    tempWraps.push({ left: newLeft, done: Math.max(0, prevLeft - newLeft), t: nowHHMM() });
-  }
+  // overlay so header mirrors shared progress (no fake pallet)
+  window._sharedProgressLeft = left;
 
-  // Optional: if user ticked “Wrap”, mirror to shared wraps too and clear the tick
-  if (wrapTick?.checked) {
-    (sharedSession.wraps ||= []).push({ left: newLeft, t: nowHHMM() });
-    wrapTick.checked = false;
-  }
+  // jump the progress bar & % label right now
+  const pct = total ? ((total - left) / total) * 100 : 0;
+  try {
+    setProgress?.(pct);
+    const pctEl = document.getElementById('progPct');
+    if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+  } catch(e){}
 
-  // UI refresh
+  // update “Left” label under the bar
+  try { updateLeftLabel?.(left); } catch(e){}
+
+  // --- predictive: re-baseline without a blank frame ---
+  try {
+    // kill any grace pause
+    if (window._predictiveGraceTimer) {
+      clearTimeout(window._predictiveGraceTimer);
+      window._predictiveGraceTimer = null;
+    }
+
+    // pick a sensible live rate fallback so ETA/Rate don't blank
+    const effRate = Math.round(
+      (typeof orderLiveRate === 'function' ? (orderLiveRate() || 0) : 0) ||
+      (current && current.orderRateUh) ||
+      (typeof getLiveRateUh === 'function' ? (getLiveRateUh() || 0) : 0) ||
+      (predictive && predictive.rateUh) || 0
+    );
+
+    // re-base to new left; keep previous rate if effRate is 0
+    predictiveReset?.(left, effRate > 0 ? effRate : undefined);
+
+    // ensure predictive knows the rate immediately
+    if (predictive) predictive.rateUh = (effRate > 0 ? effRate : (predictive.rateUh || 0));
+
+    // start (or restart) the timer and paint one frame now
+    predictiveStart?.();
+    predictiveTick?.();
+  } catch(e){}
+
+  // --- NEW: freeze OrderRate & ETA from this submission (static until next event) ---
+  try {
+    // Ground-truth snapshot = (units done so far) / (elapsed since order start)
+    const doneNow    = Math.max(0, (total - left)); // units completed on this order
+    const elapsedMin = Math.max(1, minutesBetween(current.start, nowHHMM())); // avoid ÷0
+    const rateSnap   = Math.round(doneNow / (elapsedMin / 60)); // u/h
+
+    // Set the order's static rate & keep predictive aligned
+    current.orderRateUh = rateSnap > 0 ? rateSnap : 0;
+    if (predictive) predictive.rateUh = current.orderRateUh || predictive.rateUh || 0;
+
+    // Paint header rate & ETA from the static snapshot
+    const useRate = current.orderRateUh || 0;
+    if (useRate > 0) {
+      const minsLeft = Math.round((left / useRate) * 60);
+      const etaHHMM  = addMinutesToTime(nowHHMM(), minsLeft);
+      const rEl = document.getElementById('progRate');
+      const eEl = document.getElementById('progETA');
+      if (rEl) rEl.textContent = `${useRate} u/h`;
+      if (eEl) eEl.textContent = etaHHMM;
+    } else {
+      document.getElementById('progRate')?.replaceChildren(document.createTextNode('—'));
+      document.getElementById('progETA') ?.replaceChildren(document.createTextNode('—'));
+    }
+    tintProgressByPace?.(useRate);
+  } catch(e){}
+
+  // repaint header AFTER predictive tick so visuals align
+  try { updateProgressHeader?.(); } catch(e){}
+
+  // Elapsed snapshot on event (no ticking decay here)
+  try { updateElapsedChip?.(); } catch(e){}
+
+  // refresh summary chips (Live Rate / Total Units) immediately
+  try { updateSummary?.(); } catch(e){}
+
+  // bottom dock bits
+  try { updateSharedDockInfo?.(); } catch(e){}
+
   input.value = '';
-  window._sharedProgressLeft = newLeft;          // keep the overlay in sync
-  predictiveReset?.(newLeft);                    // update creeping baseline
-  updateProgressHeader?.();                      // bar/%/left
-  updateElapsedChip?.();                         // elapsed chip reflects new progress
-  updateSharedDockInfo();                        // dock “Target | Mine | Left” and disable when done
-  const totalUnitsChip = document.getElementById('chipTotalVal');
-  if (totalUnitsChip) totalUnitsChip.textContent = sharedMySum;
-
-  showToast?.('Unit submitted.');
 }
-
-
 // Save a text note (no delay timing). Works with or without an active order.
 function submitNote(){
   const txt = (document.getElementById('delayCause').value || '').trim();
@@ -3095,57 +3364,64 @@ function renderDone(){
   document.getElementById('completedCard').style.display = picks.length? 'block':'none';
 }
 function renderWeeklySummary(){
-  try{
-    const todayISOstr = todayISO();
-    const { startISO, endISO, startDate, endDate } = weekBoundsFor(todayISOstr);
+  const todayISO = (new Date()).toISOString().slice(0,10);
+  const { startISO, endISO, startDate, endDate } = weekBoundsFor(todayISO);
 
-    const weekDays = (historyDays||[]).filter(d => d && d.date && inRange(d.date, startISO, endISO));
+  const QUARTER = 15;
+  const WEEK_OT_THRESHOLD_MIN = 45 * 60; // paid OT only after 45h worked in week
+  const floorToQuarter = (mins) => Math.max(0, Math.floor(mins / QUARTER) * QUARTER);
 
-    const floorToQuarter = (mins)=> Math.max(0, Math.floor(mins/15)*15);
-    const num = (v)=> Number.isFinite(+v) ? +v : 0;
+  let totalUnits = 0;
+  let totalWorkedFlooredMin = 0;  // all worked time, floored to 15m
+  let daysCount  = 0;
 
-    let totalUnits  = 0;
-    let totalHours  = 0;
-    let overtimeMin = 0;
+  for (const d of historyDays) {
+    if (!inRange(d.date, startISO, endISO)) continue;
 
-    weekDays.forEach(d=>{
-      const units = num(d.totalUnits);
-      const hours = num(d.shiftLen);
+    const toMin = (hhmm) => {
+      const [H,M] = (hhmm || '00:00').split(':').map(x => parseInt(x,10) || 0);
+      return H*60 + M;
+    };
 
-      const workedMin    = num(d.workedMin) || num(d.elapsedMin) || Math.round(hours*60);
-      const scheduledMin = num(d.scheduledMin) || Math.round((hours || 9)*60);
+    // Actual worked minutes to the minute
+    const workedMinRaw =
+      Number.isFinite(+d.workedMin) ? +d.workedMin
+      : (d.start && d.end) ? Math.max(0, toMin(d.end) - toMin(d.start))
+      : 0;
 
-      totalUnits += units;
-      if (hours > 0) totalHours += hours;
+    const workedMinFloored = floorToQuarter(workedMinRaw);
 
-      const delta = workedMin - scheduledMin;
-      if (delta > 0) overtimeMin += floorToQuarter(delta);
-    });
-
-    const weighted   = (totalHours>0) ? Math.round(totalUnits / totalHours) : 0;
-    const overtimeH  = (overtimeMin/60);
-
-    const setTxt = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
-    const hintEl = document.getElementById('weekRangeHint');
-    if(hintEl) hintEl.textContent = `Week: ${fmtShort(startDate)} – ${fmtShort(endDate)}`;
-
-    setTxt('weekWeighted', weighted ? (weighted+' u/h') : '— u/h');
-    // simple mean removed: no write to #weekMean
-    setTxt('weekUnits',    String(totalUnits));
-    setTxt('weekHours',    (totalHours||0).toFixed(1));
-    setTxt('weekDays',     String(weekDays.length));
-    setTxt('weekOvertime', overtimeH.toFixed(2) + ' h');
-
-    const card = document.getElementById('weekCard');
-    if(card){
-      card.classList.remove('ok','warn','bad');
-      if(weighted>=300) card.classList.add('ok');
-      else if(weighted>=249) card.classList.add('warn');
-      else card.classList.add('bad');
-    }
-  }catch(e){
-    console.warn('renderWeeklySummary error', e);
+    totalWorkedFlooredMin += workedMinFloored;
+    totalUnits += Number(d.totalUnits) || 0;
+    daysCount  += 1;
   }
+
+  // Weekly split: only minutes beyond 45h count as 'paid overtime'
+  const paidOTMin = Math.max(0, totalWorkedFlooredMin - WEEK_OT_THRESHOLD_MIN);
+  const nonOTMin  = totalWorkedFlooredMin - paidOTMin;
+
+  // Tiles
+  const totalHoursAll = totalWorkedFlooredMin / 60;           // for weighted avg denominator
+  const totalHoursTile = (nonOTMin / 60).toFixed(2);          // non-OT hours only
+  const overtimeTile   = (paidOTMin / 60).toFixed(2) + ' h';  // paid OT only
+  const weighted = (totalHoursAll > 0) ? Math.round(totalUnits / totalHoursAll) : 0;
+
+  document.getElementById('weekUnits')    ?.replaceChildren(document.createTextNode(String(totalUnits)));
+  document.getElementById('weekDays')     ?.replaceChildren(document.createTextNode(String(daysCount)));
+  document.getElementById('weekHours')    ?.replaceChildren(document.createTextNode(totalHoursTile));
+  document.getElementById('weekOvertime') ?.replaceChildren(document.createTextNode(overtimeTile));
+  document.getElementById('weekWeighted') ?.replaceChildren(document.createTextNode(weighted + ' u/h'));
+
+  // Optional styling: OT red until threshold crossed, then green
+  const otEl = document.getElementById('weekOvertime');
+  if (otEl) {
+    otEl.classList.remove('green','red');
+    otEl.classList.add(paidOTMin > 0 ? 'green' : 'red');
+  }
+
+  // Week range hint
+  const hint = document.getElementById('weekRangeHint');
+  if (hint) hint.textContent = `Week: ${startDate.toDateString().slice(0,10)} → ${endDate.toDateString().slice(0,10)}`;
 }
 
 // ====== History render ======
@@ -3163,9 +3439,21 @@ function renderHistory(){
     head.className='accHead '+boxState;
 
     const leftDiv=document.createElement('div'); leftDiv.className='left';
+    const num = (v)=> Number.isFinite(+v) ? +v : 0;
+    const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
+    const workedMin    = num(d.workedMin)    || ((d.start && d.end) ? Math.max(0, toMin(d.end) - toMin(d.start)) : 0);
+    const scheduledMin = num(d.scheduledMin) || Math.round((num(d.shiftLen)||9) * 60);
+    const floorToQuarter = (mins)=> Math.max(0, Math.floor(mins/15)*15);
+    const otMin = floorToQuarter(Math.max(0, workedMin - scheduledMin));
+
+    // Day Avg based on ACTUAL worked hours (to the minute)
+    const workedHours = workedMin / 60;
+    const dayAvgWorked = (workedHours > 0) ? Math.round((num(d.totalUnits)||0) / workedHours) : 0;
+
     leftDiv.innerHTML = `<span class="tag">${new Date(d.date+'T12:00:00').toDateString().slice(0,15)}</span>
       <span>Units: <b>${d.totalUnits||0}</b></span>
-      <span>Day Avg: <b>${d.dayRate||0}</b> u/h</span>`;
+      <span>Day Avg: <b>${dayAvgWorked}</b> u/h</span>
+      <span>Worked: <b>${fmtElapsed(workedMin)}</b>${otMin ? ` • OT: <b>${(otMin/60).toFixed(2)} h</b>` : ''}</span>`;
     head.appendChild(leftDiv);
 
     const del = document.createElement('button');
@@ -3284,27 +3572,38 @@ function computeDowntimes(picksArr, shiftBreaksArr){
 function endShift(){
   if(current){ return alert('Complete or undo the current order before ending the shift.'); }
   if(!picks.length){ return alert('No completed orders to archive.'); }
-  var dateStr=todayISO();
-  var shiftLen=parseFloat(document.getElementById('tLen').value||'9');
-  var totalUnits=picks.reduce((a,b)=>a+b.units,0);
+
+  var dateStr = todayISO();
+  var shiftLen = parseFloat(document.getElementById('tLen').value || '9');
+  var totalUnits = picks.reduce((a,b)=>a+b.units,0);
   var downtimes = computeDowntimes(picks, shiftBreaks);
-  var snapshot={date:dateStr,start:startTime||'',end:lastClose||'',shiftLen,totalUnits,dayRate:shiftLen>0?Math.round(totalUnits/shiftLen):0,picks:picks.slice(0),shiftBreaks:shiftBreaks.slice(0),downtimes};
+
+  // NEW: compute worked & scheduled minutes to the minute
+  const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
+  const workedMin = (startTime && lastClose) ? Math.max(0, toMin(lastClose) - toMin(startTime)) : 0;
+  const scheduledMin = Math.round((shiftLen || 9) * 60);
+
+  var snapshot = {
+    date: dateStr,
+    start: startTime || '',
+    end:   lastClose || '',
+    shiftLen,
+    totalUnits,
+    dayRate: shiftLen > 0 ? Math.round(totalUnits / shiftLen) : 0, // keep day avg by full shift
+    picks: picks.slice(0),
+    shiftBreaks: shiftBreaks.slice(0),
+    downtimes,
+    // NEW fields used by weekly overtime calc
+    workedMin,
+    scheduledMin
+  };
+
   historyDays.push(snapshot); saveAll(); renderHistory();
   renderWeeklySummary();
 
-  // Reset session
-  predictiveStop(); // PREDICTIVE: ensure stopped
-  picks=[]; lastClose=''; current=null; tempWraps=[]; undoStack=[]; shiftBreaks=[];
-  document.getElementById('orderArea').style.display='none';
-  ['btnB','btnL','btnUndo'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('btnStart').style.display='inline-block';
-  document.getElementById('btnStart').disabled=true;
-  document.getElementById('btnComplete').style.display='none';
-  document.getElementById('oLeft').value=''; document.getElementById('oTotal').value='';
-  document.getElementById('completedCard').style.display='none';
-  document.getElementById('shiftCard').style.display='block';
-  startTime='';
-  renderDone(); updateSummary(); showToast('Shift archived to History'); showTab('history'); updateEndShiftVisibility(); updateCloseEarlyVisibility(); saveAll();
+  exitShiftNoArchive();        // reuse your existing full reset
+  showTab('tracker');          // land back on the Tracker start screen
+  showToast('Shift archived to History');
 }
 
 function clearToday(){
@@ -3448,25 +3747,42 @@ function clearAllCustom(){
   customCodes=[]; saveCustomCodes(); renderCustomTags(); reloadDropdowns(); showToast('All custom customers cleared');
 }
 
-// ====== Live banner ======
 function currentOrderUnitsDone(){
   if (!current) return 0;
 
-  // Ignore any live input — only use logged wraps
-  if (tempWraps.length > 0) {
-    const left = tempWraps[tempWraps.length - 1].left;
-    return (current.total || 0) - left;
+  const total = current.total || 0;
+
+  // Shared: trust sharedMySum (clamped)
+  if (current.shared) {
+    const mine = Number(window.sharedMySum || 0);
+    return Math.max(0, Math.min(total, Number.isFinite(mine) ? mine : 0));
   }
 
-  // No wraps yet, so 0 progress
-  return 0;
+  // *** NEW: if submitWrapLeft just ran, use that immediately
+  if (Number.isFinite(current._lastWrapLeft)) {
+    return Math.max(0, total - Math.max(0, current._lastWrapLeft));
+  }
+
+  // Otherwise prefer last wrap record
+  if (Array.isArray(window.tempWraps) && window.tempWraps.length){
+    const last = window.tempWraps[window.tempWraps.length - 1];
+    const left = Number(last?.left);
+    if (Number.isFinite(left)) return Math.max(0, total - Math.max(0, left));
+  }
+
+  // Fallback: closed order units
+  let done = 0;
+  if (Array.isArray(window.picks)) {
+    for (const p of window.picks) done += (+p.units || 0);
+  }
+  return Math.max(0, Math.min(total, done));
 }
 
 function updateSummary(){
-  var closedUnits=picks.reduce((a,b)=>a+b.units,0);
+  var closedUnits = Array.isArray(picks) ? picks.reduce((a,b)=> a + (+b.units || 0), 0) : 0;
   var progress=currentOrderUnitsDone();
   var totalUnits = closedUnits + progress;
-  var s=hm(startTime);
+  var s=hm(getSnappedStartHHMM());
   var endHHMM = current ? nowHHMM() : lastClose;
   var e=hm(endHHMM);
   var live=(!isNaN(s)&&!isNaN(e)&&e>s)? Math.round(totalUnits/(e-s)) : 0;
@@ -3516,15 +3832,7 @@ function updateElapsedChip() {
 }
 
 function computeLiveRateSnapshot(){
-  // Same math as updateSummary’s “live” chip, but returns a number
-  var closedUnits = picks.reduce((a,b)=>a+b.units,0);
-  var progress    = currentOrderUnitsDone();
-  var totalUnits  = closedUnits + progress;
-
-  var s = hm(startTime), e = hm(nowHHMM());
-  if (isNaN(s) || isNaN(e) || e <= s) return 0;
-
-  return Math.round(totalUnits / (e - s)); // u/h
+  return computeLiveSnapshot().live;
 }
 // --- Live modal state ---
 let liveModalTick = null;
@@ -3536,8 +3844,9 @@ function computeLiveSnapshot() {
   const progress    = currentOrderUnitsDone(); // in-progress order contribution
   const totalUnits  = closedUnits + progress;
 
-  const s = hm(startTime);
-  const e = hm(nowHHMM());          // <— live end point
+  const snappedHHMM = getSnappedStartHHMM();
+  const s = hm(snappedHHMM);
+  const e = hm(nowHHMM());
   const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
 
   const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
@@ -3566,18 +3875,22 @@ function renderLiveModalOnce() {
   // Progress: either real-time or preview using override "left"
   let progress = currentOrderUnitsDone();
   if (current && liveOverrideLeft !== null && !isNaN(liveOverrideLeft)) {
-    const max = current.total || 0;
+    const max  = current.total || 0;
     const left = Math.max(0, Math.min(liveOverrideLeft, max));
-    progress = (current.total || 0) - left;
+    progress   = (current.total || 0) - left;
   }
 
   const totalUnits = closedUnits + progress;
 
-  const s = hm(startTime);
+  // Use snapped (quarter-hour) start
+  const snappedHHMM = (typeof getSnappedStartHHMM === 'function')
+    ? getSnappedStartHHMM()
+    : startTime;
+
+  const s = hm(snappedHHMM);        // decimal hours
   const e = hm(nowHHMM());
-  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;
-  const live = hours > 0 ? Math.round(totalUnits / hours) : 0;
-  const elapsedMin = hours > 0 ? Math.round(hours * 60) : 0;
+  const hours = (!isNaN(s) && !isNaN(e) && e > s) ? (e - s) : 0;  // elapsed AFTER snap
+  const live  = hours > 0 ? Math.round(totalUnits / hours) : 0;
 
   const totEl = document.getElementById('live_totUnits');
   const elEl  = document.getElementById('live_elapsed');
@@ -3585,18 +3898,49 @@ function renderLiveModalOnce() {
   const fEl   = document.getElementById('live_formula');
 
   if (totEl) totEl.textContent = String(totalUnits);
-  if (elEl)  elEl.textContent  = hours ? fmtElapsed(elapsedMin) : '—';
   if (rEl)   rEl.textContent   = (live || 0) + ' u/h';
-  if (fEl)   fEl.textContent   = hours
-      ? `Live = ${totalUnits} ÷ ${hours.toFixed(2)} h = ${live} u/h`
-      : 'Live = Total Units ÷ Hours';
-
   paintRatePill(rEl, live);
+
+  // Header: show pending quarter-hour until live begins
+  const hdr = document.getElementById('liveTitle');
+  const nowVal  = e;
+  const snapVal = s;
+  const beforeStart = (!isNaN(nowVal) && !isNaN(snapVal) && nowVal < snapVal);
+
+  if (hdr) {
+    hdr.textContent = beforeStart
+      ? `Live Rate – starts at ${snappedHHMM}`
+      : 'Live Rate – Now';
+  }
+
+  // Elapsed: countdown until snap, then normal elapsed
+  if (elEl) {
+    if (beforeStart) {
+      const remainingMin = Math.max(0, Math.ceil((snapVal - nowVal) * 60));
+      elEl.textContent = `-${fmtElapsed(remainingMin)}`;
+      // keep the countdown ticking once per second until start
+      setTimeout(renderLiveModalOnce, 1000);
+    } else {
+      const elapsedMin = Math.round(hours * 60);
+      elEl.textContent = hours ? fmtElapsed(elapsedMin) : '—';
+    }
+  }
+
+  // Remove the "Formula" block to de-bulk the bottom area
+  if (fEl) {
+    const maybeLabel = fEl.previousElementSibling;
+    if (maybeLabel && maybeLabel.classList.contains('hint')) {
+      maybeLabel.style.display = 'none';
+    }
+    fEl.textContent = '';
+    fEl.style.display = 'none';
+  }
 
   // Preview hint
   const hint = document.getElementById('live_hint');
   if (hint) hint.textContent = (liveOverrideLeft !== null) ? 'Preview only — not saved.' : '';
 }
+
 function openLiveUpdateModal(){
   if (!current) { alert('No active order to update. Start an order first.'); return; }
 
@@ -3999,20 +4343,31 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#oDD .dd-menu')  ?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
     document.querySelector('#oDD .dd-toggle')?.addEventListener('click',  ()=> setTimeout(refreshStartButton,0));
     refreshStartButton();
-    // ── 9) Live summary + timer loop ────────────────────────────────
-    setInterval(function () {
-      updateSummary(); // keep Live Rate fresh every minute, regardless of tab/break
-
-      // Elapsed chip behavior: live only when not on a break
-      if (breakDraft) {
-        setElapsedChipClickable?.(false);
-      } else if (current) {
-        updateElapsedChip?.();
+    // ── 9) Elapsed-only ticker (no rate refresh) ──────────────────────
+    // Paint once on load
+    try {
+      if (current) {
+        updateElapsedChip?.();       // ticks minutes on the chip
         setElapsedChipClickable?.(true);
       } else {
         setElapsedChipClickable?.(false);
       }
-    }, 60000);
+      // DO NOT call updateSummary() here; that would refresh rate.
+    } catch(e){}
+
+    // Keep the chip ticking, but don't touch Live Rate or summary.
+    setInterval(function () {
+      if (breakDraft) {
+        setElapsedChipClickable?.(false);
+        return;
+      }
+      if (current) {
+        updateElapsedChip?.();       // ONLY updates the elapsed minutes display
+        setElapsedChipClickable?.(true);
+      } else {
+        setElapsedChipClickable?.(false);
+      }
+    }, 10000);
 
     // ── 10) QuickCalc wiring ────────────────────────────────────────
     const qcRateEl  = document.getElementById('qcRate');
@@ -4058,7 +4413,20 @@ function openWrapModal(){
 
   if (inp) {
     inp.value = '';
-    inp.placeholder = String(lastLeft);
+    if (current?.shared) {
+      const total  = current.total || 0;
+      const mySum  = Math.max(0, window.sharedMySum || 0);
+      const myLeft = Math.max(0, total - mySum);
+
+      inp.value = String(myLeft);
+      inp.placeholder = String(myLeft);
+
+      inp.setAttribute('disabled', 'disabled'); // lock during shared wrap
+    } else {
+      inp.value = '';
+      inp.placeholder = String(lastLeft);
+      inp.removeAttribute('disabled');
+    }
     // ensure only one listener (avoid dupes)
     inp.removeEventListener('input', refreshWrapModalBtn);
     inp.addEventListener('input', refreshWrapModalBtn);
@@ -4084,22 +4452,58 @@ function closeWrapModal(){
   const inp = document.getElementById('wrapLeftInput');
   if (m) m.style.display = 'none';
   inp?.removeEventListener('input', refreshWrapModalBtn);
+  inp?.removeAttribute('disabled');
 }
 
 function submitWrapLeft(){
-  const inp = document.getElementById('wrapLeftInput');
-  const v   = Math.max(0, toInt(inp?.value));
+  if (!current) return alert('Start an order first');
+
+  const inp   = document.getElementById('wrapLeftInput');
+  const total = current.total || 0;
+
+  // 1) Get candidate "left"
+  let v = toInt(inp?.value);
+  const typedEmpty = !inp || String(inp.value).trim() === '' || !Number.isFinite(v);
+
+  if (current?.shared) {
+    // Shared: default to my current left if user didn't type
+    const mySum  = Math.max(0, Number(window.sharedMySum || 0));
+    const myLeft = Math.max(0, total - mySum);
+    if (typedEmpty) {
+      v = myLeft;
+      if (inp) inp.value = String(v);
+    }
+  } else {
+    // Single-picker: must have a valid typed number
+    if (typedEmpty) { inp?.focus(); return alert('Enter units left'); }
+  }
+
+  // 2) Guardrails
+  v = Number.isFinite(v) ? v : 0;
+  if (v < 0 || v > total) { inp?.focus(); return alert('Units left must be between 0 and total'); }
+
+  const prevLeft = (Array.isArray(window.tempWraps) && window.tempWraps.length)
+    ? Number(window.tempWraps[window.tempWraps.length - 1].left)
+    : total;
+
+  if (!Number.isFinite(prevLeft)) return alert('Previous wrap state invalid');
+  if (v > prevLeft) { inp?.focus(); return alert('Units left cannot increase vs previous wrap'); }
+
+  const done = prevLeft - v;
+  if (done <= 0) { inp?.focus(); return alert('No progress since last wrap'); }
+
+  // 3) Sync legacy field and set explicit source-of-truth for totals
   const oLeft = document.getElementById('oLeft');
   if (oLeft) oLeft.value = String(v);
+  // *** KEY: make last wrap "left" available immediately to the summary path
+  current._lastWrapLeft = v;
 
-  // --- Snapshot OrderRate + frozen ETA at the wrap moment ---
+  // 4) Snapshot per-order rate/ETA
   if (current) {
-    // Prefer the true orderLiveRate() (excludes in-order breaks)
     let rateSnap = 0;
     try {
       rateSnap = Math.round(orderLiveRate?.() || 0);
       if (!rateSnap || rateSnap <= 0) {
-        // fallback to chip / predictive if available
         const chip = document.getElementById('chipRateVal');
         const m = chip ? String(chip.textContent||'').match(/(\d+)/) : null;
         const chipUh = m ? parseInt(m[1],10) : 0;
@@ -4107,10 +4511,8 @@ function submitWrapLeft(){
       }
     } catch(e){ rateSnap = 0; }
 
-    // lock it in; if no good reading, keep prior seed
     if (rateSnap > 0) current.orderRateUh = rateSnap;
 
-    // recompute frozen ETA against LEFT at this wrap
     const leftNow = Math.max(0, v);
     const useRate = current.orderRateUh || current.preWrapRateUh || 0;
     if (useRate > 0) {
@@ -4118,19 +4520,27 @@ function submitWrapLeft(){
       current.fixedETA = addMinutesToTime(nowHHMM(), mins);
     }
 
-    // paint immediately
     const rEl = document.getElementById('progRate');
     const eEl = document.getElementById('progETA');
     if (rEl) rEl.textContent = useRate ? `${useRate} u/h` : '—';
     if (eEl) eEl.textContent = current.fixedETA || '—';
   }
 
+  // 5) Finish UI + pipeline
   closeWrapModal();
 
   refreshWrapButton?.();
-  logWrap?.();                 // persists the new 'left' into tempWraps, timeline, etc.
+  logWrap?.();                 // pushes into tempWraps
+  updateSummary?.();           // now sees current._lastWrapLeft immediately
+  updateElapsedChip?.();
+
+  if (current?.shared) {
+    window.sharedBlock = 0;
+    try { updateSharedDockInfo?.(); } catch(e){}
+  }
+
   updateHeaderActions?.();
-  showToast?.('Wrap logged');
+  showToast?.(`Wrap logged (+${done})`);
 }
 
 function updateHeaderActions(){
