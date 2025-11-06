@@ -254,6 +254,24 @@ td.small { font-size:12px; color:#9fb3c8; }
   background: var(--line); /* neutral base before rate applied */
   transition: background-color .25s ease, width .35s ease;
 }
+#sharedPad .btn.ok{
+  background:#0f131b;           /* no fill */
+  border:1px solid #244b2c;      /* thin green outline */
+  color:#d2e2d2;
+  border-radius:8px;
+  padding:12px 0;                /* matches every key height */
+  font-size:20px;
+}
+#sharedPad .btn.ok:hover{ background:#142c18; }
+
+#sharedPad .btn.ghost{
+  background:#1a1f27;
+  border:1px solid #38404b;
+  color:#c7c7c7;
+  border-radius:8px;
+  padding:12px 0;
+}
+#sharedPad .btn.ghost:hover{ background:#242a35; }
 
 /* Progress Bar Tint (scoped correctly) */
 #orderHeaderProgress .progBar .progFill { background: var(--line); transition: background-color .25s ease, width .35s ease; }
@@ -481,36 +499,38 @@ td.small { font-size:12px; color:#9fb3c8; }
       <button class="btn ghost" type="button" onclick="clearToday()">Clear today's data</button>
     </div>
   </section>
-  <!-- Shared Pick Bottom Dock (only visible in shared mode) -->
-  <div id="sharedDock" style="
-    position:fixed; bottom:0; left:0; right:0; z-index:30;
-    background: rgba(20,22,28,0.95); border-top:1px solid #2b2f3a;
-    padding:12px; display:none; backdrop-filter:saturate(120%) blur(4px);
+  <!-- Shared Order Pad (merged dock + keypad) -->
+  <div id="sharedPad" style="
+    position:fixed; bottom:0; left:0; right:0; z-index:40;
+    background:#0f131b; border-top:1px solid #29364a;
+    padding:8px 10px; display:none;
   ">
-    <div style="
-      display:flex; align-items:center; width:100%;
-      justify-content:space-between; gap:10px; flex-wrap:nowrap; min-height:48px;
-    ">
+    <div class="cbPad" style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
+      <!-- TOP ROW (Submit spans 3 cols) -->
+      <button class="btn ok" id="padSubmit"
+              style="grid-column:span 3; font-size:18px; padding:12px 0;">
+        Submit
+      </button>
 
-      <!-- LEFT (Hide) -->
-      <div style="display:flex; align-items:center; justify-content:flex-start; flex:0 0 auto;">
-        <button class="btn slim ghost" type="button" title="Hide bar" onclick="hideSharedDock()">✖</button>
-      </div>
+      <!-- NUMPAD -->
+      <button class="btn ok" data-val="1">1</button>
+      <button class="btn ok" data-val="2">2</button>
+      <button class="btn ok" data-val="3">3</button>
+      <button class="btn ok" data-val="4">4</button>
+      <button class="btn ok" data-val="5">5</button>
+      <button class="btn ok" data-val="6">6</button>
+      <button class="btn ok" data-val="7">7</button>
+      <button class="btn ok" data-val="8">8</button>
+      <button class="btn ok" data-val="9">9</button>
 
-      <!-- CENTER (Units + Current tag) -->
-      <div style="display:flex; align-items:center; gap:10px; flex:1 1 auto; justify-content:center;">
-        <input id="sharedUnitsDock" type="number" min="1" placeholder="Units"
-              style="width:96px; height:36px; text-align:center; font-size:1em;">
-        <div id="sharedDockInfo" style="font-size:.9em; opacity:.85; white-space:nowrap;">Current: 0</div>
-      </div>
-
-      <!-- RIGHT (Submit + Log Current) -->
-      <div style="display:flex; justify-content:flex-end; gap:8px; flex:0 0 auto;">
-        <button class="btn slim ok" type="button" id="sharedSubmitBtn"
-                onclick="sharedSubmitUnits()">Submit</button>
-      </div>
-
+      <!-- BOTTOM ROW (same size as others) -->
+      <button class="btn ghost" id="padDel"  style="padding:12px 0;">⌫</button>
+      <button class="btn ok"    id="padZero" style="padding:12px 0;">0</button>
+      <input  id="padUnits" type="text" inputmode="none" placeholder="Units"
+              style="padding:12px 0; text-align:center; font-size:18px;
+                    border:1px solid #244b2c; border-radius:8px; background:#1a1f27; color:#d2e2d2;">
     </div>
+    <input id="sharedUnitsDock" type="hidden">
   </div>
   <!-- Bottom Break Bar -->
   <div id="breakBar" class="breakbar">
@@ -733,9 +753,7 @@ function resetEtaSmoother(){
   lastRenderedETAmin = null;
 }
 function hideSharedDock(){
-  const dock = document.getElementById('sharedDock');
-  if (dock) dock.style.display = 'none';
-  document.body.style.paddingBottom = '';
+  persistSharedPadOpen(false);
   localStorage.setItem('sharedDockOpen','0');
 }
 
@@ -788,6 +806,7 @@ function snapForwardQuarter(hhmm) {
 function getSnappedStartHHMM() {
   return snapForwardQuarter(startTime || nowHHMM());
 }
+// === SharedPad Persistence + Auto-Hide Helpers ===
 
 function applyContractedStart(hhmm){
   closeContractModal();
@@ -923,6 +942,9 @@ function openSharedStart() {
   // Now set current.shared = true to indicate it's a shared order
   if (current) {
     current.shared = true;
+    persistSharedPadOpen(true);
+    updateSharedDockInfo?.();
+    setTimeout(()=> document.getElementById('padUnits')?.focus(), 0);
 
     // NEW: same immediate UI kick as normal start
     const chip = document.getElementById('chipElapsed');
@@ -947,12 +969,11 @@ function openSharedStart() {
   window.sharedMySum = 0;
   window.sharedBlock = 0;
   updateSharedDockInfo?.();
-  // Show the shared dock (bottom bar)
-  document.getElementById('sharedDock').style.display = 'flex';
-  document.body.style.paddingBottom = '84px';
+  // Show merged shared pad
+  showSharedPad?.();
   localStorage.setItem('sharedDockOpen','1');
-  updateSharedDockInfo();
-  setTimeout(() => document.getElementById('sharedUnitsDock').focus(), 0);
+  updateSharedDockInfo?.();
+  setTimeout(()=> document.getElementById('padUnits')?.focus(), 0);
 }
 
 // 2) Hook after startOrder completes: flip into shared mode & show dock
@@ -980,12 +1001,11 @@ function openSharedStart() {
       showProgressHeader?.();
       updateHeaderActions?.();
 
-      // show dock
-      const dock = document.getElementById('sharedDock');
-      if (dock) dock.style.display = 'block';
+      showSharedPad?.();
       localStorage.setItem('sharedDockOpen','1');
-      updateSharedDockInfo();
-      setTimeout(()=> document.getElementById('sharedUnitsDock')?.focus(), 0);
+      updateSharedDockInfo?.();
+      setTimeout(()=> document.getElementById('padUnits')?.focus(), 0);
+
     }
   };
 })()
@@ -993,9 +1013,7 @@ function openSharedStart() {
 function sharedCancel(){
   if (!confirm('Discard shared progress?')) return;
 
-  // hide dock and reset shared state
-  document.getElementById('sharedDock').style.display = 'none';
-  document.body.style.paddingBottom = '';
+  hideSharedPad?.();
 
   sharedMySum = 0;
   window.sharedBlock = 0;
@@ -1030,22 +1048,47 @@ function markFirstOrderStarted(){ localStorage.setItem(shiftDateKey(), '1'); }
 
 function earlyRestore() {
   try {
+    // ── 1. Restore active break/lunch early and bail if needed ──
+    try {
+      const raw = localStorage.getItem('breakDraft');
+      if (raw) {
+        breakDraft = JSON.parse(raw);
+        if (breakDraft) {
+          restoreBreakDraftIfAny();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore active break/lunch:', e);
+    }
+
+    // ── 2. Load all saved data first ──
     loadAll();
     restoreBreakDraftIfAny();
 
-    // If current order is shared and user hasn’t hidden the dock, show it
-    if (window.current && window.current.shared && localStorage.getItem('sharedDockOpen') !== '0') {
-      const dock = document.getElementById('sharedDock');
-      if (dock) dock.style.display = 'flex';
-      document.body.style.paddingBottom = '84px';
-
-      // restore persisted shared counters
+    // ── 3. Try to rehydrate any partial Shared Order state ──
+    try {
+      const currRaw = localStorage.getItem('currentOrder');
+      if (currRaw && !window.current) {
+        window.current = JSON.parse(currRaw);
+      }
+      // restore partial progress counters
       const sm = parseInt(localStorage.getItem('sharedMySum') || '0', 10);
       const sb = parseInt(localStorage.getItem('sharedBlock') || '0', 10);
       window.sharedMySum = (isFinite(sm) && sm >= 0) ? sm : 0;
       window.sharedBlock = (isFinite(sb) && sb >= 0) ? sb : 0;
+    } catch(e) {
+      console.warn('Shared session rehydrate failed', e);
+    }
 
-      // mirror left overlay & progress bar so header matches restored progress
+    // ── 4. Determine if pad should show ──
+    const sharedFlag = localStorage.getItem('sharedDockOpen') === '1';
+    const isShared   = !!(window.current && window.current.shared);
+
+    if (isShared && sharedFlag) {
+      // Show merged SharedPad and restore counters
+      showSharedPad?.();
+
       if (current && Number.isFinite(+current.total)) {
         const total = +current.total;
         const left  = Math.max(0, total - (window.sharedMySum || 0));
@@ -1059,7 +1102,6 @@ function earlyRestore() {
           if (pctEl) pctEl.textContent = Math.round(pct) + '%';
         } catch(e){}
 
-        // resume predictive so Rate/ETA reappear after refresh
         try {
           const rateUh = Math.round(orderLiveRate?.() || getLiveRateUh?.() || 0);
           predictiveReset?.(left, rateUh);
@@ -1068,9 +1110,15 @@ function earlyRestore() {
       }
 
       try { updateSharedDockInfo?.(); } catch(e){}
+      setTimeout(()=> document.getElementById('padUnits')?.focus(), 100);
+
+    } else {
+      // hide pad if not in shared mode
+      hideSharedPad?.();
+      localStorage.setItem('sharedDockOpen','0');
     }
 
-    // If an order is open, make sure the order UI is rendered (buttons, chips, etc.)
+    // ── 5. Ensure UI re-renders for any active order ──
     if (current && Number.isFinite(+current.total)) {
       try {
         restoreActiveOrderUI?.();
@@ -1079,7 +1127,17 @@ function earlyRestore() {
         updateElapsedChip?.();
       } catch(e){}
     }
-  } catch (e) {}
+
+    // ── 6. Persist current shared order snapshot for next refresh ──
+    try {
+      if (window.current && window.current.shared) {
+        localStorage.setItem('currentOrder', JSON.stringify(window.current));
+      }
+    } catch(e){}
+
+  } catch (e) {
+    console.warn('earlyRestore failed:', e);
+  }
 }
 // Standalone: shared pick modal opener (keep this at top level)
 function openSharedPickModal(){
@@ -1142,7 +1200,10 @@ function exitShiftNoArchive(){
     btn.onclick = function(){ location.reload(); }; // hard reload to clean state
   })();
 }
-
+// Delay / Break (declare BEFORE earlyRestore so restoreBreakDraftIfAny sees it)
+let delayDraft = null; // {start:'HH:MM', cause:''}
+let breakDraft = null; // {type:'B'|'L', startHHMM, targetSec, beeping}
+let breakTickId = null;
 // Rebuild break UI if a persisted draft exists (call once after loadAll())
 function restoreBreakDraftIfAny(){
   if (!breakDraft) return;
@@ -1168,7 +1229,30 @@ function restoreBreakDraftIfAny(){
   breakTickId = setInterval(tickBreak, 1000);
 }
 
-earlyRestore(); // <-- run BEFORE any UI work
+// 1) Preload any saved break *before* we try to restore UI
+(function preloadBreakDraft(){
+  const saved = localStorage.getItem('breakDraft');
+  if (saved) {
+    try { breakDraft = JSON.parse(saved); } catch(e){ breakDraft = null; }
+  }
+})();
+
+// 2) Now restore UI & timers from the preloaded draft
+earlyRestore();
+
+// 3) Keep persisting while a break is active
+setInterval(()=>{
+  if (breakDraft) localStorage.setItem('breakDraft', JSON.stringify(breakDraft));
+}, 3000);
+
+window.addEventListener('beforeunload', ()=>{
+  try {
+    if (window.current && window.current.shared) {
+      localStorage.setItem('currentOrder', JSON.stringify(window.current));
+    }
+  } catch(e){}
+});
+
 // Persist periodically + on tab close
 window.addEventListener('beforeunload', saveAll);
 setInterval(saveAll, 1500);
@@ -1265,11 +1349,6 @@ const LS = {
   LAST_CLOSE: 'wqt.lastClose',
   VERSION: 'wqt.v2'
 };
-
-// Delay / Break
-let delayDraft = null; // {start:'HH:MM', cause:''}
-let breakDraft = null; // {type:'B'|'L', startHHMM, targetSec, beeping}
-let breakTickId = null;
 
 // ====== Utils ======
 function hasActiveOrder(){
@@ -2324,9 +2403,9 @@ function restoreActiveOrderUI() {
     const chipBox2 = document.getElementById('chipElapsed');
     if (chipBox2) chipBox2.style.display = 'none';
 
-    // Ensure shared dock hidden when no active order
-    const dock = document.getElementById('sharedDock');
-    if (dock) dock.style.display = 'none';
+    persistSharedPadOpen(true);
+    updateSharedDockInfo?.();
+    setTimeout(()=> document.getElementById('padUnits')?.focus(), 0);
 
     predictiveStop?.();
   }
@@ -2767,7 +2846,13 @@ function completeOrder() {
   tempWraps = [];
   undoStack = [];
 
-    // Hide active order UI
+  // ▼▼▼ NEW: hide merged shared pad on order close ▼▼▼
+  try { persistSharedPadOpen(false); } catch(e){}
+  try { localStorage.setItem('sharedDockOpen','0'); } catch(e){}
+  const _pu = document.getElementById('padUnits'); if (_pu) _pu.value = '';
+  // ▲▲▲ NEW ▲▲▲
+
+  // Hide active order UI
   const hide = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
   hide('orderArea');
   hide('btnUndo');
@@ -3013,21 +3098,35 @@ function submitNote(){
 function openBreakModal(kind){ startBreak(kind); }
 
 function startBreak(kind){
-  var mins = (kind==='B') ? 20 : 30;
+  var mins  = (kind==='B') ? 20 : 30;
   var start = nowHHMM();
-  breakDraft = {type:kind, startHHMM:start, targetSec: mins*60, beeping:false};
+  breakDraft = { type: kind, startHHMM: start, targetSec: mins*60, beeping: false };
 
   // persist across refresh
   try { localStorage.setItem('breakDraft', JSON.stringify(breakDraft)); } catch(e){}
 
-  document.getElementById('breakBarTitle').textContent = (kind==='B'?'Break':'Lunch');
-  document.getElementById('breakBarStart').textContent = start;
-  document.getElementById('breakBarTarget').textContent = mins+' min target';
-  document.getElementById('breakBar').style.display = 'flex';
+  // Base bar text
+  document.getElementById('breakBarTitle').textContent  = (kind==='B'?'Break':'Lunch');
+  document.getElementById('breakBarStart').textContent  = start;
+  document.getElementById('breakBarTarget').textContent = mins + ' min target';
+  document.getElementById('breakBar').style.display     = 'flex';
 
-  document.getElementById('chipElapsed').style.display = '';
+  // --- NEW: paint a clean initial countdown & reset chip colours ---
+  const countdown = document.getElementById('breakBarCountdown');
+  if (countdown) countdown.textContent = mins + ' min';
+
+  const chipBox = document.getElementById('chipElapsed');
+  const chipVal = document.getElementById('chipElapsedVal');
+  if (chipBox) {
+    chipBox.style.display = '';
+    chipBox.classList.remove('green', 'amber');  // clear previous state
+  }
+  if (chipVal) chipVal.textContent = mins + ' min';
+  // --- END NEW ---
+
+  // First tick & 1s interval
   tickBreak();
-  if(breakTickId) clearInterval(breakTickId);
+  if (breakTickId) clearInterval(breakTickId);
   breakTickId = setInterval(tickBreak, 1000);
 
   // PREDICTIVE: pause creeping during breaks
@@ -3040,40 +3139,48 @@ function hasActiveOrder(){
 }
 
 function submitBreak(){
-  if(!breakDraft){ return cancelBreak(); }
-  var end = nowHHMM();
-  var minutes = Math.max(1, Math.round((hm(end)-hm(breakDraft.startHHMM))*60));
-  var entry = {type: breakDraft.type, start: breakDraft.startHHMM, end, minutes};
+  if (!breakDraft) { return cancelBreak(); }
 
-  if(current){
+  const end = nowHHMM();
+  const minutes = Math.max(1, Math.round((hm(end) - hm(breakDraft.startHHMM)) * 60));
+  const entry = { type: breakDraft.type, start: breakDraft.startHHMM, end, minutes };
+
+  if (current) {
     current.breaks.push(entry);
-    undoStack.push({type:'break'});
+    undoStack.push({ type:'break' });
     renderTimeline();
   } else {
     shiftBreaks.push(entry);
   }
 
-  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+  if (breakTickId) { clearInterval(breakTickId); breakTickId = null; }
 
   // clear persisted draft
-  try { localStorage.removeItem('breakDraft'); } catch(e){}
+  try { localStorage.removeItem('breakDraft'); } catch (e) {}
 
   breakDraft = null;
 
-  document.getElementById('breakBar').style.display = 'none';
+  const bar = document.getElementById('breakBar');
+  if (bar) bar.style.display = 'none';
 
+  // --- reset countdown + chip so the next start is clean ---
+  const countdown = document.getElementById('breakBarCountdown');
+  if (countdown) countdown.textContent = '—';
   const chipBox = document.getElementById('chipElapsed');
-  const chipVal = document.getElementById('chipElapsedVal');
+  const chipVal  = document.getElementById('chipElapsedVal');
+  if (chipBox) { chipBox.classList.remove('green','amber'); }
+  if (chipVal)  { chipVal.textContent = '—'; }
+
+  // Restore elapsed chip visibility/state depending on order context
   if (current) {
     if (chipBox) chipBox.style.display = '';
     updateElapsedChip();
   } else {
     if (chipBox) chipBox.style.display = 'none';
-    if (chipVal) chipVal.textContent = '—';
   }
 
   updateSummary();
-  showToast('Break logged ('+minutes+'m)');
+  showToast('Break logged (' + minutes + 'm)');
   saveAll();
 
   // PREDICTIVE: resume from current true left
@@ -3083,24 +3190,35 @@ function submitBreak(){
   }
 }
 function cancelBreak(){
-  if(breakTickId){ clearInterval(breakTickId); breakTickId=null; }
+  if (breakTickId) { clearInterval(breakTickId); breakTickId = null; }
 
   // clear persisted draft
-  try { localStorage.removeItem('breakDraft'); } catch(e){}
+  try { localStorage.removeItem('breakDraft'); } catch (e) {}
 
   breakDraft = null;
-  document.getElementById('breakBar').style.display = 'none';
 
+  const bar = document.getElementById('breakBar');
+  if (bar) bar.style.display = 'none';
+
+  // --- reset countdown + chip so the next start is clean ---
+  const countdown = document.getElementById('breakBarCountdown');
+  if (countdown) countdown.textContent = '—';
   const chipBox = document.getElementById('chipElapsed');
-  const chipVal = document.getElementById('chipElapsedVal');
+  const chipVal  = document.getElementById('chipElapsedVal');
+  if (chipBox) { chipBox.classList.remove('green','amber'); }
+  if (chipVal)  { chipVal.textContent = '—'; }
 
+  // Restore elapsed chip visibility/state depending on order context
   if (current) {
     if (chipBox) chipBox.style.display = '';
     updateElapsedChip();
   } else {
     if (chipBox) chipBox.style.display = 'none';
-    if (chipVal) chipVal.textContent = '—';
   }
+
+  updateSummary();
+  showToast('Break cancelled');
+  saveAll();
 
   // PREDICTIVE: resume from current true left
   if (current) {
@@ -4449,6 +4567,44 @@ document.addEventListener('DOMContentLoaded', function () {
     showToast('Error on load: ' + (err.message || err));
   }
 });
+// ─── Shared Pad (merged bar + keypad) ────────────────────────────────────────
+(function initSharedPad(){
+  const pad    = document.getElementById('sharedPad');
+  const inp    = document.getElementById('padUnits');
+  const hid    = document.getElementById('sharedUnitsDock'); // reused by sharedSubmitUnits()
+  const delBtn = document.getElementById('padDel');
+  const zeroBtn= document.getElementById('padZero');
+  const subBtn = document.getElementById('padSubmit');
+
+  if (!pad || !inp || !hid || !delBtn || !zeroBtn || !subBtn) return;
+
+  // numeric keys
+  pad.querySelectorAll('[data-val]').forEach(btn=>{
+    btn.addEventListener('click', ()=> { inp.value += btn.dataset.val; });
+  });
+  delBtn.addEventListener('click', ()=> { inp.value = inp.value.slice(0,-1); });
+  zeroBtn.addEventListener('click', ()=> { inp.value += '0'; });
+
+  subBtn.addEventListener('click', ()=>{
+    const n = parseInt(inp.value || '0', 10);
+    if (!(n > 0)) { inp.focus(); return; }
+    hid.value = String(n);                 // feed existing logic
+    try { sharedSubmitUnits(); } catch(e) {}
+    inp.value = '';
+  });
+
+  // global helpers so existing code can show/hide without touching layout math
+  window.showSharedPad = function(){
+    pad.style.display = 'block';
+    // reserve space so content above doesn’t get covered
+    document.body.style.paddingBottom = '220px';
+  };
+  window.hideSharedPad = function(){
+    pad.style.display = 'none';
+    document.body.style.paddingBottom = '';
+  };
+})();
+
 function openWrapModal(){
   if (!current) return;
   const m   = document.getElementById('wrapModal');
@@ -4588,13 +4744,97 @@ function submitWrapLeft(){
   updateHeaderActions?.();
   showToast?.(`Wrap logged (+${done})`);
 }
+// Control and persist open/closed state
+function persistSharedPadOpen(open){
+  try { localStorage.setItem('sharedDockOpen', open ? '1' : '0'); } catch(e){}
+  if (open) showSharedPad?.(); else hideSharedPad?.();
+}
+
+// Preserve pad open state if shared order refreshes
+window.addEventListener('beforeunload', ()=>{
+  if (window.current && window.current.shared) {
+    localStorage.setItem('sharedDockOpen','1');
+  } else {
+    localStorage.setItem('sharedDockOpen','0');
+  }
+});
 
 function updateHeaderActions(){
   const inOrder = hasActiveOrder?.() || !!(current && Number.isFinite(current?.total));
   const wrapBtn = document.getElementById('btnWrapTop');
   if (wrapBtn) wrapBtn.disabled = !inOrder;
 }
+setTimeout(() => {
+(function initSharedNumPad(){
+  const dock = document.getElementById('sharedDock');
+  const pad  = document.getElementById('sharedNumPad');
+  const inp  = document.getElementById('sharedUnitsDock');
+  const submitBtn = document.getElementById('sharedSubmitBtn');
+  if (!dock || !pad || !inp || !submitBtn) return;
 
+  // --- layout ---
+  pad.style.position = 'fixed';
+  pad.style.left = '0';
+  pad.style.right = '0';
+  pad.style.bottom = '0';
+  pad.style.zIndex = '31';
+  pad.style.display = 'none';
+  pad.style.gridTemplateColumns = 'repeat(3,1fr)';
+  pad.style.background = '#0f131b';
+  pad.style.borderTop = '1px solid #29364a';
+  pad.style.padding = '6px 10px';
+  pad.style.gap = '6px';
+  pad.style.transition = 'opacity 0.25s ease';
+  pad.style.opacity = '0';
+
+  // phone layout + final row: ⌫ | 0 | ✔
+  const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','✔'];
+  pad.innerHTML = '';
+
+  keys.forEach(k=>{
+    const b = document.createElement('button');
+    b.textContent = (k==='✔') ? 'Submit' : k;
+    b.className = 'btn ok';
+    b.style.padding = '14px 0';
+    b.style.fontSize = '20px';
+    b.style.background = '#1a2a40';
+    if (k==='⌫') b.classList.add('ghost');
+    if (k==='✔') b.style.background = '#1f3d2c'; // green tint for submit
+    b.onclick = ()=>{
+      if (k==='⌫') inp.value = inp.value.slice(0,-1);
+      else if (k==='✔') submitBtn.click();
+      else inp.value += k;
+    };
+    pad.appendChild(b);
+  });
+
+  let openedAt = 0;
+  function showPad(){
+    openedAt = Date.now();
+    pad.style.display='grid';
+    requestAnimationFrame(()=> pad.style.opacity='1');
+    dock.style.bottom='200px';
+  }
+  function hidePad(){
+    pad.style.opacity='0';
+    dock.style.bottom='0';
+    setTimeout(()=> pad.style.display='none',250);
+  }
+
+  inp.addEventListener('focus', showPad);
+  document.addEventListener('click', e=>{
+    if (Date.now()-openedAt < 300) return;
+    if (!pad.contains(e.target) && e.target!==inp) hidePad();
+  });
+
+  const orig = submitBtn.onclick;
+  submitBtn.onclick = function(ev){
+    if (orig) orig.call(this, ev);
+    inp.value='';
+    hidePad();
+  };
+})();
+}, 500);
 </script>
 <!-- Contracted Start Picker -->
 <div id="contractModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center; z-index:9999;">
