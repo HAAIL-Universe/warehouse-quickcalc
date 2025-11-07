@@ -3,9 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v4.2(Patched)</title>
+<title>Warehouse QuickCalc & Tracker v4.3(Patched)</title>
 <style>
-:root { --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8; --accent:#2f6bff; --line:#243244; --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b; }
+:root {
+  --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8;
+  --accent:#b4363a;            /* maroon focus/active */
+  --line:#5a1e25;              /* darker neutral line */
+  --ok:#1b6e36; --warn:#8a6a15; --bad:#7a2b2b;
+  --rim1:#d84b52; --rim2:#5e1a1e;              /* deep edge */
+}
 * { box-sizing: border-box; }
 html,body { margin:0; padding:0; background:#0b0d10; color:var(--ink); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
 .wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
@@ -33,9 +39,26 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea {
 textarea{ min-height:90px; resize:vertical; }
 .row { display:flex; gap:10px; flex-wrap: wrap; }
 .col { flex:1; min-width:220px; }
-.btn { padding:10px 12px; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:700; cursor:pointer; }
-.btn.ghost { background:transparent; border-color:#29364a; }
-.btn.ok { border-color:#2e6b3a; background:#173220; }
+.btn {
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #5e1a1e;
+  background:#141821;
+  color:var(--ink);
+  font-weight:700;
+  cursor:pointer;
+}
+.btn.ghost {
+  background:#141821;
+  border-color:#5e1a1e;
+  color:#e8eef7;
+  opacity:.85;
+}
+.btn.ok {
+  border-color:#b4363a;
+  background:#1b0f10;
+  color:#f1d9db;
+}
 .btn.warn { border-color:#8a6a15; background:#30250f; }
 .btn.bad { border-color:#7a2b2b; background:#331b1b; }
 .btn.chip { padding:8px 10px; border-radius:999px; }
@@ -46,11 +69,24 @@ textarea{ min-height:90px; resize:vertical; }
 .pill p { margin:6px 0 0; font-size:22px; font-weight:800; }
 .rateBanner { position: sticky; top:48px; z-index:10; display:flex; gap:10px; margin:8px 0; }
 .rateChip { flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid #29364a; background:#0f131b; }
-.rateChip.good { border-color:#1f4830; background:#14271c; }
-.rateChip.warn { border-color:#584a1a; background:#2a230f; }
-.rateChip.bad { border-color:#4f1f1f; background:#2a1313; }
-.rateChip.green { border-color:#1f4830; background:#14271c; }
-.rateChip.amber { border-color:#584a1a; background:#2a230f; }
+.rateChip.good {
+  background:
+    linear-gradient(#14271c,#14271c) padding-box,
+    linear-gradient(180deg,var(--rim1),var(--rim2)) border-box !important;
+  border-color: transparent;
+}
+.rateChip.warn {
+  background:
+    linear-gradient(#2a230f,#2a230f) padding-box,
+    linear-gradient(180deg,var(--rim1),var(--rim2)) border-box !important;
+  border-color: transparent;
+}
+.rateChip.bad {
+  background:
+    linear-gradient(#2a1313,#2a1313) padding-box,
+    linear-gradient(180deg,var(--rim1),var(--rim2)) border-box !important;
+  border-color: transparent;
+}
 .timeline { margin-top:8px; border-left:0; padding-left:0; }
 .tick { margin:6px 0; color:#cfe2ff; font-size:13px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
 .tick .meta { color:#9fb3c8; font-size:12px; }
@@ -63,15 +99,66 @@ td.small { font-size:12px; color:#9fb3c8; }
 .bottom-actions .left { flex:1 1 auto; min-width:220px; }
 .bottom-actions .right { flex:0 0 auto; white-space:nowrap; display:flex; gap:8px; }
 .safetybar { margin: 8px 0 40px; }
-.safetybar .btn { width:100%; border-style:dashed; opacity:0.8; }
+.safetybar .btn{
+  width:100%;
+  border:1px dashed var(--rim2) !important;  /* darker maroon (#5e1a1e) */
+  background:#141821 !important;             /* flat ghost fill */
+  color:#d0d3d9;                             
+  box-shadow:none !important;                 /* kill the shiny rim */
+  background-image:none !important;
+  opacity:.85;
+}
+.safetybar .btn:hover{
+  opacity:1;
+  background:#1a1f27;                         /* subtle hover, still ghost */
+  border-color:var(--accent);                 /* slightly brighter maroon */
+}
 .hint { color:#9fb3c8; font-size:12px; }
 .tagbox { display:flex; flex-wrap:wrap; gap:8px; }
 .tag { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid #29364a; background:#0f131b; font-weight:700; }
 .tag button { border:0; background:transparent; color:#9fb3c8; cursor:pointer; font-size:14px; }
 .accordion .accHead { width:100%; text-align:left; padding:10px; border:1px solid #29364a; background:#0f131b; border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.accordion .accHead.ok { border-color:#1f4830; background:#14271c; }
-.accordion .accHead.warn { border-color:#584a1a; background:#2a230f; }
-.accordion .accHead.bad { border-color:#4f1f1f; background:#2a1313; }
+/* History day headers: shiny rim + colour fill */
+/* === Global Semantic Shiny Tints (OK / WARN / BAD) === */
+/* All share the same rim logic + fill style */
+.card.ok,
+.rateChip.good,
+.accordion .accHead.ok,
+#weekCard .pill.ok {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(#14271c, #14271c) padding-box,                 /* green fill */
+    linear-gradient(180deg, #2e7d4a, #1f4830) border-box !important; /* green rim */
+  box-shadow:
+    inset 0 0 0 1px rgba(33,122,68,.06),
+    0 0 12px rgba(33,122,68,.10);
+}
+
+.card.warn,
+.rateChip.warn,
+.accordion .accHead.warn,
+#weekCard .pill.warn {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(#2a230f, #2a230f) padding-box,                 /* amber fill */
+    linear-gradient(180deg, #8a6a15, #584a1a) border-box !important; /* amber rim */
+  box-shadow:
+    inset 0 0 0 1px rgba(138,106,21,.06),
+    0 0 12px rgba(138,106,21,.10);
+}
+
+.card.bad,
+.rateChip.bad,
+.accordion .accHead.bad,
+#weekCard .pill.bad {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(#2a1313, #2a1313) padding-box,                 /* red fill */
+    linear-gradient(180deg, #7a2b2b, #4f1f1f) border-box !important; /* red rim */
+  box-shadow:
+    inset 0 0 0 1px rgba(122,43,43,.06),
+    0 0 12px rgba(122,43,43,.10);
+}
 .accordion .accBody { display:none; padding:10px 0 0 0; }
 .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0f131b; border:1px solid #29364a; padding:10px 12px; border-radius:10px; display:none; z-index:30; }
 .toast.show { display:block; }
@@ -83,7 +170,13 @@ td.small { font-size:12px; color:#9fb3c8; }
 .hidden { display: none !important; }
 /* Modal */
 .modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:20; }
-.modal .box { width:min(560px,92vw); background:#0f131b; border:1px solid #29364a; border-radius:12px; padding:14px; }
+.modal .box {
+  width:min(560px,92vw);
+  background:#0f131b;
+  border:1px solid #5e1a1e;
+  border-radius:12px;
+  padding:14px;
+}
 .modal .hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .modal .hdr h3 { margin:0; font-size:16px; color:#cfe2ff; }
 .modal .fld { margin:8px 0; }
@@ -105,10 +198,16 @@ td.small { font-size:12px; color:#9fb3c8; }
 .dd-other input { flex:1; }
 
 /* Countback calc */
-.cbCard { margin-top:8px; padding:10px; border-radius:12px; border:1px dashed #29364a; background:#0f131b; }
+.cbCard {
+  margin-top:8px; padding:10px; border-radius:12px;
+  border:1px solid #5e1a1e;         /* maroon rim */
+  background:#0f131b;
+}
 .cbRow { display:flex; gap:8px; align-items:center; }
 .cbDisplay { flex:1; display:flex; gap:8px; }
-.cbBox { flex:1; border:1px solid #29364a; border-radius:10px; padding:8px; }
+.cbBox {
+  flex:1; border:1px solid #5e1a1e; border-radius:10px; padding:8px;
+}
 .cbBox h4 { margin:0 0 6px; font-size:12px; color:#9fb3c8; }
 .cbVal { font-weight:800; font-size:22px; min-height:28px; }
 .cbPad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; }
@@ -255,9 +354,9 @@ td.small { font-size:12px; color:#9fb3c8; }
   transition: background-color .25s ease, width .35s ease;
 }
 #sharedPad .btn.ok{
-  background:#0f131b;           /* no fill */
-  border:1px solid #244b2c;      /* thin green outline */
-  color:#d2e2d2;
+  background:#141821;
+  border:1px solid #5e1a1e;
+  color:#f1d9db;
   border-radius:8px;
   padding:12px 0;                /* matches every key height */
   font-size:20px;
@@ -265,9 +364,9 @@ td.small { font-size:12px; color:#9fb3c8; }
 #sharedPad .btn.ok:hover{ background:#142c18; }
 
 #sharedPad .btn.ghost{
-  background:#1a1f27;
-  border:1px solid #38404b;
-  color:#c7c7c7;
+  background:#141821;
+  border:1px solid #5e1a1e;
+  color:#e8eef7;
   border-radius:8px;
   padding:12px 0;
 }
@@ -293,13 +392,99 @@ td.small { font-size:12px; color:#9fb3c8; }
 /* Smooth fade for order header swap */
 .fade { opacity: 0; transition: opacity 0.25s ease-in-out; }
 .fade.show { opacity: 1; }
+/* ── Red Theme Rim Overrides (non-destructive) ───────────────────── */
+.rim { /* utility if you ever want to apply by class */ }
 
+.tabbtn,
+.btn,
+.btn.ghost,
+.pill,
+.rateChip,
+#chipRate,
+.cbPad button,
+input[type="number"], input[type="time"], input[type="text"], select, textarea,
+.dd-toggle, .dd-menu, .dd-group,
+.card,
+.toast, .logwrap, .breakbar,
+.modal .box,
+.progBar {            /* progress bar outer rim */
+  border:1px solid transparent;
+  background:
+    linear-gradient(#0f131b,#0f131b) padding-box,     /* keep dark fill */
+    linear-gradient(180deg,var(--rim1),var(--rim2)) border-box; /* red rim */
+  box-shadow:
+    inset 0 0 0 1px rgba(212,64,72,0.06),             /* inner crispness */
+    0 0 12px rgba(212,64,72,0.10);                    /* faint glow */
+}
+/* Log/Delay: actions aligned left so Cancel sits on the left */
+#delayModal .actions { justify-content: flex-start; }
+#delayModal .actions { justify-content: space-between; }  /* push sides apart */
+#delayModal .actions-left { display: flex; gap: 8px; }
+/* Split layout for Log Wrap modal buttons */
+#wrapModal .actions.split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#wrapModal .actions.split .btn {
+  min-width: 110px;
+}
+
+/* Shared Order keypad: remove the green rim and use maroon */
+#sharedPad .btn.ok,
+#sharedPad .btn.ghost,
+#sharedPad #padUnits {
+  border:1px solid transparent !important;
+  background:
+    linear-gradient(#1a1f27,#1a1f27) padding-box,
+    linear-gradient(180deg,var(--rim1),var(--rim2)) border-box !important;
+  color:#f1d9db; /* soft light */
+}
+
+/* Calculator pad keys (QuickCalc) – same red rim treatment */
+.cbPad button {
+  border:1px solid transparent !important;
+  background:
+    linear-gradient(#1a1f27,#1a1f27) padding-box,
+    linear-gradient(180deg,var(--rim1),var(--rim2)) border-box !important;
+}
+
+/* Subtle focus ring now uses maroon accent */
+.cbPad button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.btn { background:#141821; } /* darker base fill; keeps the rim pop */
+/* Green fill for Start-Shift + Contracted-Start buttons (keep red rim) */
+#shiftCard .btn.ok,
+#contractModal .btn.ok,
+#wrapModal .btn.ok,
+#btnEndShift {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(#14271c,#14271c) padding-box,            /* green fill */
+    linear-gradient(180deg, var(--rim1), var(--rim2)) border-box !important;
+  color: var(--ink) !important;                               /* pure UI white */
+  -webkit-text-fill-color: var(--ink) !important;             /* webkit ensure */
+  text-shadow: none !important;
+  box-shadow: inset 0 0 0 1px rgba(212,64,72,.04), 0 0 0 rgba(0,0,0,0) !important;
+}
+#btnStart,
+#btnSharedStart,
+#btnDelay,
+#btnB,
+#btnL,
+#btnCloseEarly,
+#btnUndo,
+#btnWrapTop,
+#delayModal .btn[onclick="submitNote()"]  {
+  border-width: 2px; /* subtle emphasis over the default 1px rim */
+  box-shadow:
+    0 0 0 1px rgba(176,25,38,.55),       /* crisp outer edge */
+    0 8px 20px rgba(176,25,38,.18),      /* gentle lift */
+    inset 0 0 0 1px rgba(255,255,255,.06); /* inner crispness */
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1><b>Warehouse QuickCalc & Tracker v4.2</b></h1>
-
   <div class="tabs">
     <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
     <button id="tabTrackBtn" class="tabbtn" type="button" onclick="showTab('tracker')">Tracker</button>
@@ -607,7 +792,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 <div id="delayModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delayTitle">
   <div class="box">
     <div class="hdr">
-      <h3 id="delayTitle">Log / Delay</h3>      <button class="btn slim ghost" type="button" onclick="closeDelayModal()">✖</button>
+      <h3 id="delayTitle">Log / Delay</h3>
     </div>
     <div class="fld">
       <label>Start (auto)</label>
@@ -616,11 +801,13 @@ td.small { font-size:12px; color:#9fb3c8; }
     <div class="fld">
       <label>Note / Cause</label>      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
     </div>
-    <div class="actions">
-      <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
-      <button class="btn" type="button" onclick="submitNote()">Note</button>
-      <button class="btn ok" type="button" onclick="submitDelay()">Submit & Stop</button>
-    </div>
+      <div class="actions">
+        <div class="actions-left">
+          <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
+          <button class="btn" type="button" onclick="submitNote()">Note</button>
+        </div>
+        <button class="btn ok" type="button" onclick="submitDelay()">Submit & Stop</button>
+      </div>
   </div>
 </div>
 <!-- Live Rate Modal -->
@@ -704,9 +891,9 @@ td.small { font-size:12px; color:#9fb3c8; }
       <input id="ceWrapped" type="checkbox">
       <label for="ceWrapped" style="margin:0;">Wrapped last pallet</label>
     </div>
-    <div class="actions">
-      <button class="btn ghost" type="button" onclick="closeCloseEarlyModal()">Cancel</button>
-      <button class="btn ok" type="button" onclick="submitCloseEarly()">Close Order</button>
+    <div class="actions split">
+      <button class="btn slim" type="button" onclick="closeWrapModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitWrapLeft()">Save Wrap</button>
     </div>
   </div>
 </div>
@@ -715,7 +902,6 @@ td.small { font-size:12px; color:#9fb3c8; }
   <div class="box" style="max-width:420px;">
     <div class="hdr">
       <h3 id="wrapTitle">Log Wrap</h3>
-      <button class="btn slim ghost" type="button" onclick="closeWrapModal()">✖</button>
     </div>
     <div class="fld">
       <label for="wrapLeftInput">Units left on this order</label>
@@ -3573,8 +3759,7 @@ function renderHistory(){
   var days=historyDays.slice(0).reverse();
   days.forEach(function(d,diRev){
     const di = historyDays.length - 1 - diRev;
-    var head=document.createElement('div'); var boxState=d.dayRate>=300?'ok':(d.dayRate>=249?'warn':'bad');
-    head.className='accHead '+boxState;
+    var head = document.createElement('div'); // class set after we know worked-hours avg
 
     const leftDiv=document.createElement('div'); leftDiv.className='left';
     const num = (v)=> Number.isFinite(+v) ? +v : 0;
@@ -3587,6 +3772,9 @@ function renderHistory(){
     // Day Avg based on ACTUAL worked hours (to the minute)
     const workedHours = workedMin / 60;
     const dayAvgWorked = (workedHours > 0) ? Math.round(((Number(d.totalUnits)||0) / workedHours)) : 0;
+    const effectiveRate = (Number.isFinite(+d.dayRate) && +d.dayRate > 0) ? +d.dayRate : dayAvgWorked;
+    const boxState = effectiveRate >= 300 ? 'ok' : (effectiveRate >= 249 ? 'warn' : 'bad');
+    head.className = 'accHead ' + boxState;
 
     // Header layout: date on line 1, meta row under it
     leftDiv.innerHTML =
@@ -3741,16 +3929,16 @@ function endShift(){
   var shiftLen = parseFloat(document.getElementById('tLen').value || '9');
   var totalUnits = picks.reduce((a,b)=>a+b.units,0);
   var downtimes = computeDowntimes(picks, shiftBreaks);
-
+  const endHHMM = nowHHMM();
   // NEW: compute worked & scheduled minutes to the minute
   const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
-  const workedMin = (startTime && lastClose) ? Math.max(0, toMin(lastClose) - toMin(startTime)) : 0;
+  const workedMin = (startTime && endHHMM) ? Math.max(0, toMin(endHHMM) - toMin(startTime)) : 0;
   const scheduledMin = Math.round((shiftLen || 9) * 60);
 
   var snapshot = {
     date: dateStr,
     start: startTime || '',
-    end:   lastClose || '',
+    end:   endHHMM || '',
     shiftLen,
     totalUnits,
     dayRate: shiftLen > 0 ? Math.round(totalUnits / shiftLen) : 0, // keep day avg by full shift
