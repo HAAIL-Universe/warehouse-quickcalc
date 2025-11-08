@@ -103,10 +103,11 @@ td.small { font-size:12px; color:#9fb3c8; }
 /* History day headers: shiny rim + colour fill */
 /* === Global Semantic Shiny Tints (OK / WARN / BAD) === */
 /* All share the same rim logic + fill style */
-.card.ok,
-.rateChip.good,
-.accordion .accHead.ok,
-#weekCard .pill.ok {
+.card.ok, .card.good,
+.rateChip.ok, .rateChip.good, .rateChip.green,
+.accordion .accHead.ok, .accordion .accHead.good,
+#weekCard .pill.ok, #weekCard .pill.good {
+
   border: 1px solid transparent !important;
   background:
     linear-gradient(#14271c, #14271c) padding-box,                 /* green fill */
@@ -116,10 +117,11 @@ td.small { font-size:12px; color:#9fb3c8; }
     0 0 12px rgba(33,122,68,.10);
 }
 
-.card.warn,
-.rateChip.warn,
-.accordion .accHead.warn,
-#weekCard .pill.warn {
+.card.warn, .card.amber,
+.rateChip.warn, .rateChip.amber,
+.accordion .accHead.warn, .accordion .accHead.amber,
+#weekCard .pill.warn, #weekCard .pill.amber {
+
   border: 1px solid transparent !important;
   background:
     linear-gradient(#2a230f, #2a230f) padding-box,                 /* amber fill */
@@ -129,10 +131,10 @@ td.small { font-size:12px; color:#9fb3c8; }
     0 0 12px rgba(138,106,21,.10);
 }
 
-.card.bad,
-.rateChip.bad,
-.accordion .accHead.bad,
-#weekCard .pill.bad {
+.card.bad, .card.red,
+.rateChip.bad, .rateChip.red,
+.accordion .accHead.bad, .accordion .accHead.red,
+#weekCard .pill.bad, #weekCard .pill.red {
   border: 1px solid transparent !important;
   background:
     linear-gradient(#2a1313, #2a1313) padding-box,                 /* red fill */
@@ -562,11 +564,7 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
         <!-- keep tLen as a hidden field so the rest of the code works unchanged -->
         <input id="tLen" type="number" value="9" style="display:none;">
       </div>
-
-      <div class="hint">Start time is snapped to the nearest hour automatically.  
-      Daily avg uses full shift length. Live rate uses Start → last Wrap/Close (includes breaks &amp; delays).</div>
     </div>
-
     <div class="card" id="activeOrderCard" style="display:none;">
       <!-- ✨ Header form (shown before Start) -->
       <div id="orderHeaderForm" class="fade show">
