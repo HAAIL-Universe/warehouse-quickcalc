@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v4.3(Patched)</title>
+<title>Warehouse QuickCalc & Tracker v4.4</title>
 <style>
 :root {
   --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8;
@@ -150,6 +150,8 @@ td.small { font-size:12px; color:#9fb3c8; }
 .logrow { display:none; }
 .logrow td { border-bottom:none; padding-top:0; }
 .gate-pro { display:none; }
+/* Keep history page clean: never show gate-pro buttons there */
+#tabHistory .gate-pro { display: none !important; }
 /* Utility: hide/show */
 .hidden { display: none !important; }
 /* Modal */
@@ -548,7 +550,53 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
       </div>
     </div>
   </section>
+  <!-- Pro Settings Modal -->
+  <div id="proSettingsModal" class="modal" style="display:none;">
+    <div class="box">
+      <div class="hdr">
+        <h3>Pro Tools</h3>
+        <button class="btn ghost slim" type="button" onclick="closeProSettingsModal()">✖</button>
+      </div>
 
+      <div class="fld">
+        <div class="row" style="gap:8px; flex-wrap:wrap;">
+          <button class="btn" type="button" onclick="exportCSV()">Export CSV (today)</button>
+          <button class="btn" type="button" onclick="exportJSON()">Export JSON (all)</button>
+          <label id="impLabel2" class="btn" for="impFile">Import JSON</label>
+          <!-- reuse existing hidden file input -->
+        </div>
+        <div class="sub" style="margin-top:6px;">Exports include today / all-time. Import merges JSON into your history.</div>
+      </div>
+
+      <div class="fld" style="margin-top:10px;">
+        <div class="row" style="gap:8px; flex-wrap:wrap;">
+          <button class="btn" type="button" onclick="toggleManageCustomers(); closeProSettingsModal();">
+            Manage Customers
+          </button>
+        </div>
+        <div class="sub" style="margin-top:6px;">Open the customer manager card to add/remove custom codes.</div>
+      </div>
+    </div>
+  </div>
+  <!-- ───────── Operative Tools Modal ───────── -->
+  <div id="operativeModal" class="modal" style="display:none;">
+    <div class="box">
+      <div class="hdr" style="display:flex;align-items:center;justify-content:space-between;">
+        <h3>Operative Tools</h3>
+        <button class="btn ghost slim" type="button" onclick="closeOperativeModal()">✖</button>
+      </div>
+
+      <div class="fld">
+        <label for="opNote" class="sub" style="margin-bottom:6px;">Note (optional)</label>
+        <textarea id="opNote" rows="3" placeholder="e.g. Marshaling, loading, stock moves…"></textarea>
+      </div>
+
+      <div class="fld" style="display:flex;align-items:center;gap:12px;">
+        <div><b>Elapsed:</b> <span id="opElapsed">—</span></div>
+        <button id="opToggleBtn" class="btn" type="button" onclick="toggleOperative()">Start Operative Work</button>
+      </div>
+    </div>
+  </div>
   <!-- Tracker -->
   <section id="tabTracker" class="hidden">
     <div class="card" id="shiftCard">
@@ -616,10 +664,8 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
             <span class="progBullet">•</span>
             <span><strong>ETA:</strong> <span id="progETA">—</span></span>
           </div>
-
           <div class="progBar"><div id="progFill" class="progFill"></div></div>
         </div>
-
         <div id="progPct" class="progPct">0%</div>
       </div>
       <!-- Active Order Area -->
@@ -635,7 +681,6 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
         <div class="timeline" id="orderTimeline"></div>
       </div>
     </div>
-
     <div class="card" id="completedCard" style="display:none;">
       <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
       <table>
@@ -658,6 +703,13 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
     </div>
     <div class="safetybar">
       <button class="btn ghost" type="button" onclick="clearToday()">Clear today's data</button>
+    </div>
+    <!-- Operative status chip (Tracker) -->
+    <div id="opChipBar" style="display:none; margin:10px 0 6px; align-items:center; gap:10px;">
+      <span id="opChip" class="chip" style="padding:6px 10px; border-radius:999px; border:1px solid var(--rim1);">
+        🟠 Operative — <span id="opChipElapsed">0m</span>
+      </span>
+      <button id="opChipStop" class="btn slim" type="button" onclick="stopOperative()">Stop</button>
     </div>
   </section>
   <!-- Shared Order Pad (merged dock + keypad) -->
@@ -969,7 +1021,11 @@ function getSnappedStartHHMM() {
   return snapForwardQuarter(startTime || nowHHMM());
 }
 // === SharedPad Persistence + Auto-Hide Helpers ===
-
+function openDynamicStartPicker(len){
+  try { localStorage.setItem('shiftPref', String(len)); } catch(e){}
+  if (typeof window._chosenShiftLen !== 'undefined') window._chosenShiftLen = len;
+  openContractedStartPicker();
+}
 function applyContractedStart(hhmm){
   closeContractModal();
 
@@ -1011,6 +1067,124 @@ function applyContractedStart(hhmm){
   if (lateMin > 0)      note = `${lateMin}m late`;
   else if (lateMin < 0) note = `${-lateMin}m early`;
   showPreOrderNote?.(`Contracted ${hmTo12(contracted)} • Actual ${hmTo12(actual)} (${note})`);
+}
+function openProSettingsModal(){
+  const m = document.getElementById('proSettingsModal');
+  if (!m) return;
+  m.style.display = 'flex';
+}
+function openOperativeModal(){
+  const m = document.getElementById('operativeModal');
+  if (!m) return;
+  m.style.display = 'flex';
+  refreshOperativeUI();
+}
+function refreshOperativeChip(){
+  const bar = document.getElementById('opChipBar');
+  const el  = document.getElementById('opChipElapsed');
+  if (!bar || !el) return;
+
+  if (operativeActive){
+    bar.style.display = 'flex';
+    // elapsed will be kept fresh by the same ticker used in the modal
+    try {
+      const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
+      const start = operativeActive.start;
+      const end   = nowHHMM();
+      const mins  = Math.max(0, toMin(end) - toMin(start));
+      const h = Math.floor(mins/60), m = mins%60;
+      el.textContent = (h>0 ? `${h}h ` : '') + `${m}m`;
+    } catch(e){}
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function closeOperativeModal(){
+  const m = document.getElementById('operativeModal');
+  if (!m) return;
+  m.style.display = 'none';
+}
+(function(){
+  // backdrop click to close
+  document.getElementById('operativeModal')?.addEventListener('click', (e)=>{
+    if (e.target?.id === 'operativeModal') closeOperativeModal();
+  });
+})();
+let _opTicker = null;
+
+function refreshOperativeUI(){
+  const btn = document.getElementById('opToggleBtn');
+  const el  = document.getElementById('opElapsed');
+  if (!btn || !el) return;
+
+  if (operativeActive){
+    btn.textContent = 'Stop Operative Work';
+    // start / update ticker
+    if (_opTicker) clearInterval(_opTicker);
+    _opTicker = setInterval(()=>{
+      try {
+        const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
+        const start = operativeActive.start;
+        const end   = nowHHMM();
+        const mins  = Math.max(0, toMin(end) - toMin(start));
+        const h = Math.floor(mins/60), m = mins%60;
+        el.textContent = (h>0 ? `${h}h ` : '') + `${m}m`;
+        refreshOperativeChip();
+
+      } catch(e) {}
+    }, 1000);
+  } else {
+    btn.textContent = 'Start Operative Work';
+    el.textContent = '—';
+    refreshOperativeChip();
+    if (_opTicker) { clearInterval(_opTicker); _opTicker = null; }
+  }
+}
+
+function toggleOperative(){
+  if (operativeActive) stopOperative();
+  else startOperative();
+}
+
+function startOperative(){
+  if (!startTime) {
+    showToast('Start your shift first');
+    return;
+  }
+  if (operativeActive) return;
+  const note = (document.getElementById('opNote')?.value || '').trim();
+  const now  = nowHHMM();
+  const block = { start: now, end: null, note };
+  operativeLog.push(block);
+  operativeActive = block;
+  showToast('Operative started');
+  saveAll();
+  refreshOperativeUI();
+  renderTimeline?.();
+  refreshOperativeChip();
+}
+
+function stopOperative(){
+  if (!operativeActive) return;
+  const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
+  const start = operativeActive.start;
+  const end   = nowHHMM();
+  const mins  = Math.max(0, toMin(end) - toMin(start));
+  operativeActive.end = end;
+  operativeActive.minutes = mins;
+  operativeActive = null;
+  showToast('Operative stopped');
+  saveAll();
+  refreshOperativeUI();
+  renderTimeline?.();
+  refreshOperativeChip();
+}
+
+function closeProSettingsModal(){
+  const m = document.getElementById('proSettingsModal');
+  if (!m) return;
+  m.style.display = 'none';
 }
 
 // ─── Patch startShift to honour chosen HH:MM ──────────────────────────────────
@@ -1427,6 +1601,8 @@ let lastClose = "";     // last order close time
 let undoStack = [];     // undo actions for current order
 let historyDays = [];   // archived days
 let customCodes = [];   // user-added customer codes
+let operativeLog = [];      // [{ start:'HH:MM', end:'HH:MM'|null, minutes?:number, note?:string }]
+let operativeActive = null; // { start:'HH:MM', end:null, note?:string }
 let shiftBreaks = [];   // breaks without an active order
 let learnedUL = {};     // U/Layer frequency map (persisted via KEY_LEARN)
 
@@ -1468,9 +1644,12 @@ const KEY = 'wqt_v2722_data';
 const KEY_CODES = 'wqt_codes';
 const KEY_LEARN = 'wqt_learn_ul';
 const PRO_UNLOCK_CODE = '0000';
+const OPER_UNLOCK_CODE = '2222';
 let proUnlocked = false;  // Gate: Export/Import/Manage Customers
 // Persisted preference: one-time shift length (hours)
 const SHIFT_PREF = 'wqt.shiftLenH';
+setInterval(function(){ saveAll(); }, 30000);
+
 function clearStartHint(){
   const hint = document.getElementById('snapHint');
   if (hint) hint.textContent = '';
@@ -1900,24 +2079,35 @@ function tryBeep(){
 function loadAll(){
   try {
     const raw = localStorage.getItem(KEY);
+
     if (raw) {
       const p = JSON.parse(raw);
       picks       = Array.isArray(p.picks) ? p.picks : [];
       historyDays = Array.isArray(p.history) ? p.history : [];
       current     = p.current || null;
       tempWraps   = Array.isArray(p.tempWraps) ? p.tempWraps : [];
-      startTime   = typeof p.startTime === 'string' ? p.startTime : "";
-      lastClose   = typeof p.lastClose === 'string' ? p.lastClose : "";
+      startTime   = (typeof p.startTime === 'string') ? p.startTime : "";
+      lastClose   = (typeof p.lastClose === 'string') ? p.lastClose : "";
       undoStack   = Array.isArray(p.undoStack) ? p.undoStack : [];
       proUnlocked = !!p.proUnlocked;
       shiftBreaks = Array.isArray(p.shiftBreaks) ? p.shiftBreaks : [];
+
+      // ── Operative data (new) ───────────────────────────────
+      operativeLog    = Array.isArray(p.operativeLog) ? p.operativeLog : [];
+      operativeActive = p.operativeActive || null;
+      refreshOperativeChip();
     } else {
-      // sane defaults on first run / cleared storage
+      // ── Sane defaults on first run / cleared storage ───────
       picks = []; historyDays = []; current = null; tempWraps = [];
       startTime = ""; lastClose = ""; undoStack = [];
       proUnlocked = false; shiftBreaks = [];
+
+      // ── Operative defaults (new) ───────────────────────────
+      operativeLog = [];
+      operativeActive = null;
     }
 
+    // learned UL
     const lraw = localStorage.getItem(KEY_LEARN);
     learnedUL = lraw ? (JSON.parse(lraw) || {}) : {};
 
@@ -1926,13 +2116,18 @@ function loadAll(){
       const braw = localStorage.getItem('breakDraft');
       breakDraft = braw ? (JSON.parse(braw) || null) : null;
     } catch(e){ breakDraft = null; }
+
   } catch (e) {
     console.error(e);
-    // hard reset if corrupted
+    // ── Hard reset if corrupted ──────────────────────────────
     picks = []; historyDays = []; current = null; tempWraps = [];
     startTime = ""; lastClose = ""; undoStack = [];
     proUnlocked = false; shiftBreaks = []; learnedUL = {};
     breakDraft = null;
+
+    // ── Operative defaults on error (new) ────────────────────
+    operativeLog = [];
+    operativeActive = null;
   }
 }
 
@@ -1951,7 +2146,9 @@ function saveAll(){
         lastClose,
         undoStack,
         proUnlocked,
-        shiftBreaks
+        shiftBreaks,
+        operativeLog,
+        operativeActive
       })
     );
     localStorage.setItem(KEY_LEARN, JSON.stringify(learnedUL || {}));
@@ -1959,8 +2156,6 @@ function saveAll(){
     console.error(e);
   }
 }
-
-setInterval(function(){ saveAll(); }, 30000);
 
 // Custom codes
 function loadCustomCodes(){ try{ var raw=localStorage.getItem(KEY_CODES); if(raw){ customCodes=JSON.parse(raw)||[]; } }catch(e){ customCodes=[]; } }
@@ -2119,22 +2314,41 @@ function onOtherInput(prefix){
 
 // ====== Pro Gate ======
 function applyProGate(){
-  document.querySelectorAll('.gate-pro').forEach(el=> el.style.display = proUnlocked ? '' : 'none');
+  document.querySelectorAll('.gate-pro').forEach(el => {
+    const inHistory = !!el.closest('#tabHistory');
+    el.style.display = (proUnlocked && !inHistory) ? '' : 'none';
+  });
   saveAll();
 }
-function updCalcGate(){
-  const el = document.getElementById('qcRate');
-  const raw = (el.value||'').toString().trim();
-  if(raw.replace(/\s/g,'') === PRO_UNLOCK_CODE && !proUnlocked){
-    proUnlocked = true;
-    el.value = '';
-    el.blur();
-    applyProGate();
-    showToast('Pro unlocked for this session');
-    recalcQuick();
-  }
-}
+function updCalcGate() {
+  const inp = document.getElementById('qcRate');
+  if (!inp) return;
 
+  const raw = String(inp.value || '');
+  const digits = raw.replace(/\D+/g, '');
+
+  if (digits.endsWith(PRO_UNLOCK_CODE) && digits.length >= PRO_UNLOCK_CODE.length) {
+    inp.value = '';
+    try { localStorage.setItem('proUnlocked','1'); } catch {}
+    window.proUnlocked = true;
+
+    showToast('Pro tools unlocked');   // ← this line must be showToast(...)
+    openProSettingsModal?.();
+    return;
+  }
+  else if (digits.endsWith(OPER_UNLOCK_CODE) && digits.length >= OPER_UNLOCK_CODE.length) {
+    inp.value = '';
+    if (!startTime) {                     // ← guard: must have started a shift
+      showToast('Start your shift first');
+      // optional: auto-open the contracted time picker if you want:
+      // openContractedStartPicker?.();
+      return;
+    }
+    openOperativeModal();
+    return;
+  }
+  updCalc?.();
+}
 // ====== Tabs ======
 function showTab(which){
   // ---------- swap visible section ----------
@@ -3313,6 +3527,8 @@ function submitBreak(){
     renderTimeline();
   } else {
     shiftBreaks.push(entry);
+    try { renderTimeline?.(); } catch(e){}
+    try { saveAll?.(); } catch(e){}
   }
 
   if (breakTickId) { clearInterval(breakTickId); breakTickId = null; }
@@ -3321,7 +3537,9 @@ function submitBreak(){
   try { localStorage.removeItem('breakDraft'); } catch (e) {}
 
   breakDraft = null;
-
+  // ── Operative defaults on error (new) ────────────────────
+  operativeLog = [];
+  operativeActive = null;
   const bar = document.getElementById('breakBar');
   if (bar) bar.style.display = 'none';
 
@@ -3445,8 +3663,8 @@ function renderTimeline(){
     row0.innerHTML = `<span>🟢 Order started</span><span class="meta">${current.start || ''}</span>`;
     tl.appendChild(row0);
   }
-  
-  // Breaks / Delays / Notes
+
+  // Breaks / Delays / Notes (order-attached)
   (current?.breaks || []).forEach(b => {
     const row = document.createElement('div');
     row.className = 'tick';
@@ -3477,13 +3695,118 @@ function renderTimeline(){
     tl.appendChild(row);
   });
 
-  // Wraps
+  // Wraps (order-attached)
   tempWraps.forEach((w, i) => {
     const row = document.createElement('div');
     row.className = 'tick';
     row.innerHTML = `<span>📦 Wrap ${i+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t || ''}</span>`;
     tl.appendChild(row);
   });
+  // ────────────────────────────────────────────────────────────────
+  // Operative work blocks (start/end with minutes)
+  // ────────────────────────────────────────────────────────────────
+  (operativeLog || []).forEach((b, i) => {
+    // Start row
+    if (b.start) {
+      const rowS = document.createElement('div');
+      rowS.className = 'tick';
+      const n = (b.note || '').trim();
+      rowS.innerHTML = `<span>🟠 Operative started${n ? ' — ' + esc(n) : ''}</span><span class="meta">${b.start}</span>`;
+      tl.appendChild(rowS);
+    }
+    // End row
+    if (b.end) {
+      const rowE = document.createElement('div');
+      rowE.className = 'tick';
+      const mins = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
+      const meta = b.end + (mins ? ` • ${mins}` : '');
+      rowE.innerHTML = `<span>🟠 Operative ended</span><span class="meta">${meta}</span>`;
+      tl.appendChild(rowE);
+    }
+  });
+  // ────────────────────────────────────────────────────────────────
+  // Shift-level timeline items (only when NO active order)
+  // Pulls from in-memory shiftBreaks and persisted shiftNotes/shiftDelays
+  // ────────────────────────────────────────────────────────────────
+  if (!current) {
+    let shiftNotes = [];
+    let shiftDelays = [];
+    try { shiftNotes  = JSON.parse(localStorage.getItem('shiftNotes')  || '[]'); } catch(e){}
+    try { shiftDelays = JSON.parse(localStorage.getItem('shiftDelays') || '[]'); } catch(e){}
+
+    const items = [];
+
+    // Breaks/Lunches recorded outside orders (in-memory)
+    (window.shiftBreaks || []).forEach(b => {
+      items.push({
+        kind: (b.type === 'L') ? 'L' : 'B', // default to Break if not 'L'
+        start: b.start || '',
+        end: b.end || '',
+        minutes: Number.isFinite(b.minutes) ? b.minutes : undefined
+      });
+    });
+
+    // Delays recorded outside orders (persisted)
+    (shiftDelays || []).forEach(d => {
+      items.push({
+        kind: 'D',
+        start: d.start || '',
+        end: d.end || '',
+        minutes: Number.isFinite(d.minutes) ? d.minutes : undefined,
+        cause: d.cause || ''
+      });
+    });
+
+    // Notes recorded outside orders (persisted)
+    (shiftNotes || []).forEach(n => {
+      items.push({
+        kind: 'N',
+        t: n.t || '',
+        note: n.note || ''
+      });
+    });
+
+    // Sort by timestamp (notes use t; ranges use start)
+    items.sort((a, b) => {
+      const ta = (a.t || a.start || '');
+      const tb = (b.t || b.start || '');
+      return ta.localeCompare(tb);
+    });
+
+    // Render shift-level items
+    items.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'tick';
+
+      if (it.kind === 'N') {
+        const txt = (it.note || '').trim();
+        row.innerHTML =
+          `<span>📝 Note${txt ? ' — ' + esc(txt) : ''}</span>` +
+          `<span class="meta">${it.t || ''}</span>`;
+      } else if (it.kind === 'D') {
+        const cause = it.cause ? ': ' + esc(it.cause) : '';
+        const mins  = Number.isFinite(it.minutes) ? `${it.minutes}m` : '';
+        const meta  = (it.start && it.end)
+          ? `${it.start} → ${it.end}${mins ? ' • ' + mins : ''}`
+          : (it.start || it.end || '');
+        row.innerHTML =
+          `<span>⏱️ Delay${cause}</span>` +
+          `<span class="meta">${meta}</span>`;
+      } else {
+        // Break / Lunch
+        const label = (it.kind === 'L') ? 'Lunch' : 'Break';
+        const mins  = Number.isFinite(it.minutes) ? `${it.minutes}m` : '';
+        const meta  = (it.start && it.end)
+          ? `${it.start} → ${it.end}${mins ? ' • ' + mins : ''}`
+          : (it.start || it.end || '');
+        row.innerHTML =
+          `<span>☕ ${label}</span>` +
+          `<span class="meta">${meta}</span>`;
+      }
+
+      tl.appendChild(row);
+    });
+  }
 }
 
 // --- Close Early buttons visibility
@@ -3906,6 +4229,16 @@ function endShift(){
   var totalUnits = picks.reduce((a,b)=>a+b.units,0);
   var downtimes = computeDowntimes(picks, shiftBreaks);
   const endHHMM = nowHHMM();
+  // If operative work is active at clock-out, close it at end time
+  if (operativeActive && !operativeActive.end) {
+    const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
+    const start = operativeActive.start || endHHMM;
+    const end   = endHHMM;
+    const mins  = Math.max(0, toMin(end) - toMin(start));
+    operativeActive.end = end;
+    operativeActive.minutes = mins;
+  }
+
   // NEW: compute worked & scheduled minutes to the minute
   const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
   const workedMin = (startTime && endHHMM) ? Math.max(0, toMin(endHHMM) - toMin(startTime)) : 0;
@@ -3921,6 +4254,7 @@ function endShift(){
     picks: picks.slice(0),
     shiftBreaks: shiftBreaks.slice(0),
     downtimes,
+    operativeLog: (operativeLog || []).slice(0),
     // NEW fields used by weekly overtime calc
     workedMin,
     scheduledMin
@@ -3928,7 +4262,7 @@ function endShift(){
 
   historyDays.push(snapshot); saveAll(); renderHistory();
   renderWeeklySummary();
-
+  
   exitShiftNoArchive();        // reuse your existing full reset
   showTab('tracker');          // land back on the Tracker start screen
   showToast('Shift archived to History');
@@ -4599,6 +4933,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('elapsedModal')?.addEventListener('click', (e)=>{
       if (e.target?.id === 'elapsedModal') closeElapsedModal();
     });
+        // Wire Pro Unlock (Override Rate box)
+    document.getElementById('qcRate')?.addEventListener('input',  updCalcGate);
+    document.getElementById('qcRate')?.addEventListener('change', updCalcGate);
     document.getElementById('oOther')?.addEventListener('input', ()=>onOtherInput('o'));
     document.getElementById('oLeft') ?.addEventListener('input', refreshWrapButton);
     document.getElementById('liveUpdateModal')?.addEventListener('click', (e)=>{
