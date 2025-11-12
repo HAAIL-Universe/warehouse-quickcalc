@@ -376,7 +376,7 @@ td.small { font-size:12px; color:#9fb3c8; }
 .fade.show { opacity: 1; }
 /* ── Red Theme Rim Overrides (non-destructive) ───────────────────── */
 .rim { /* utility if you ever want to apply by class */ }
-
+.glow-weak { text-shadow: 0 0 6px var(--rim1); }
 .tabbtn,
 .btn,
 .btn.ghost,
@@ -430,7 +430,9 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
     linear-gradient(#1a1f27,#1a1f27) padding-box,
     linear-gradient(180deg,var(--rim1),var(--rim2)) border-box !important;
 }
-
+#shiftLogHeader {
+  margin-bottom: 15px;
+}
 /* Subtle focus ring now uses maroon accent */
 .cbPad button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .btn { background:#141821; } /* darker base fill; keeps the rim pop */
@@ -453,15 +455,20 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
 #btnDelay,
 #btnB,
 #btnL,
+#opBtnB,
+#opBtnL,
 #btnCloseEarly,
 #btnUndo,
 #btnWrapTop,
+#opNoteSave, #opToggleBtn, #opBreakBtn, #opLunchBtn,
 #delayModal .btn[onclick="submitNote()"]  {
   border-width: 2px; /* subtle emphasis over the default 1px rim */
   box-shadow:
     0 0 0 1px rgba(176,25,38,.55),       /* crisp outer edge */
     0 8px 20px rgba(176,25,38,.18),      /* gentle lift */
     inset 0 0 0 1px rgba(255,255,255,.06); /* inner crispness */
+  color: var(--ink);
+  background-color: var(--color-bg-surface, var(--bg1));
 }
 </style>
 </head>
@@ -585,15 +592,18 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
         <h3>Operative Tools</h3>
         <button class="btn ghost slim" type="button" onclick="closeOperativeModal()">✖</button>
       </div>
-
       <div class="fld">
         <label for="opNote" class="sub" style="margin-bottom:6px;">Note (optional)</label>
         <textarea id="opNote" rows="3" placeholder="e.g. Marshaling, loading, stock moves…"></textarea>
       </div>
-
-      <div class="fld" style="display:flex;align-items:center;gap:12px;">
-        <div><b>Elapsed:</b> <span id="opElapsed">—</span></div>
-        <button id="opToggleBtn" class="btn" type="button" onclick="toggleOperative()">Start Operative Work</button>
+      <div class="fld" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div><span class="glow-weak">Elapsed:</span> <span id="opElapsed">—</span></div>
+        <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+          <button id="opNoteSave" class="btn" type="button" onclick="saveOperativeNote()">Save note</button>
+          <button id="opToggleBtn" class="btn" type="button" onclick="toggleOperative()">Start Operative Work</button>
+          <button id="opBtnB" class="btn" type="button" onclick="opOpenBreak('B')">B</button>
+          <button id="opBtnL" class="btn" type="button" onclick="opOpenBreak('L')">L</button>
+        </div>
       </div>
     </div>
   </div>
@@ -655,7 +665,7 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
             <span class="progBullet">•</span>
             <span><strong>Qty:</strong> <span id="progQty">0</span></span>
           </div>
-          
+
           <div class="progSub">
             <span><strong>Pallets:</strong> <span id="progPallets">0</span></span>
             <span><strong>Left:</strong> <span id="progLeft">0</span></span>
@@ -668,27 +678,36 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
         </div>
         <div id="progPct" class="progPct">0%</div>
       </div>
+
       <!-- Active Order Area -->
       <div id="orderArea" style="display:none; margin-top:10px;">
         <!-- Compact: keep only a hidden oLeft for internal use -->
         <input id="oLeft" type="number" min="0" step="1" inputmode="numeric" style="display:none;">
+
         <!-- Controls row (unchanged right-side controls container) -->
         <div class="row" style="align-items:flex-end;">
           <div class="col" id="orderControls"
               style="flex:0 0 auto; display:flex; align-items:flex-end; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
           </div>
         </div>
-        <div class="timeline" id="orderTimeline"></div>
+        <!-- Order log (active order only) -->
+        <div id="orderLogCard" class="logwrap" style="margin-top:8px;">
+          <div class="row" style="align-items:center; justify-content:space-between; padding:6px 8px 0;">
+            <div class="muted" style="font-weight:600;">Order Log</div>
+          </div>
+          <div id="orderTimeline" class="timeline" style="padding-top:8px;"></div>
+        </div>
       </div>
     </div>
-    <div class="card" id="completedCard" style="display:none;">
-      <h3 style="margin:0 0 8px; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
-      <table>
-        <thead><tr><th>#</th><th>Customer</th><th>Units</th><th>Pallets</th><th>Start</th><th>Closed</th><th>Order Rate</th></tr></thead>
-        <tbody id="doneBody"></tbody>
-      </table>
+    <!-- Shift-wide (no-order) log panel — sits between the order box and the buttons -->
+    <div class="card" id="shiftLogCard">
+      <div id="shiftLogHeader" class="row" style="align-items:center; justify-content:space-between; padding:6px 8px 0;">
+        <div id="shiftLogTitle" class="muted" style="font-weight:600;">Shift Log</div>
+        <div id="shiftLogCount" class="meta"></div>
+      </div>
+      <div id="shiftLogList"></div>
     </div>
-    <!-- Shared Pick Modal -->
+    <!-- Shared Pick / bottom actions -->
     <div class="bottom-actions">
       <div class="left">
         <button class="btn" type="button" id="btnDelay" onclick="openDelayModal()" style="display:none;">Log / Delay</button>
@@ -706,10 +725,11 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
     </div>
     <!-- Operative status chip (Tracker) -->
     <div id="opChipBar" style="display:none; margin:10px 0 6px; align-items:center; gap:10px;">
-      <span id="opChip" class="chip" style="padding:6px 10px; border-radius:999px; border:1px solid var(--rim1);">
+      <span id="opChip" class="chip"
+            onclick="openOperativeModal()"
+            style="padding:6px 10px; border-radius:999px; border:1px solid var(--rim1); cursor:pointer;">
         🟠 Operative — <span id="opChipElapsed">0m</span>
       </span>
-      <button id="opChipStop" class="btn slim" type="button" onclick="stopOperative()">Stop</button>
     </div>
   </section>
   <!-- Shared Order Pad (merged dock + keypad) -->
@@ -1077,16 +1097,48 @@ function openOperativeModal(){
   const m = document.getElementById('operativeModal');
   if (!m) return;
   m.style.display = 'flex';
+  // Pre-fill note from active or last block
+  const noteEl = document.getElementById('opNote');
+  if (noteEl){
+    const src = operativeActive || (operativeLog.length ? operativeLog[operativeLog.length-1] : null);
+    noteEl.value = (src && src.note) ? src.note : '';
+  }
   refreshOperativeUI();
 }
+function opOpenBreak(kind){
+  // Record context: were we in an order and was operative running?
+  window._breakStartNoOrder = !window.current;
+  window._opWasRunningAtBreakStart = !!operativeActive;
+
+  // ⬇️ NEW: If operative is running, DO NOT stop it.
+  // Instead add an operative-tagged "started" note for the break/lunch.
+  try {
+    if (window._opWasRunningAtBreakStart) {
+      const key = 'shiftNotes';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      const label = (kind === 'L') ? 'Lunch' : 'Break';
+      arr.push({ t: nowHHMM(), note: `${label} started`, op: true });
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+  } catch(e){}
+
+  // Close the operative modal to avoid stacked overlays
+  closeOperativeModal();
+
+  // Open the existing break/lunch flow
+  openBreakModal(kind); // kind = 'B' or 'L'
+}
+
 function refreshOperativeChip(){
   const bar = document.getElementById('opChipBar');
   const el  = document.getElementById('opChipElapsed');
   if (!bar || !el) return;
 
-  if (operativeActive){
+  // Optional: if you have a dot/icon span, flip it green safely.
+  const dot = document.getElementById('opChipDot'); // safe optional
+
+  if (operativeActive && !operativeActive.end){
     bar.style.display = 'flex';
-    // elapsed will be kept fresh by the same ticker used in the modal
     try {
       const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
       const start = operativeActive.start;
@@ -1095,8 +1147,10 @@ function refreshOperativeChip(){
       const h = Math.floor(mins/60), m = mins%60;
       el.textContent = (h>0 ? `${h}h ` : '') + `${m}m`;
     } catch(e){}
+    if (dot) dot.textContent = '🟢'; // green while running
   } else {
     bar.style.display = 'none';
+    if (dot) dot.textContent = '🟠'; // fallback color when not running
   }
 }
 
@@ -1148,37 +1202,116 @@ function toggleOperative(){
 }
 
 function startOperative(){
-  if (!startTime) {
-    showToast('Start your shift first');
-    return;
-  }
+  if (!startTime) { showToast('Start your shift first'); return; }
   if (operativeActive) return;
+
+  // ensure log exists
+  window.operativeLog = Array.isArray(window.operativeLog) ? window.operativeLog : [];
+
   const note = (document.getElementById('opNote')?.value || '').trim();
   const now  = nowHHMM();
-  const block = { start: now, end: null, note };
+
+  // capture whether we started with or without an active order
+  const block = { start: now, end: null, minutes: null, note, noOrder: !window.current };
+
+  // keep a single shared object referenced by both active + log
   operativeLog.push(block);
   operativeActive = block;
+
+  // IMPORTANT: no "started" note now — we write both start & end notes on stop
+
   showToast('Operative started');
-  saveAll();
-  refreshOperativeUI();
-  renderTimeline?.();
-  refreshOperativeChip();
+  refreshOperativeUI?.();
+  refreshOperativeChip?.();
+  renderShiftPanel?.();      // shows the single green live line
+  renderTimeline?.();        // harmless; Order Log won’t render operative rows anyway
+  updateDelayBtn?.();        // hide Log/Delay button while operative active
+  saveAll?.();
 }
 
 function stopOperative(){
   if (!operativeActive) return;
+
   const toMin = (hhmm)=> Math.round(hm(hhmm) * 60);
   const start = operativeActive.start;
   const end   = nowHHMM();
   const mins  = Math.max(0, toMin(end) - toMin(start));
-  operativeActive.end = end;
+
+  // finalize active block
+  operativeActive.end     = end;
   operativeActive.minutes = mins;
+
+  // ensure it's in operativeLog
+  if (!Array.isArray(operativeLog)) operativeLog = [];
+  if (!operativeLog.includes(operativeActive)) {
+    operativeLog.push(operativeActive);
+  }
+
+  // Write BOTH bracket markers now: "started" and "ended — total"
+  try {
+    const key = 'shiftNotes';
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+
+    // “Operative started — <optional note>” at the original start time
+    const startedMsg = operativeActive.note
+      ? `Operative started — ${operativeActive.note}`
+      : 'Operative started';
+    arr.push({ t: start, note: startedMsg, op: true });
+
+    // “Operative ended — Xh Ym” at the end time
+    const h = Math.floor((mins || 0) / 60);
+    const m = (mins || 0) % 60;
+    const total = (h > 0 ? `${h}h ` : '') + `${m}m`;
+    arr.push({ t: end, note: `Operative ended — ${total}`, op: true });
+
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch(e){}
+
+  // Persist immutable range (kept for analytics/history)
+  try {
+    const key  = 'shiftOperatives';
+    const arr  = JSON.parse(localStorage.getItem(key) || '[]');
+    arr.push({
+      start: operativeActive.start,
+      end:   operativeActive.end,
+      minutes: operativeActive.minutes,
+      note:  operativeActive.note || '',
+      noOrder: !!operativeActive.noOrder
+    });
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch(e){}
+
   operativeActive = null;
+
   showToast('Operative stopped');
-  saveAll();
-  refreshOperativeUI();
+  saveAll?.();
+  refreshOperativeUI?.();
   renderTimeline?.();
-  refreshOperativeChip();
+  refreshOperativeChip?.();
+  renderShiftPanel?.();
+  updateDelayBtn?.();
+}
+
+function saveOperativeNote(){
+  const el = document.getElementById('opNote');
+  if (!el) return;
+
+  const txt = (el.value || '').trim();
+  if (!txt){ showToast?.('Type a note'); return; }
+
+  try {
+    const key = 'shiftNotes';
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    arr.push({ t: nowHHMM(), note: txt, op: !!(operativeActive && !operativeActive.end) });
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch(e){}
+
+  // do NOT attach note to the live block (prevents “Operative running — …”)
+  el.value = '';
+  saveAll?.();
+  renderShiftPanel?.();
+  renderTimeline?.();
+  showToast?.('Note saved');
 }
 
 function closeProSettingsModal(){
@@ -2414,7 +2547,7 @@ function showTab(which){
     updateDelayBtn?.();
     updateEndShiftVisibility?.();
     updateCloseEarlyVisibility?.();
-
+    renderShiftPanel?.();
     saveAll();
     return;
   }
@@ -3266,8 +3399,12 @@ function completeOrder() {
 function updateDelayBtn(){
   const el = document.getElementById('btnDelay');
   if (!el) return;
+
   const shiftOn = !!startTime && window.archived !== true;
-  el.style.display = shiftOn ? 'inline-block' : 'none';
+  const hideForOperative = !!(window.operativeActive && !window.operativeActive.end);
+
+  // show only when a shift is on AND we're not in operative mode
+  el.style.display = (shiftOn && !hideForOperative) ? 'inline-block' : 'none';
 }
 
 function openDelayModal(){
@@ -3311,6 +3448,7 @@ function submitDelay(){
       arr.push({ type:'D', start: delayDraft.start, end, minutes, cause });
       localStorage.setItem(key, JSON.stringify(arr));
     } catch(e){}
+    renderShiftPanel?.();   // <-- repaint Shift Log accordion
   }
 
   delayDraft = null;
@@ -3443,31 +3581,49 @@ function sharedSubmitUnits(){
   input.value = '';
 }
 // Save a text note (no delay timing). Works with or without an active order.
-function submitNote(){
-  const txt = (document.getElementById('delayCause').value || '').trim();
-  if (!txt) { showToast?.('Enter a note'); return; }
+function submitNote(evt){
+  // prevent form submit/page reload if button is inside a <form>
+  try { evt?.preventDefault?.(); } catch(e){}
+
+  // be tolerant to different input IDs
+  const candidateIds = ['noteText','noteInput','noteField','shiftNote','shiftNoteText'];
+  let el = null;
+  for (const id of candidateIds){
+    const cand = document.getElementById(id);
+    if (cand) { el = cand; break; }
+  }
+
+  const note = (el?.value || '').trim();
+  if (!note){
+    showToast?.('Type a note'); 
+    return;
+  }
 
   const t = nowHHMM();
+
   if (current && Number.isFinite(current.total)) {
-    // store on the active order timeline
+    // attach to current order
     current.breaks = current.breaks || [];
-    current.breaks.push({ type:'N', t, note: txt });
+    current.breaks.push({ type:'N', t, note });
     undoStack.push?.({ type:'note' });
     renderTimeline?.();
     updateSummary?.();
     saveAll?.();
   } else {
-    // shift-level note (no active order). Persist separately.
+    // shift-level note (no active order)
     try {
       const key = 'shiftNotes';
       const arr = JSON.parse(localStorage.getItem(key) || '[]');
-      arr.push({ t, note: txt });
+      arr.push({ t, note });
       localStorage.setItem(key, JSON.stringify(arr));
     } catch(e){}
+    renderShiftPanel?.();
   }
 
-  showToast?.('Note saved');
-  closeDelayModal();
+  // cleanup / close
+  if (el) el.value = '';
+  closeNoteModal?.();      // your note modal close fn
+  showToast?.('Note logged');
 }
 
 // ====== Break timer (banner) ======
@@ -3520,7 +3676,7 @@ function submitBreak(){
   const end = nowHHMM();
   const minutes = Math.max(1, Math.round((hm(end) - hm(breakDraft.startHHMM)) * 60));
   const entry = { type: breakDraft.type, start: breakDraft.startHHMM, end, minutes };
-
+  if (!current) entry.noOrder = true;
   if (current) {
     current.breaks.push(entry);
     undoStack.push({ type:'break' });
@@ -3537,9 +3693,20 @@ function submitBreak(){
   try { localStorage.removeItem('breakDraft'); } catch (e) {}
 
   breakDraft = null;
-  // ── Operative defaults on error (new) ────────────────────
-  operativeLog = [];
-  operativeActive = null;
+
+  // ⬇️ NEW: If break started during operative, add an "ended" note.
+  try {
+    if (window._opWasRunningAtBreakStart) {
+      const key = 'shiftNotes';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      const label = (entry.type === 'L') ? 'Lunch' : 'Break';
+      arr.push({ t: end, note: `${label} ended`, op: true });
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+  } catch(e){}
+  // IMPORTANT: keep operative running — do NOT clear operative state here.
+  // (Removed the previous: operativeLog = []; operativeActive = null;)
+
   const bar = document.getElementById('breakBar');
   if (bar) bar.style.display = 'none';
 
@@ -3562,13 +3729,18 @@ function submitBreak(){
   updateSummary();
   showToast('Break logged (' + minutes + 'm)');
   saveAll();
+  renderShiftPanel?.();
 
   // PREDICTIVE: resume from current true left
   if (current) {
     predictiveReset(getCurrentLeft(), getLiveRateUh());
     predictiveStart();
   }
+
+  // tidy the flag after we've logged both notes
+  window._opWasRunningAtBreakStart = false;
 }
+
 function cancelBreak(){
   if (breakTickId) { clearInterval(breakTickId); breakTickId = null; }
 
@@ -3599,7 +3771,7 @@ function cancelBreak(){
   updateSummary();
   showToast('Break cancelled');
   saveAll();
-
+  renderShiftPanel?.();
   // PREDICTIVE: resume from current true left
   if (current) {
     predictiveReset(getCurrentLeft(), getLiveRateUh());
@@ -3641,7 +3813,6 @@ function tickBreak() {
   if (typeof updateProgressHeader === 'function') updateProgressHeader();
 }
 
-
 // ====== Completed orders & history ======
 function renderTimeline(){
   const tl = document.getElementById('orderTimeline');
@@ -3670,12 +3841,10 @@ function renderTimeline(){
     row.className = 'tick';
 
     if (b.type === 'N') {
-      // 📝 Note — single timestamp (no duration)
       const t   = b.t || '';
       const txt = (b.note || '').trim();
       row.innerHTML = `<span>📝 Note${txt ? ' — ' + esc(txt) : ''}</span><span class="meta">${t}</span>`;
     } else if (b.type === 'D') {
-      // ⏱️ Delay — start → end • Xm (guarded)
       const cause = b.cause ? ': ' + esc(b.cause) : '';
       const start = b.start || '';
       const end   = b.end   || '';
@@ -3683,7 +3852,6 @@ function renderTimeline(){
       const meta  = (start && end) ? `${start} → ${end}${mins ? ' • ' + mins : ''}` : (start || end || '');
       row.innerHTML = `<span>⏱️ Delay${cause}</span><span class="meta">${meta}</span>`;
     } else {
-      // ☕ Break / Lunch — start → end • Xm (guarded)
       const label = (b.type === 'B') ? 'Break' : 'Lunch';
       const start = b.start || '';
       const end   = b.end   || '';
@@ -3702,51 +3870,27 @@ function renderTimeline(){
     row.innerHTML = `<span>📦 Wrap ${i+1}: <b>${w.done}</b> done, <b>${w.left}</b> left</span><span class="meta">${w.t || ''}</span>`;
     tl.appendChild(row);
   });
-  // ────────────────────────────────────────────────────────────────
-  // Operative work blocks (start/end with minutes)
-  // ────────────────────────────────────────────────────────────────
-  (operativeLog || []).forEach((b, i) => {
-    // Start row
-    if (b.start) {
-      const rowS = document.createElement('div');
-      rowS.className = 'tick';
-      const n = (b.note || '').trim();
-      rowS.innerHTML = `<span>🟠 Operative started${n ? ' — ' + esc(n) : ''}</span><span class="meta">${b.start}</span>`;
-      tl.appendChild(rowS);
-    }
-    // End row
-    if (b.end) {
-      const rowE = document.createElement('div');
-      rowE.className = 'tick';
-      const mins = Number.isFinite(b.minutes) ? `${b.minutes}m` : '';
-      const meta = b.end + (mins ? ` • ${mins}` : '');
-      rowE.innerHTML = `<span>🟠 Operative ended</span><span class="meta">${meta}</span>`;
-      tl.appendChild(rowE);
-    }
-  });
-  // ────────────────────────────────────────────────────────────────
-  // Shift-level timeline items (only when NO active order)
-  // Pulls from in-memory shiftBreaks and persisted shiftNotes/shiftDelays
-  // ────────────────────────────────────────────────────────────────
+
+  // DESIGN: Operative events are intentionally NOT rendered here.
+  // They appear only in Shift Log (see renderShiftPanel).
+
+  // Shift-level items only when NO active order (kept as-is)
   if (!current) {
-    let shiftNotes = [];
-    let shiftDelays = [];
+    let shiftNotes = [], shiftDelays = [];
     try { shiftNotes  = JSON.parse(localStorage.getItem('shiftNotes')  || '[]'); } catch(e){}
     try { shiftDelays = JSON.parse(localStorage.getItem('shiftDelays') || '[]'); } catch(e){}
 
     const items = [];
 
-    // Breaks/Lunches recorded outside orders (in-memory)
     (window.shiftBreaks || []).forEach(b => {
       items.push({
-        kind: (b.type === 'L') ? 'L' : 'B', // default to Break if not 'L'
+        kind: (b.type === 'L') ? 'L' : 'B',
         start: b.start || '',
         end: b.end || '',
         minutes: Number.isFinite(b.minutes) ? b.minutes : undefined
       });
     });
 
-    // Delays recorded outside orders (persisted)
     (shiftDelays || []).forEach(d => {
       items.push({
         kind: 'D',
@@ -3757,27 +3901,15 @@ function renderTimeline(){
       });
     });
 
-    // Notes recorded outside orders (persisted)
     (shiftNotes || []).forEach(n => {
-      items.push({
-        kind: 'N',
-        t: n.t || '',
-        note: n.note || ''
-      });
+      items.push({ kind: 'N', t: n.t || '', note: n.note || '' });
     });
 
-    // Sort by timestamp (notes use t; ranges use start)
-    items.sort((a, b) => {
-      const ta = (a.t || a.start || '');
-      const tb = (b.t || b.start || '');
-      return ta.localeCompare(tb);
-    });
+    items.sort((a, b) => (a.t || a.start || '').localeCompare(b.t || b.start || ''));
 
-    // Render shift-level items
     items.forEach(it => {
       const row = document.createElement('div');
       row.className = 'tick';
-
       if (it.kind === 'N') {
         const txt = (it.note || '').trim();
         row.innerHTML =
@@ -3793,7 +3925,6 @@ function renderTimeline(){
           `<span>⏱️ Delay${cause}</span>` +
           `<span class="meta">${meta}</span>`;
       } else {
-        // Break / Lunch
         const label = (it.kind === 'L') ? 'Lunch' : 'Break';
         const mins  = Number.isFinite(it.minutes) ? `${it.minutes}m` : '';
         const meta  = (it.start && it.end)
@@ -3803,10 +3934,119 @@ function renderTimeline(){
           `<span>☕ ${label}</span>` +
           `<span class="meta">${meta}</span>`;
       }
-
       tl.appendChild(row);
     });
   }
+}
+function renderShiftPanel(){
+  const card = document.getElementById('shiftLogCard');
+  const list = document.getElementById('shiftLogList');
+  if (!card || !list) return;
+
+  const esc = s => String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+
+  const rows = [];
+
+  // Live indicators first (green single line while active)
+  if (operativeActive && !operativeActive.end){
+    rows.push(
+      `<div class="tick"><span>🟢 Operative running</span><span class="meta">since ${operativeActive.start || '--:--'}</span></div>`
+    );
+  }
+  if (!current && breakDraft){
+    const kind  = breakDraft.type === 'L' ? 'Lunch' : 'Break';
+    rows.push(
+      `<div class="tick"><span>🟡 ${kind} in progress</span><span class="meta">since ${breakDraft.startHHMM || '--:--'}</span></div>`
+    );
+  }
+
+  // Collect completed shift-level items
+  const items = [];
+
+  // ❌ Skip finished OP range rows — we only render OS/OE notes for brackets.
+
+  // Finished breaks/lunches (RAM)
+  (Array.isArray(shiftBreaks) ? shiftBreaks : []).forEach(br=>{
+    if (br && br.end){
+      items.push({ kind:(br.type==='L'?'L':'B'), start:br.start||'', end:br.end||'', minutes:Number.isFinite(br.minutes)?br.minutes:undefined });
+    }
+  });
+
+  // Shift delays/notes (persisted)
+  let shiftDelays=[], shiftNotes=[];
+  try { shiftDelays = JSON.parse(localStorage.getItem('shiftDelays')||'[]'); } catch(e){}
+  try { shiftNotes  = JSON.parse(localStorage.getItem('shiftNotes') ||'[]'); } catch(e){}
+
+  shiftDelays.forEach(d=>{
+    items.push({ kind:'D', start:d.start||'', end:d.end||'', minutes:Number.isFinite(d.minutes)?d.minutes:undefined, cause:d.cause||'' });
+  });
+
+  // Normalize notes: detect operative start/end & operative break/lunch notes
+  (Array.isArray(shiftNotes) ? shiftNotes : []).forEach(n=>{
+    const t = n.t || '';
+    const noteTxt = (n.note || '').trim();
+
+    if (n.op && /^Operative started/i.test(noteTxt)) {
+      items.push({ kind:'OS', t, text: noteTxt }); // Operative Start marker
+    } else if (n.op && /^Operative ended/i.test(noteTxt)) {
+      items.push({ kind:'OE', t, text: noteTxt }); // Operative End marker
+    } else if (n.op && /(Break|Lunch)\s+(started|ended)/i.test(noteTxt)) {
+      items.push({ kind:'OBN', t, text: noteTxt }); // Operative-scoped break/lunch markers
+    } else {
+      items.push({ kind:'N', t, note: noteTxt, op: !!n.op }); // Regular note
+    }
+  });
+
+  // Deduplicate by key
+  const seen = new Set();
+  const dedup = [];
+  for (const it of items){
+    const key = (it.kind==='N')  ? `N@${it.t}@${it.note}` :
+               (it.kind==='D')  ? `D@${it.start}@${it.end}@${it.cause}` :
+               (it.kind==='B'||it.kind==='L') ? `${it.kind}@${it.start}@${it.end}` :
+               `${it.kind}@${it.t || it.start || ''}`;
+    if (!seen.has(key)){ seen.add(key); dedup.push(it); }
+  }
+
+  // Chronological
+  dedup.sort((a,b)=>{
+    const ta = a.t || a.start || '';
+    const tb = b.t || b.start || '';
+    return ta.localeCompare(tb);
+  });
+
+  // Render
+  const out = [...rows];
+  dedup.forEach(it=>{
+    if (it.kind === 'B' || it.kind === 'L'){
+      const label = it.kind==='L' ? 'Lunch' : 'Break';
+      const mins  = it.minutes!=null ? ` • ${it.minutes}m` : '';
+      out.push(`<div class="tick"><span>☕ ${label}</span><span class="meta">${it.start} → ${it.end}${mins}</span></div>`);
+    } else if (it.kind === 'D'){
+      const mins  = it.minutes!=null ? ` • ${it.minutes}m` : '';
+      const cause = it.cause ? `: ${esc(it.cause)}` : '';
+      const meta  = (it.start && it.end) ? `${it.start} → ${it.end}${mins}` : (it.start||it.end||'');
+      out.push(`<div class="tick"><span>⏱️ Delay${cause}</span><span class="meta">${meta}</span></div>`);
+    } else if (it.kind === 'OS'){
+      out.push(`<div class="tick"><span>🟠 Operative started</span><span class="meta">${it.t}</span></div>`);
+    } else if (it.kind === 'OE'){
+      const tail = it.text.replace(/^Operative ended\s*/i,'').trim(); // "— 21m" if present
+      const meta = tail ? `${it.t} ${esc(tail)}` : it.t;
+      out.push(`<div class="tick"><span>🔴 Operative ended</span><span class="meta">${meta}</span></div>`);
+    } else if (it.kind === 'OBN'){
+      out.push(`<div class="tick"><span>☕ ${esc(it.text)} (operative)</span><span class="meta">${it.t}</span></div>`);
+    } else if (it.kind === 'N'){
+      const suffix = it.op ? ' (operative)' : '';
+      const txt = (it.note||'').trim();
+      out.push(`<div class="tick"><span>📝 Note${suffix}${txt ? ' — ' + esc(txt) : ''}</span><span class="meta">${it.t}</span></div>`);
+    }
+  });
+
+  list.innerHTML = out.length ? out.join('') : '<div class="hint">Nothing logged yet.</div>';
+  card.style.display = 'block';
 }
 
 // --- Close Early buttons visibility
@@ -4271,7 +4511,7 @@ function endShift(){
 function clearToday(){
   if (!confirm("Clear today's order data? Your shift will remain active.")) return;
 
-  // Stop any running predictive/grace timers
+  // ── Stop any running predictive/grace timers ─────────────────────
   try { predictiveStop?.(); } catch(e){}
   try {
     if (window._predictiveGraceTimer) {
@@ -4280,16 +4520,29 @@ function clearToday(){
     }
   } catch(e){}
 
-  // Wipe order-specific in-memory state (KEEP the shift running)
-  current = null;
-  tempWraps = [];
-  picks = [];
-  undoStack = [];
-  lastClose = '';
-  shiftBreaks = [];
+  // ── Wipe order-specific in-memory state (KEEP the shift running) ─
+  current     = null;
+  tempWraps   = [];
+  picks       = [];
+  undoStack   = [];
+  lastClose   = '';
+  shiftBreaks = [];             // clears break history
   try { localStorage.setItem('shiftActive','1'); } catch(e){} // keep durable flag on
 
-  // UI → Active Shift, no open order: show New-Order header form
+  // ── ALSO wipe shift-wide logs (operative + shift notes/delays) ───
+  operativeActive = null;
+  operativeLog    = [];
+  breakDraft      = null;       // if you had a live break in draft, cancel it
+  // clear any persisted copies
+  try { localStorage.removeItem('operativeActive'); } catch(e){}
+  try { localStorage.removeItem('operativeLog'); } catch(e){}
+  try { localStorage.removeItem('shiftDelays'); } catch(e){}
+  try { localStorage.removeItem('shiftNotes'); } catch(e){}
+  try { localStorage.removeItem('shiftOperatives'); } catch(e){}   // ← NEW: immutable Operative store
+  // optional: clear note input so it doesn't carry to next block
+  try { const nEl = document.getElementById('opNote'); if (nEl) nEl.value = ''; } catch(e){}
+
+  // ── UI → Active Shift, no open order: show New-Order header form ─
   const shiftCard  = document.getElementById('shiftCard');
   const activeCard = document.getElementById('activeOrderCard');
   const doneCard   = document.getElementById('completedCard');
@@ -4304,21 +4557,21 @@ function clearToday(){
   if (hdrProg) hdrProg.style.display = 'none';
   if (area)    area.style.display    = 'none';
 
-  // Reset header fields to clean slate
+  // ── Reset header fields to clean slate ────────────────────────────
   document.getElementById('progRate')?.replaceChildren(document.createTextNode('—'));
-  document.getElementById('progETA')?.replaceChildren(document.createTextNode('—'));
+  document.getElementById('progETA') ?.replaceChildren(document.createTextNode('—'));
   const fill = document.getElementById('progFill'); if (fill) fill.style.width = '0%';
-  document.getElementById('progPct')?.replaceChildren(document.createTextNode('0%'));
+  document.getElementById('progPct') ?.replaceChildren(document.createTextNode('0%'));
   document.getElementById('progLeft')?.replaceChildren(document.createTextNode('0'));
   document.getElementById('progPallets')?.replaceChildren(document.createTextNode('0'));
 
-  // Clear form inputs
+  // ── Clear form inputs ─────────────────────────────────────────────
   const oCust  = document.getElementById('oCust');   if (oCust)  oCust.value  = '';
   const oOther = document.getElementById('oOther');  if (oOther) oOther.value = '';
   const oTotal = document.getElementById('oTotal');  if (oTotal) oTotal.value = '';
   const oLeft  = document.getElementById('oLeft');   if (oLeft)  oLeft.value  = '';
 
-  // Flip ghost button → "Exit Shift" (non-archiving)
+  // ── Flip ghost button → "Exit Shift" (non-archiving) ─────────────
   (function setExitShiftButton(){
     const btn = document.querySelector('.safetybar button.btn.ghost');
     if (!btn) return;
@@ -4326,11 +4579,16 @@ function clearToday(){
     btn.onclick = function(){ exitShiftNoArchive?.(); };
   })();
 
-  // Persist + land on Tracker
-  saveAll?.();
-  if (typeof showTab === 'function') showTab('tracker');
-
+  // ── Persist & repaint ────────────────────────────────────────────
+  saveAll?.();                 // writes clean state
+  renderShiftPanel?.();        // clears Shift Log list
+  renderTimeline?.();          // clears Order Log timeline
+  refreshOperativeUI?.();      // hides/clears operative modal controls
+  refreshOperativeChip?.();    // removes the chip bar
   ensureActionRowLayout?.();
+
+  // land on Tracker
+  if (typeof showTab === 'function') showTab('tracker');
 }
 
 // ====== Export / Import (gated) ======
@@ -4963,6 +5221,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
     renderShiftChooser();
+    renderShiftPanel?.();
     // ── 6) Decide header: progress vs new-order form ────────────────
     if (hadOpen && window.archived !== true) {
       // We have an active order: ensure progress header/UI is shown
@@ -4998,6 +5257,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initWeekCardToggle();
     renderDone();
     renderULayerChips();
+    renderShiftPanel?.();
     // ── 8) Start button validation (order of entry agnostic) ────────
     ['oTotal','oOther'].forEach(id=>{
       const el = document.getElementById(id);
