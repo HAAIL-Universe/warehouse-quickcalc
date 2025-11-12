@@ -699,6 +699,29 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
         </div>
       </div>
     </div>
+    <!-- Completed Orders -->
+    <div class="card" id="completedCard" style="display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <h3 style="margin:0; font-size:14px; color:#9fb3c8;">Completed Orders</h3>
+        <span id="completedMeta" class="sub"></span>
+      </div>
+      <div class="tablewrap" style="margin-top:8px;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Units</th>
+              <th>Pallets</th>
+              <th>Start</th>
+              <th>Closed</th>
+              <th>Order Rate</th>
+            </tr>
+          </thead>
+          <tbody id="doneBody"></tbody>
+        </table>
+      </div>
+    </div>
     <!-- Shift-wide (no-order) log panel — sits between the order box and the buttons -->
     <div class="card" id="shiftLogCard">
       <div id="shiftLogHeader" class="row" style="align-items:center; justify-content:space-between; padding:6px 8px 0;">
