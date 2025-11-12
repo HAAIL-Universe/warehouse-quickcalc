@@ -695,7 +695,7 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
           <div class="row" style="align-items:center; justify-content:space-between; padding:6px 8px 0;">
             <div class="muted" style="font-weight:600;">Order Log</div>
           </div>
-          <div id="orderTimeline" class="timeline" style="padding-top:8px;"></div>
+          <div id="orderTimeline" class="timeline" style="padding-top:3px;"></div>
         </div>
       </div>
     </div>
@@ -963,8 +963,8 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
       <label for="ceWrapped" style="margin:0;">Wrapped last pallet</label>
     </div>
     <div class="actions split">
-      <button class="btn slim" type="button" onclick="closeWrapModal()">Cancel</button>
-      <button class="btn ok" type="button" onclick="submitWrapLeft()">Save Wrap</button>
+      <button class="btn slim" type="button" onclick="closeCloseEarlyModal()">Cancel</button>
+      <button class="btn ok" type="button" onclick="submitCloseEarly()">Close Early</button>
     </div>
   </div>
 </div>
@@ -3609,7 +3609,7 @@ function submitNote(evt){
   try { evt?.preventDefault?.(); } catch(e){}
 
   // be tolerant to different input IDs
-  const candidateIds = ['noteText','noteInput','noteField','shiftNote','shiftNoteText'];
+  const candidateIds = ['delayCause','noteText','noteInput','noteField','shiftNote','shiftNoteText'];
   let el = null;
   for (const id of candidateIds){
     const cand = document.getElementById(id);
