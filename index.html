@@ -149,9 +149,15 @@ td.small { font-size:12px; color:#9fb3c8; }
 .logwrap { padding:8px 10px; background:#0f131b; border:1px solid #29364a; border-radius:10px; margin:8px 0; }
 .logrow { display:none; }
 .logrow td { border-bottom:none; padding-top:0; }
-.gate-pro { display:none; }
+.logrow { display:none; }
+.logrow td { border-bottom:none; padding-top:0; }
+
+/* Gated controls */
+.gate-pro { display:none; }      /* Pro tools (export, etc.)      */
+.gate-snake { display:none; }    /* Snake congestion game button  */
 /* Keep history page clean: never show gate-pro buttons there */
 #tabHistory .gate-pro { display: none !important; }
+
 /* Utility: hide/show */
 .hidden { display: none !important; }
 /* Modal */
@@ -163,6 +169,21 @@ td.small { font-size:12px; color:#9fb3c8; }
   border-radius:12px;
   padding:14px;
 }
+/* Snake modal: wider + taller so you don't have to scroll */
+#snakeHostModal .box{
+  width:min(720px,96vw);
+  max-height:90vh;
+}
+
+#snakeHostModal .fld{
+  margin:8px 0;
+  max-height:none;
+}
+
+#snakeHostModal #snakeFrame{
+  width:100%;
+}
+
 .modal .hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .modal .hdr h3 { margin:0; font-size:16px; color:#cfe2ff; }
 .modal .fld { margin:8px 0; }
@@ -865,20 +886,50 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
     <div class="hdr">
       <h3 id="delayTitle">Log / Delay</h3>
     </div>
+
     <div class="fld">
       <label>Start (auto)</label>
       <div id="delayStart" class="readonly-time">--:--</div>
     </div>
+
     <div class="fld">
-      <label>Note / Cause</label>      <textarea id="delayCause" placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
+      <label>Note / Cause</label>
+      <textarea
+        id="delayCause"
+        placeholder="e.g., Waiting on forklift / aisle blocked / label misprint"></textarea>
     </div>
-      <div class="actions">
-        <div class="actions-left">
-          <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
-          <button class="btn" type="button" onclick="submitNote()">Note</button>
-        </div>
-        <button class="btn ok" type="button" onclick="submitDelay()">Submit & Stop</button>
+
+    <div class="actions">
+      <div class="actions-left">
+        <button class="btn ghost" type="button" onclick="cancelDelay()">Cancel</button>
+        <button class="btn gate-snake" type="button" onclick="openSnakeFromDelay()">
+          Snake (congestion)
+        </button>
+        <button class="btn" type="button" onclick="submitNote()">Note</button>
       </div>
+      <button class="btn ok" type="button" onclick="submitDelay()">Submit &amp; Stop</button>
+    </div>
+  </div>
+</div>
+<!-- Snake Host Modal (embeds snake.html sandbox) -->
+<div id="snakeHostModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="snakeHostTitle">
+  <div class="box" style="max-width:720px;">
+    <div class="hdr">
+      <h3 id="snakeHostTitle">Congestion Snake</h3>
+      <button class="btn slim ghost" type="button" onclick="closeSnakeHost()">✖</button>
+    </div>
+
+    <div class="fld">
+      <iframe
+        id="snakeFrame"
+        src="snake.html"
+        style="width:100%; height:560px; border:none; border-radius:14px; background:#000;">
+      </iframe>
+    </div>
+
+    <div class="hint">
+      Use this only while genuinely blocked. Snake is a Pro tool and stays hidden unless unlocked.
+    </div>
   </div>
 </div>
 <!-- Live Rate Modal -->
@@ -1801,7 +1852,11 @@ const KEY_CODES = 'wqt_codes';
 const KEY_LEARN = 'wqt_learn_ul';
 const PRO_UNLOCK_CODE = '0000';
 const OPER_UNLOCK_CODE = '2222';
-let proUnlocked = false;  // Gate: Export/Import/Manage Customers
+const SNAKE_UNLOCK_CODE = '1234';   // <- Snake secret code
+
+let proUnlocked  = false;  // Gate: Export/Import/Manage Customers
+let snakeUnlocked = false; // Gate: Snake congestion game
+
 // Persisted preference: one-time shift length (hours)
 const SHIFT_PREF = 'wqt.shiftLenH';
 setInterval(function(){ saveAll(); }, 30000);
@@ -2246,6 +2301,7 @@ function loadAll(){
       lastClose   = (typeof p.lastClose === 'string') ? p.lastClose : "";
       undoStack   = Array.isArray(p.undoStack) ? p.undoStack : [];
       proUnlocked = !!p.proUnlocked;
+      snakeUnlocked = !!p.snakeUnlocked;
       shiftBreaks = Array.isArray(p.shiftBreaks) ? p.shiftBreaks : [];
 
       // ── Operative data (new) ───────────────────────────────
@@ -2256,7 +2312,7 @@ function loadAll(){
       // ── Sane defaults on first run / cleared storage ───────
       picks = []; historyDays = []; current = null; tempWraps = [];
       startTime = ""; lastClose = ""; undoStack = [];
-      proUnlocked = false; shiftBreaks = [];
+      proUnlocked = false; snakeUnlocked = false; shiftBreaks = [];
 
       // ── Operative defaults (new) ───────────────────────────
       operativeLog = [];
@@ -2302,6 +2358,7 @@ function saveAll(){
         lastClose,
         undoStack,
         proUnlocked,
+        snakeUnlocked,
         shiftBreaks,
         operativeLog,
         operativeActive
@@ -2467,42 +2524,62 @@ function onOtherInput(prefix){
     saveAll();
   }
 }
+// ====== Gates ======
+function applySnakeGate(){
+  document.querySelectorAll('.gate-snake').forEach(el => {
+    // Force-show when unlocked, otherwise hide
+    el.style.display = snakeUnlocked ? 'inline-block' : 'none';
+  });
+}
 
-// ====== Pro Gate ======
 function applyProGate(){
   document.querySelectorAll('.gate-pro').forEach(el => {
     const inHistory = !!el.closest('#tabHistory');
-    el.style.display = (proUnlocked && !inHistory) ? '' : 'none';
+    el.style.display = (proUnlocked && !inHistory) ? 'inline-block' : 'none';
   });
+  applySnakeGate();
   saveAll();
 }
 function updCalcGate() {
   const inp = document.getElementById('qcRate');
   if (!inp) return;
 
-  const raw = String(inp.value || '');
+  const raw    = String(inp.value || '');
   const digits = raw.replace(/\D+/g, '');
 
+  // ---- Pro tools unlock ------------------------------------
   if (digits.endsWith(PRO_UNLOCK_CODE) && digits.length >= PRO_UNLOCK_CODE.length) {
     inp.value = '';
     try { localStorage.setItem('proUnlocked','1'); } catch {}
     window.proUnlocked = true;
-
-    showToast('Pro tools unlocked');   // ← this line must be showToast(...)
+    showToast('Pro tools unlocked');
     openProSettingsModal?.();
     return;
   }
-  else if (digits.endsWith(OPER_UNLOCK_CODE) && digits.length >= OPER_UNLOCK_CODE.length) {
+
+  // ---- Snake unlock ----------------------------------------
+  if (digits.endsWith(SNAKE_UNLOCK_CODE) && digits.length >= SNAKE_UNLOCK_CODE.length) {
     inp.value = '';
-    if (!startTime) {                     // ← guard: must have started a shift
+    snakeUnlocked = true;
+    applySnakeGate();
+    saveAll();
+    showToast('Snake available');
+    return;
+  }
+
+  // ---- Operative unlock ------------------------------------
+  if (digits.endsWith(OPER_UNLOCK_CODE) && digits.length >= OPER_UNLOCK_CODE.length) {
+    inp.value = '';
+    if (!startTime) {
       showToast('Start your shift first');
-      // optional: auto-open the contracted time picker if you want:
-      // openContractedStartPicker?.();
+      // openContractedStartPicker?.();  // optional
       return;
     }
     openOperativeModal();
     return;
   }
+
+  // No special code → just re-run normal QuickCalc logic
   updCalc?.();
 }
 // ====== Tabs ======
@@ -3478,6 +3555,21 @@ function submitDelay(){
   closeDelayModal();
   showToast?.(`Delay logged (${minutes}m)`);
 }
+// ====== Snake page (full screen) ======
+function openSnakeFromDelay(){
+  if (!snakeUnlocked) {
+    showToast?.('Enter the Snake code first');
+    return;
+  }
+  // Navigate to Snake as a full page
+  window.location.href = 'snake.html';
+}
+
+function closeSnakeHost(){
+  const host = document.getElementById('snakeHostModal');
+  if (host) host.style.display = 'none';
+}
+
 function updateSharedDockInfo() {
   const info = document.getElementById('sharedDockInfo');
 
