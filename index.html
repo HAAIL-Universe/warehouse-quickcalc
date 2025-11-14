@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v4.4</title>
+<title>Warehouse QuickCalc & Tracker v4.5</title>
 <style>
 :root {
   --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8;
@@ -3556,6 +3556,89 @@ function submitDelay(){
   closeDelayModal();
   showToast?.(`Delay logged (${minutes}m)`);
 }
+
+// Auto-log a congestion delay when returning from the Snake game
+function applySnakeDelayIfAny(){
+  try {
+    const doneRaw  = localStorage.getItem('snakeDelayCompleted');
+    if (!doneRaw) return;
+
+    const draftRaw = localStorage.getItem('snakeDelayDraft');
+    let done  = null;
+    let draft = null;
+
+    try { done  = JSON.parse(doneRaw || 'null') || null; } catch(_){ done = null; }
+    try { draft = draftRaw ? (JSON.parse(draftRaw) || null) : null; } catch(_){ draft = null; }
+
+    // Determine start/end HH:MM
+    let start = (draft && typeof draft.start === 'string') ? draft.start : null;
+    let end   = (done  && typeof done.end   === 'string') ? done.end   : nowHHMM();
+    const cause = (done && typeof done.cause === 'string') ? done.cause : 'Congestion';
+
+    if (!start) start = end;
+
+    let minutes = Math.max(1, Math.round((hm(end) - hm(start)) * 60));
+    if (!Number.isFinite(minutes) || minutes <= 0) minutes = 1;
+
+    if (window.current && Number.isFinite(window.current.total)) {
+      window.current.breaks = window.current.breaks || [];
+      const entry = { type:'D', start, end, minutes, cause };
+      window.current.breaks.push(entry);
+      window.current.__lastDelay = entry;
+      window.undoStack?.push?.({ type:'delay' });
+      window.renderTimeline?.();
+      window.updateSummary?.();
+      window.saveAll?.();
+    } else {
+      const key = 'shiftDelays';
+      let arr = [];
+      try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch(_){ arr = []; }
+      arr.push({ type:'D', start, end, minutes, cause });
+      localStorage.setItem(key, JSON.stringify(arr));
+      window.renderShiftPanel?.();
+    }
+
+    // Best-effort cleanup so we don't accidentally re-log
+    localStorage.removeItem('snakeDelayDraft');
+    localStorage.removeItem('snakeDelayCompleted');
+
+    window.showToast?.(`Delay logged (${minutes}m, congestion)`);
+  } catch (e) {
+    console.error('applySnakeDelayIfAny failed', e);
+    try {
+      localStorage.removeItem('snakeDelayDraft');
+      localStorage.removeItem('snakeDelayCompleted');
+    } catch(_){}
+  }
+}
+
+// ====== Snake page (full screen) ======
+function openSnakeFromDelay(){
+  if (!snakeUnlocked) {
+    showToast?.('Enter the Snake code first');
+    return;
+  }
+
+  // Snapshot the delay start + whether there was an active order
+  try {
+    const start = (window.delayDraft && delayDraft.start) ? delayDraft.start : nowHHMM();
+    const hasOrder = !!(window.current && Number.isFinite(window.current.total));
+    const payload = { start, hasOrder };
+    localStorage.setItem('snakeDelayDraft', JSON.stringify(payload));
+  } catch(e){}
+
+  // Navigate to Snake as a full page
+  window.location.href = 'snake.html';
+}
+
+function closeSnakeHost(){
+  const host = document.getElementById('snakeHostModal');
+  if (!host) return;
+  host.classList.add('hidden');
+  const iframe = document.getElementById('snakeFrame');
+  if (iframe) iframe.src = '';
+}
+
 // ====== Snake page (full screen) ======
 function openSnakeFromDelay(){
   if (!snakeUnlocked) {
@@ -5297,6 +5380,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── 1) Restore persisted state FIRST ────────────────────────────
     loadCustomCodes();
     loadAll(); // hydrates: startTime, current, tempWraps, picks, historyDays, etc.
+
+    // If we just came back from Snake, auto-log that congestion delay
+    if (typeof applySnakeDelayIfAny === 'function') applySnakeDelayIfAny();
+
     const hadShift = !!startTime;
     const hadOpen  = !!(current && Number.isFinite(current.total));
     // ── 2) Build customer dropdowns (safe post-restore) ─────────────
