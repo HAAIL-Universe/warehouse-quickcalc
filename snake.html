@@ -684,7 +684,7 @@
     savedGame = null;
     }
 
-    function endCongestionAndGameManual(){
+  function endCongestionAndGameManual(){
 
         // Try to end the game if it's currently running
         try {
@@ -693,10 +693,32 @@
             // game wasn't running — safe to ignore
         }
 
+        // Snapshot an end time + cause so the main app can log a delay
+        try {
+            const now   = new Date();
+            const hh    = String(now.getHours()).padStart(2, "0");
+            const mm    = String(now.getMinutes()).padStart(2, "0");
+            const endHm = hh + ":" + mm;
+
+            let payload = {};
+            try {
+                const raw = localStorage.getItem("snakeDelayCompleted");
+                if (raw) payload = JSON.parse(raw) || {};
+            } catch (_){ payload = {}; }
+
+            payload.end   = endHm;
+            payload.ts    = now.toISOString();
+            payload.cause = "Congestion";
+
+            localStorage.setItem("snakeDelayCompleted", JSON.stringify(payload));
+        } catch (e) {
+            // If localStorage is blocked, we still just navigate back.
+        }
+
         // Always return to QuickCalc, even if congestion was never started
         setTimeout(() => {
             try {
-                window.location.href = 'index.html';
+                window.location.href = "index.html";
             } catch (e) {
                 // fail-safe: user can close the tab manually
             }
