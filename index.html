@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Warehouse QuickCalc & Tracker v4.5</title>
+<title>Warehouse QuickCalc & Tracker v4.4</title>
 <style>
 :root {
   --bg:#0b0d10; --card:#141821; --ink:#e8eef7; --muted:#9fb3c8;
@@ -3639,13 +3639,45 @@ function closeSnakeHost(){
   if (iframe) iframe.src = '';
 }
 
-// ====== Snake page (full screen) ======
 function openSnakeFromDelay(){
   if (!snakeUnlocked) {
     showToast?.('Enter the Snake code first');
     return;
   }
-  // Navigate to Snake as a full page
+
+  try {
+    // 1) Snapshot delay start + whether there's an active order
+    const start = (window.delayDraft && delayDraft.start) ? delayDraft.start : nowHHMM();
+    const hasOrder = !!(window.current && Number.isFinite(window.current.total));
+    const payload = { start, hasOrder };
+    localStorage.setItem('snakeDelayDraft', JSON.stringify(payload));
+
+    // 2) Snapshot the live rate for Snake
+    let rateUh = 0;
+
+    // Prefer the proper helper if available
+    if (typeof getLiveRateUh === 'function') {
+      rateUh = Math.round(getLiveRateUh() || 0);
+    } else {
+      // Fallback: parse the Live Rate chip text, e.g. "283 u/h"
+      const chip = document.getElementById('chipRateVal');
+      if (chip) {
+        const m = String(chip.textContent || '').match(/(\d+)/);
+        rateUh = m ? parseInt(m[1], 10) : 0;
+      }
+    }
+
+    // If there's nothing meaningful, default to 250 u/h
+    if (!rateUh || rateUh <= 0 || !Number.isFinite(rateUh)) {
+      rateUh = 250;
+    }
+
+    localStorage.setItem('snakeLiveRateUh', String(rateUh));
+  } catch(e){
+    console.error('openSnakeFromDelay snapshot failed', e);
+  }
+
+  // 3) Navigate to Snake as a full page
   window.location.href = 'snake.html';
 }
 
