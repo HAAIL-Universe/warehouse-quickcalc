@@ -606,8 +606,8 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
 <div class="wrap">
   <!-- Top tab bar: switches between QuickCalc / Tracker / History -->
   <div class="tabs">
-    <button id="tabCalcBtn" class="tabbtn active" type="button" onclick="showTab('calc')">QuickCalc</button>
-    <button id="tabTrackBtn" class="tabbtn" type="button" onclick="showTab('tracker')">Tracker</button>
+    <button id="tabCalcBtn" class="tabbtn" type="button" onclick="showTab('calc')">QuickCalc</button>
+    <button id="tabTrackBtn" class="tabbtn active" type="button" onclick="showTab('tracker')">Tracker</button>
     <button id="tabHistBtn" class="tabbtn" type="button" onclick="showTab('history')">History</button>
   </div>
 
@@ -622,7 +622,7 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
        - Countback calculator
        - QuickCalc basic units + rate calc
        =================================================================== -->
-  <section id="tabCalc">
+  <section id="tabCalc" class="hidden">
     <!-- B1: Countback calculator (moved ABOVE QuickCalc) -->
     <div class="cbCard">
       <div class="cbRow" style="flex-wrap:wrap; align-items:flex-start;">
@@ -757,7 +757,7 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
   <!-- ===================================================================
        SECTION D – TRACKER TAB (SHIFT / ORDERS / BREAKS / DELAYS)
        =================================================================== -->
-  <section id="tabTracker" class="hidden">
+  <section id="tabTracker">
     <!-- D1: Shift start / length picker -->
     <div class="card" id="shiftCard">
       <div class="row" style="align-items:flex-end;">
