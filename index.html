@@ -3498,7 +3498,7 @@ function startOrder() {
     shared: false,  // Shared mode flag (set in openSharedStart())
   };
   tempWraps = [];
-  undoStack = [];
+  undoStack = [{ type: 'start' }];
 
   // --- Seed from Live Rate chip if available ---
   (function seedFromLiveRate(){
