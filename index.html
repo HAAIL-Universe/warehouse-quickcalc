@@ -3956,10 +3956,9 @@ function updateDelayBtn(){
   const btn = document.getElementById('btnDelay');
   if (!btn) return;
 
-  // If the shift has started and we're not looking at an archived day,
-  // you should always be able to log a delay/note.
-  const shiftOn = !!startTime && window.archived !== true;
-  btn.style.display = shiftOn ? 'inline-block' : 'none';
+  // Keep the button available whenever it exists.
+  // openDelayModal() already enforces "start your shift" before logging.
+  btn.style.display = 'inline-block';
 }
 
 // Open delay modal, seeding readonly timestamp
