@@ -3986,62 +3986,40 @@ function closeDelayModal(){ document.getElementById('delayModal').style.display=
 function cancelDelay(){ delayDraft=null; closeDelayModal(); }
 
 // Commit a delay record (with reason). Works with or without an active order.
-function submitDelay() {
-  if (!delayDraft || !delayDraft.start) {
-    return alert('Delay start time missing.');
+function submitDelay(){
+  if (!delayDraft){ closeDelayModal(); return; }
+
+  const end = nowHHMM();
+  const minutes = Math.max(1, Math.round((hm(end)-hm(delayDraft.start))*60));
+  const cause = (document.getElementById('delayCause').value||'').trim();
+  const cust  = current && current.name ? current.name : null;
+
+  // 1) Attach to current order if there is one
+  if (current && Number.isFinite(current.total)) {
+    current.breaks = current.breaks || [];
+    const entry = { type:'D', start: delayDraft.start, end, minutes, cause };
+    current.breaks.push(entry);
+    current.__lastDelay = entry;
+    undoStack.push?.({ type:'delay' });
+    renderTimeline?.(); updateSummary?.(); saveAll?.();
   }
 
-  const endStr = (document.getElementById('delayEnd')?.value || '').trim();
-  if (!endStr) return alert('Enter end time for the delay.');
-
-  const causeSel = document.getElementById('causeDD');
-  const causeTxt = (causeSel && causeSel.value) ? causeSel.value : 'Unspecified';
-
-  const startMins = hmToMinutes(delayDraft.start);
-  const endMins   = hmToMinutes(endStr);
-  if (!(endMins > startMins)) {
-    return alert('End must be after start time.');
-  }
-
-  const minutes = endMins - startMins;
-  const cust    = current && current.name ? current.name : null;
-
-  const delayEntry = {
-    type: 'D',
-    start: delayDraft.start,
-    end: endStr,
-    minutes,
-    cause: causeTxt
-  };
-
-  // 1) Always log into shiftDelays (canonical, with optional customer)
+  // 2) Always write to shiftDelays (canonical shift log)
   try {
     const key = 'shiftDelays';
     const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    const payload = cust
-      ? { ...delayEntry, cust }
-      : delayEntry;
-    arr.push(payload);
+    const shiftEntry = cust
+      ? { type:'D', start: delayDraft.start, end, minutes, cause, cust }
+      : { type:'D', start: delayDraft.start, end, minutes, cause };
+    arr.push(shiftEntry);
     localStorage.setItem(key, JSON.stringify(arr));
-  } catch (e) {
-    console.error('Failed to persist shift delay', e);
-  }
+  } catch(e){}
 
-  // 2) If there is an active order, also mirror into its order-specific log
-  if (current && Number.isFinite(current.total)) {
-    current.breaks = current.breaks || [];
-    current.breaks.push({ ...delayEntry });
-    undoStack.push?.({ type: 'delay' });
-    try { renderTimeline?.(); } catch (e) {}
-    try { updateSummary?.(); } catch (e) {}
-    try { saveAll?.(); } catch (e) {}
-  }
-
-  // 3) Refresh shift-wide panel
-  try { renderShiftPanel?.(); } catch (e) {}
+  // 3) Repaint Shift Log panel
+  renderShiftPanel?.();
 
   delayDraft = null;
-  closeDelayModal?.();
+  closeDelayModal();
   showToast?.(`Delay logged (${minutes}m)`);
 }
 
