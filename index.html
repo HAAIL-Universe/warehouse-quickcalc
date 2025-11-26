@@ -4320,67 +4320,68 @@ function sharedSubmitUnits(){
 // Save a text note (no delay timing). Always goes into shift log,
 // and if an order is active, we also mirror it into that order's log.
 function submitNote(evt){
-  if (evt) evt.preventDefault?.();
+  try { evt?.preventDefault?.(); } catch(e){}
 
-  // Single source of truth: the textarea in the Log / Delay modal
-  const noteEl = document.getElementById('delayCause');
-  if (!noteEl){
-    alert('Note field not found.');
+  const candidateIds = [
+    'noteText',
+    'noteTextArea',
+    'delayNote',
+    'delayCause'
+  ];
+
+  let el = null;
+  for (const id of candidateIds) {
+    const cand = document.getElementById(id);
+    if (cand) { el = cand; break; }
+  }
+
+  if (!el) {
+    console.warn('No note text area found for submitNote');
     return;
   }
 
-  const raw = (noteEl.value || '').trim();
-  if (!raw){
-    alert('Enter a note before saving.');
+  const raw = (el.value || '').trim();
+  if (!raw) {
+    if (typeof showToast === 'function') showToast('Type a note before saving');
     return;
   }
 
-  // Default timestamp
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2,'0');
-  const mm = String(now.getMinutes()).padStart(2,'0');
-  let timeStr = `${hh}:${mm}`;
-
-  // If the modal has an explicit time field, prefer that (keeps you in sync if you edit)
-  const timeEl = document.getElementById('delayStart') || document.getElementById('noteTime');
-  if (timeEl && timeEl.value){
-    timeStr = timeEl.value;
-  }
-
-  // Active customer (if there is an order running)
+  const t    = nowHHMM();
   const cust = (current && current.name) ? current.name : null;
 
-  // 1) Always write into shiftNotes (canonical)
+  // 1) Canonical shift-level log (always)
   try {
-    const key  = 'shiftNotes';
-    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    const key = 'shiftNotes';
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
     const payload = cust
-      ? { t: timeStr, note: raw, cust }
-      : { t: timeStr, note: raw };
-    list.push(payload);
-    localStorage.setItem(key, JSON.stringify(list));
-  } catch (e){
+      ? { t, note: raw, cust }
+      : { t, note: raw };
+    arr.push(payload);
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch (e) {
     console.error('Failed to persist shift note', e);
   }
 
-  // 2) If there is an active order, mirror into that order's own log
-  if (current && Number.isFinite(current.total)){
+  // 2) If an order is active, mirror into that order's log
+  if (current && Number.isFinite(current.total)) {
     current.breaks = current.breaks || [];
     current.breaks.push({
-      t:    timeStr,
+      type: 'N',
+      t,
       note: raw
     });
-    undoStack.push?.({ type:'note' });
+    undoStack.push?.({ type: 'note' });
     try { renderTimeline?.(); } catch(e){}
     try { updateSummary?.(); } catch(e){}
     try { saveAll?.(); } catch(e){}
   }
 
-  // 3) Refresh UI + clean up
-  noteEl.value = '';
-  closeDelayModal?.();
-  showToast?.('Note saved');
+  // 3) Refresh shift panel view
   try { renderShiftPanel?.(); } catch(e){}
+
+  el.value = '';
+  closeNoteModal?.();
+  if (typeof showToast === 'function') showToast('Note logged');
 }
 
 // Entry-point from UI: just delegate to startBreak with kind 'B' / 'L'
@@ -4773,7 +4774,8 @@ function renderShiftPanel(){
       start:   d.start || '',
       end:     d.end   || '',
       minutes: Number.isFinite(d.minutes) ? d.minutes : undefined,
-      cause:   d.cause || ''
+      cause:   d.cause || '',
+      cust:    d.cust || null      // 👈 customer tag (if present)
     });
   });
 
@@ -4794,7 +4796,7 @@ function renderShiftPanel(){
         t,
         note: noteTxt,
         op: !!n.op,
-        cust: n.cust || null  // optional customer tag
+        cust: n.cust || null  // 👈 optional customer tag
       }); // Regular / operative note
     }
   });
@@ -4804,10 +4806,10 @@ function renderShiftPanel(){
   const dedup = [];
   for (const it of items){
     const key =
-      (it.kind === 'N')               ? `N@${it.t}@${it.note}` :
-      (it.kind === 'D')               ? `D@${it.start}@${it.end}@${it.cause}` :
+      (it.kind === 'N')                 ? `N@${it.t}@${it.note}@${it.cust || ''}` :
+      (it.kind === 'D')                 ? `D@${it.start}@${it.end}@${it.cause}@${it.cust || ''}` :
       (it.kind === 'B' || it.kind==='L') ? `${it.kind}@${it.start}@${it.end}` :
-                                          `${it.kind}@${it.t || it.start || ''}`;
+                                           `${it.kind}@${it.t || it.start || ''}`;
     if (!seen.has(key)){
       seen.add(key);
       dedup.push(it);
@@ -4832,13 +4834,14 @@ function renderShiftPanel(){
         `<span class="meta">${it.start} → ${it.end}${mins}</span></div>`
       );
     } else if (it.kind === 'D'){
-      const mins  = it.minutes != null ? ` • ${it.minutes}m` : '';
-      const cause = it.cause ? `: ${esc(it.cause)}` : '';
-      const meta  = (it.start && it.end)
+      const mins       = it.minutes != null ? ` • ${it.minutes}m` : '';
+      const cause      = it.cause ? `: ${esc(it.cause)}` : '';
+      const custSuffix = it.cust ? ` (${esc(it.cust)})` : '';
+      const meta       = (it.start && it.end)
         ? `${it.start} → ${it.end}${mins}`
         : (it.start || it.end || '');
       out.push(
-        `<div class="tick"><span>⏱️ Delay${cause}</span>` +
+        `<div class="tick"><span>⏱️ Delay${cause}${custSuffix}</span>` +
         `<span class="meta">${meta}</span></div>`
       );
     } else if (it.kind === 'OS'){
@@ -4860,10 +4863,11 @@ function renderShiftPanel(){
         `<span class="meta">${it.t}</span></div>`
       );
     } else if (it.kind === 'N'){
-      const suffix = it.op ? ' (operative)' : '';
-      const txt    = (it.note || '').trim();
+      const opSuffix   = it.op ? ' (operative)' : '';
+      const txt        = (it.note || '').trim();
+      const custSuffix = it.cust ? ` (${esc(it.cust)})` : '';
       out.push(
-        `<div class="tick"><span>📝 Note${suffix}${txt ? ' — ' + esc(txt) : ''}</span>` +
+        `<div class="tick"><span>📝 Note${opSuffix}${txt ? ' — ' + esc(txt) : ''}${custSuffix}</span>` +
         `<span class="meta">${it.t}</span></div>`
       );
     }
@@ -4874,11 +4878,9 @@ function renderShiftPanel(){
 
   applyProGate?.();
 
-  // Force-hide controls when viewing Shift Log with no active shift/order
-  const delayBtn = document.getElementById('btnDelay');
-  const closeBtn = document.getElementById('btnCloseEarly');
-  if (delayBtn) delayBtn.style.display = 'none';
-  if (closeBtn) closeBtn.style.display = 'none';
+  // Let the normal button updaters decide visibility instead of force-hiding.
+  if (typeof updateDelayBtn === 'function') updateDelayBtn();
+  if (typeof updateCloseEarlyBtn === 'function') updateCloseEarlyBtn();
 }
 
 // --- Close Early buttons visibility (tracker tab only)
