@@ -3953,14 +3953,13 @@ function completeOrder() {
 
 // Show/hide Delay button (suppressed during Operative work)
 function updateDelayBtn(){
-  const el = document.getElementById('btnDelay');
-  if (!el) return;
+  const btn = document.getElementById('btnDelay');
+  if (!btn) return;
 
+  // If the shift has started and we're not looking at an archived day,
+  // you should always be able to log a delay/note.
   const shiftOn = !!startTime && window.archived !== true;
-  const hideForOperative = !!(window.operativeActive && !window.operativeActive.end);
-
-  // show only when a shift is on AND we're not in operative mode
-  el.style.display = (shiftOn && !hideForOperative) ? 'inline-block' : 'none';
+  btn.style.display = shiftOn ? 'inline-block' : 'none';
 }
 
 // Open delay modal, seeding readonly timestamp
@@ -4318,65 +4317,71 @@ function sharedSubmitUnits(){
   input.value = '';
 }
 
-// ====== Shift / order notes (no timing, just text) ======
-
-// Save a text note (no delay timing). Works with or without an active order.
+// Save a text note (no delay timing). Always goes into shift log,
+// and if an order is active, we also mirror it into that order's log.
 function submitNote(evt){
-  // Don’t let a surrounding <form> reload the page
-  try { evt?.preventDefault?.(); } catch(e){}
+  if (evt) evt.preventDefault?.();
 
-  // This modal uses the Log / Delay textarea
-  const textarea = document.getElementById('delayCause');
-  const note = (textarea?.value || '').trim();
-
-  // No more “must type a note” alert – empty is allowed
-
-  // Timestamp for both logs
-  let t = '';
-  try {
-    t = (typeof nowHHMM === 'function')
-      ? nowHHMM()
-      : new Date().toTimeString().slice(0, 5);
-  } catch (e) {
-    t = new Date().toTimeString().slice(0, 5);
+  // Single source of truth: the textarea in the Log / Delay modal
+  const noteEl = document.getElementById('delayCause');
+  if (!noteEl){
+    alert('Note field not found.');
+    return;
   }
 
-  const cust = current && current.name ? current.name : null;
+  const raw = (noteEl.value || '').trim();
+  if (!raw){
+    alert('Enter a note before saving.');
+    return;
+  }
 
-  // 1) Shift-level note (canonical, with optional customer tag)
+  // Default timestamp
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  let timeStr = `${hh}:${mm}`;
+
+  // If the modal has an explicit time field, prefer that (keeps you in sync if you edit)
+  const timeEl = document.getElementById('delayStart') || document.getElementById('noteTime');
+  if (timeEl && timeEl.value){
+    timeStr = timeEl.value;
+  }
+
+  // Active customer (if there is an order running)
+  const cust = (current && current.name) ? current.name : null;
+
+  // 1) Always write into shiftNotes (canonical)
   try {
-    const key = 'shiftNotes';
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    const payload = cust ? { t, note, cust } : { t, note };
-    arr.push(payload);
-    localStorage.setItem(key, JSON.stringify(arr));
-  } catch (e) {
+    const key  = 'shiftNotes';
+    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    const payload = cust
+      ? { t: timeStr, note: raw, cust }
+      : { t: timeStr, note: raw };
+    list.push(payload);
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch (e){
     console.error('Failed to persist shift note', e);
   }
 
-  // 2) Order-attached note if an order is active
-  if (current && Number.isFinite(current.total)) {
+  // 2) If there is an active order, mirror into that order's own log
+  if (current && Number.isFinite(current.total)){
     current.breaks = current.breaks || [];
-    current.breaks.push({ type: 'N', t, note });
-    undoStack.push?.({ type: 'note' });
-    try { renderTimeline?.(); } catch (e) {}
-    try { updateSummary?.(); } catch (e) {}
-    try { saveAll?.(); } catch (e) {}
+    current.breaks.push({
+      t:    timeStr,
+      note: raw
+    });
+    undoStack.push?.({ type:'note' });
+    try { renderTimeline?.(); } catch(e){}
+    try { updateSummary?.(); } catch(e){}
+    try { saveAll?.(); } catch(e){}
   }
 
-  // 3) Refresh shift log UI
-  try { renderShiftPanel?.(); } catch (e) {}
-
-  if (textarea) textarea.value = '';
-
-  // Close whichever close function exists
+  // 3) Refresh UI + clean up
+  noteEl.value = '';
   closeDelayModal?.();
-  closeNoteModal?.();
-
-  showToast?.('Note logged');
+  showToast?.('Note saved');
+  try { renderShiftPanel?.(); } catch(e){}
 }
-
-// ====== Break timer (banner) ======
 
 // Entry-point from UI: just delegate to startBreak with kind 'B' / 'L'
 function openBreakModal(kind){ startBreak(kind); }
@@ -4685,9 +4690,10 @@ function renderTimeline(){
       const row = document.createElement('div');
       row.className = 'tick';
       if (it.kind === 'N') {
-        const txt = (it.note || '').trim();
+        const txt        = (it.note || '').trim();
+        const custSuffix = it.cust ? ` (${esc(it.cust)})` : '';
         row.innerHTML =
-          `<span>📝 Note${txt ? ' — ' + esc(txt) : ''}</span>` +
+          `<span>📝 Note${txt ? ' — ' + esc(txt) : ''}${custSuffix}</span>` +
           `<span class="meta">${it.t || ''}</span>`;
       } else if (it.kind === 'D') {
         const cause = it.cause ? ': ' + esc(it.cause) : '';
@@ -4783,7 +4789,13 @@ function renderShiftPanel(){
     } else if (n.op && /(Break|Lunch)\s+(started|ended)/i.test(noteTxt)) {
       items.push({ kind:'OBN', t, text: noteTxt }); // Operative-scoped break/lunch markers
     } else {
-      items.push({ kind:'N', t, note: noteTxt, op: !!n.op }); // Regular / operative note
+      items.push({
+        kind: 'N',
+        t,
+        note: noteTxt,
+        op: !!n.op,
+        cust: n.cust || null  // optional customer tag
+      }); // Regular / operative note
     }
   });
 
