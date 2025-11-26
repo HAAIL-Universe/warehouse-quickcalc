@@ -3979,7 +3979,7 @@ function completeOrder() {
   saveAll();
 }
 
-// Show/hide Delay button (only when a shift is actually running)
+// Show/hide Delay button based on active shift
 function updateDelayBtn(){
   const btn = document.getElementById('btnDelay');
   if (!btn) return;
@@ -5610,8 +5610,16 @@ function endShift(){
 }
 
 // ====== Clear today (keep shift active, nuke orders + logs) ======
+// ====== Clear today (keep shift active, nuke orders + logs) ======
 function clearToday(){
   if (!confirm("Clear today's order data? Your shift will remain active.")) return;
+
+  // If there's no active shift, don't change layout – nothing to clear.
+  const hasShift = !!startTime || (localStorage.getItem('shiftActive') === '1');
+  if (!hasShift) {
+    showToast?.("No active shift to clear.");
+    return;
+  }
 
   // Stop any running predictive/grace timers
   try { predictiveStop?.(); } catch(e){}
