@@ -3448,7 +3448,7 @@ function restoreActiveOrderUI() {
 
     // Hide elapsed chip
     const chipBox2 = document.getElementById('chipElapsed');
-    if (chipBox2) chipBox2.display = 'none';   // NOTE: small typo here; should be style.display
+    if (chipBox2) chipBox2.style.display = 'none';
 
     persistSharedPadOpen(true);
     updateSharedDockInfo?.();
@@ -3682,12 +3682,18 @@ function logWrap() {
   saveAll();
 }
 
-// Undo wrapper for wraps / breaks / delays (never rewinds past order start)
+// Undo wrapper for wraps / breaks / delays / notes (never rewinds past order start)
 function undoLast() {
-  if (!current) { showToast('Nothing to undo'); return; }
+  if (!current) {
+    showToast('Nothing to undo');
+    return;
+  }
 
   const last = undoStack.pop();
-  if (!last) { showToast('Nothing to undo'); return; }
+  if (!last) {
+    showToast('Nothing to undo');
+    return;
+  }
 
   // Never allow Undo to go past the order start
   if (last.type === 'start') {
@@ -3697,30 +3703,51 @@ function undoLast() {
   }
 
   if (last.type === 'wrap') {
+    // Remove last wrap (units-left will be recalculated via getCurrentLeft)
     tempWraps.pop();
 
   } else if (last.type === 'break') {
-    current.breaks?.pop();
+    // Remove last break / lunch entry from the current order log
+    if (Array.isArray(current.breaks) && current.breaks.length) {
+      current.breaks.pop();
+    }
 
   } else if (last.type === 'delay' && current.__lastDelay) {
+    // Remove the specific delay we just logged
     current.breaks = (current.breaks || []).filter(b => b !== current.__lastDelay);
     current.__lastDelay = null;
+
+  } else if (last.type === 'note') {
+    // Remove the last NOTE entry (type: 'N') from the current order log
+    if (Array.isArray(current.breaks) && current.breaks.length) {
+      for (let i = current.breaks.length - 1; i >= 0; i--) {
+        const b = current.breaks[i];
+        if (b && b.type === 'N') {
+          current.breaks.splice(i, 1);
+          break;
+        }
+      }
+    }
   }
 
   // --- Recompute + repaint ---
-  if (typeof updateProgressHeader === 'function') updateProgressHeader();
-  if (typeof renderTimeline       === 'function') renderTimeline();
-  if (typeof updateSummary        === 'function') updateSummary();
-  if (typeof refreshCompleteButton=== 'function') refreshCompleteButton();
-  if (typeof refreshWrapButton    === 'function') refreshWrapButton();
-  if (typeof updateDelayBtn       === 'function') updateDelayBtn();
-  if (typeof updateEndShiftVisibility   === 'function') updateEndShiftVisibility();
-  if (typeof updateCloseEarlyVisibility === 'function') updateCloseEarlyVisibility();
+  if (typeof updateProgressHeader        === 'function') updateProgressHeader();
+  if (typeof renderTimeline              === 'function') renderTimeline();
+  if (typeof updateSummary               === 'function') updateSummary();
+  if (typeof refreshCompleteButton       === 'function') refreshCompleteButton();
+  if (typeof refreshWrapButton           === 'function') refreshWrapButton();
+  if (typeof updateDelayBtn              === 'function') updateDelayBtn();
+  if (typeof updateEndShiftVisibility    === 'function') updateEndShiftVisibility();
+  if (typeof updateCloseEarlyVisibility  === 'function') updateCloseEarlyVisibility();
 
   // Predictive: re-baseline to latest known left/rate (or stop if no order)
   if (current) {
-    const left = (typeof getCurrentLeft === 'function') ? getCurrentLeft() : (current.left ?? 0);
-    const rate = (typeof getLiveRateUh  === 'function') ? getLiveRateUh()  : 0;
+    const left = (typeof getCurrentLeft === 'function')
+      ? getCurrentLeft()
+      : (current.left ?? 0);
+    const rate = (typeof getLiveRateUh === 'function')
+      ? getLiveRateUh()
+      : 0;
     if (typeof predictiveReset === 'function') predictiveReset(left, rate);
   } else {
     if (typeof predictiveStop === 'function') predictiveStop();
