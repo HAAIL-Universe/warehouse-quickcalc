@@ -3145,7 +3145,8 @@ function beginShift(){
   if (shift)  shift.style.display = 'none';
   if (active) active.style.display = 'block';
   if (done)   done.style.display = 'block';
-
+  const shiftLog = document.getElementById('shiftLogCard');
+  if (shiftLog) shiftLog.style.display = 'block';
   // Header form visible until an order starts
   const hdrForm = document.getElementById('orderHeaderForm');
   const hdrProg = document.getElementById('orderHeaderProgress');
