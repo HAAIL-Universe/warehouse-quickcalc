@@ -904,7 +904,7 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
     </div>
 
     <!-- D4: Shift-wide (no-order) log panel — sits between the order box and the buttons -->
-    <div class="card" id="shiftLogCard">
+    <div class="card" id="shiftLogCard" style="display:none;">
       <div id="shiftLogHeader" class="row" style="align-items:center; justify-content:space-between; padding:6px 8px 0;">
         <div id="shiftLogTitle" class="muted" style="font-weight:600;">Shift Log</div>
         <div id="shiftLogCount" class="meta"></div>
@@ -4900,8 +4900,14 @@ function renderShiftPanel(){
     }
   });
 
-  list.innerHTML = out.length ? out.join('') : '<div class="hint">Nothing logged yet.</div>';
-  card.style.display = 'block';
+  // If nothing to show yet, hide the Shift Log card completely
+  if (!out.length) {
+    list.innerHTML = '';
+    card.style.display = 'none';
+  } else {
+    list.innerHTML = out.join('');
+    card.style.display = 'block';
+  }
 
   applyProGate?.();
 
@@ -4909,6 +4915,7 @@ function renderShiftPanel(){
   if (typeof updateDelayBtn === 'function') updateDelayBtn();
   if (typeof updateCloseEarlyBtn === 'function') updateCloseEarlyBtn();
 }
+
 
 // --- Close Early buttons visibility (tracker tab only)
 function updateCloseEarlyVisibility(){
