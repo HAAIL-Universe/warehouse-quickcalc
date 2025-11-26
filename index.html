@@ -4321,11 +4321,9 @@ function sharedSubmitUnits(){
 // ====== Shift / order notes (no timing, just text) ======
 
 // Save a text note (no delay timing). Works with or without an active order.
-// Save a text note (no delay timing). Works with or without an active order.
 function submitNote(evt){
   // Don’t let a surrounding <form> reload the page
   try { evt?.preventDefault?.(); } catch(e){}
-
   // This modal uses the Log / Delay textarea
   const textarea = document.getElementById('delayCause');
   const note = (textarea?.value || '').trim();
@@ -4337,49 +4335,7 @@ function submitNote(evt){
 
   // Timestamp for both logs
   let t = '';
-  try {
-    t = (typeof nowHHMM === 'function')
-      ? nowHHMM()
-      : new Date().toTimeString().slice(0,5);
-  } catch(e){
-    t = new Date().toTimeString().slice(0,5);
-  }
-
-  const cust = current && current.name ? current.name : null;
-
-  // 1) Shift-level note (canonical, with optional customer tag)
-  try {
-    const key = 'shiftNotes';
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    const payload = cust
-      ? { t, note, cust }
-      : { t, note };
-    arr.push(payload);
-    localStorage.setItem(key, JSON.stringify(arr));
-  } catch(e){
-    console.error('Failed to persist shift note', e);
-  }
-
-  // 2) Order-attached note if an order is active
-  if (current && Number.isFinite(current.total)) {
-    current.breaks = current.breaks || [];
-    current.breaks.push({ type: 'N', t, note });
-    undoStack.push?.({ type: 'note' });
-    try { renderTimeline?.(); } catch(e){}
-    try { updateSummary?.(); } catch(e){}
-    try { saveAll?.(); } catch(e){}
-  }
-
-  // 3) Refresh shift log UI
-  try { renderShiftPanel?.(); } catch(e){}
-
-  if (textarea) textarea.value = '';
-
-  // Close whichever close function exists
-  closeDelayModal?.();
-  closeNoteModal?.();
-
-  showToast?.('Note logged');
+  ...
 }
 
 // ====== Break timer (banner) ======
