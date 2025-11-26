@@ -3979,14 +3979,13 @@ function completeOrder() {
   saveAll();
 }
 
-// Show/hide Delay button (suppressed during Operative work)
+// Show/hide Delay button (only when a shift is actually running)
 function updateDelayBtn(){
   const btn = document.getElementById('btnDelay');
   if (!btn) return;
 
-  // Keep the button available whenever it exists.
-  // openDelayModal() already enforces "start your shift" before logging.
-  btn.style.display = 'inline-block';
+  const shiftOn = !!startTime && window.archived !== true;
+  btn.style.display = shiftOn ? 'inline-block' : 'none';
 }
 
 // Open delay modal, seeding readonly timestamp
