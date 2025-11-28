@@ -5798,6 +5798,20 @@ function clearToday(){
   lastClose   = '';
   shiftBreaks = [];
 
+  // --- Shared Pick RESET (ensure bar hides on refresh) ---
+  try {
+    persistSharedPadOpen(false);    // hide the bar immediately
+    hideSharedPad?.();              // collapse UI
+    localStorage.removeItem('sharedDockOpen');
+    localStorage.removeItem('sharedMySum');
+    localStorage.removeItem('sharedBlock');
+    localStorage.removeItem('currentOrder');   // <-- critical so earlyRestore stops resurrecting shared mode
+  } catch(e){}
+  window.sharedMySum        = 0;
+  window.sharedBlock        = 0;
+  window._sharedProgressLeft = null;
+  // ---------------------------------------------------------
+
   try { localStorage.setItem('shiftActive','1'); } catch(e){} // keep durable flag on
 
   // Also wipe shift-wide logs (operative + shift notes/delays)
