@@ -278,26 +278,48 @@ td.small { font-size:12px; color:#9fb3c8; }
 .cbPad button { padding:28px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:500; font-size:22px; }
 .cbChips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .cbSummary { margin-left:auto; text-align:right; font-weight:800; }
+
 /* =====================================================================
-   11.5 SHARED ORDER BAR (BOTTOM DOCK)
+   11.5 SHARED PICK BAR (BOTTOM FULL-WIDTH)
    ===================================================================== */
+#sharedPad{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  z-index:40;
+  display:none;
+  background:#05070b;
+  border-top:1px solid #5e1a1e;
+  box-shadow:0 -6px 20px rgba(0,0,0,.8);
+}
+
 .shared-pad-inner{
-  max-width:700px;
+  max-width:900px;
   margin:0 auto;
+  padding:8px 12px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:12px;
 }
 
-.shared-pad-label{
+.shared-pad-text{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.shared-pad-title{
   font-size:11px;
   text-transform:uppercase;
-  letter-spacing:0.06em;
-  color:#c8d4e4;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  letter-spacing:0.08em;
+  color:#f1d9db;
+}
+
+.shared-pad-meta{
+  font-size:10px;
+  color:#9fb3c8;
 }
 
 .shared-pad-controls{
@@ -307,15 +329,15 @@ td.small { font-size:12px; color:#9fb3c8; }
 }
 
 .shared-pad-input{
-  width:96px;
-  padding:8px 10px;
+  width:90px;
+  padding:6px 10px;
   text-align:center;
-  font-size:16px;
+  font-size:14px;
   font-weight:600;
   border-radius:10px;
   border:1px solid #5e1a1e;
-  background:#05070b;
-  color:var(--ink);
+  background:#0f131b;
+  color:#f1d9db;
 }
 
 /* Hide number spinners so it looks like a normal WQT field */
@@ -328,71 +350,7 @@ td.small { font-size:12px; color:#9fb3c8; }
   -moz-appearance:textfield;
 }
 
-.shared-pad-submit{
-  padding:8px 16px;
-  font-size:14px;
-}
-/* =====================================================================
-   11.5 SHARED ORDER PILL (BOTTOM FLOAT)
-   ===================================================================== */
-.shared-pad-pill{
-  max-width:480px;
-  width:100%;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:8px 14px;
-  border-radius:999px;
-  background:#05070b;
-  border:1px solid var(--accent);
-  box-shadow:0 8px 22px rgba(0,0,0,.85);
-}
-
-.shared-pad-label{
-  font-size:11px;
-  text-transform:uppercase;
-  letter-spacing:0.08em;
-  color:#f1d9db;
-}
-
-.shared-pad-meta{
-  display:block;
-  font-size:10px;
-  text-transform:none;
-  letter-spacing:0.03em;
-  color:#9fb3c8;
-}
-
-.shared-pad-controls{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.shared-pad-input{
-  width:80px;
-  padding:6px 10px;
-  text-align:center;
-  font-size:14px;
-  font-weight:600;
-  border-radius:999px;
-  border:1px dashed var(--rim2);
-  background:#0f131b;
-  color:#f1d9db;
-}
-
-/* Hide number spinners so it looks like a normal WQT pill input */
-#sharedPad input[type=number]::-webkit-outer-spin-button,
-#sharedPad input[type=number]::-webkit-inner-spin-button{
-  -webkit-appearance:none;
-  margin:0;
-}
-#sharedPad input[type=number]{
-  -moz-appearance:textfield;
-}
-
-.shared-pad-submit{
+.shared-pad-add{
   padding:6px 14px;
   font-size:13px;
 }
@@ -1059,21 +1017,13 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
     </div>
   </section>
 
-
   <!-- ===================================================================
-      SECTION E – SHARED ORDER PILL (BOTTOM FLOAT)
-      =================================================================== -->
-  <div id="sharedPad" style="
-    position:fixed;
-    left:50%;
-    transform:translateX(-50%);
-    bottom:12px;
-    z-index:40;
-    display:none;
-  ">
-    <div class="shared-pad-pill">
-      <div class="shared-pad-label">
-        🤝 Shared pick
+        SECTION E – SHARED ORDER BAR (FULL-WIDTH)
+        =================================================================== -->
+  <div id="sharedPad">
+    <div class="shared-pad-inner">
+      <div class="shared-pad-text">
+        <span class="shared-pad-title">Shared pick</span>
         <span class="shared-pad-meta">Units for this block</span>
       </div>
 
@@ -1088,11 +1038,11 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
           class="shared-pad-input"
         >
         <button
-          class="btn ok btn.slim shared-pad-submit"
+          class="btn ok shared-pad-add"
           id="padSubmit"
           type="button"
         >
-          Submit
+          Add
         </button>
       </div>
     </div>
@@ -6754,7 +6704,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 
-// ─── Shared Pad (floating pill using native keypad) ─────────────────────────
+// ─── Shared Pad (full-width bar using native keypad) ────────────────────────
 (function initSharedPad(){
   const pad = document.getElementById('sharedPad');
   const inp = document.getElementById('padUnits');
@@ -6763,7 +6713,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (!pad || !inp || !hid || !sub) return;
 
-  // Submit handler – feed existing sharedSubmitUnits() pipeline
+  // Click "Add" → push units into existing sharedSubmitUnits() pipeline
   sub.addEventListener('click', () => {
     const n = parseInt(inp.value || '0', 10);
     if (!(n > 0)) {
@@ -6774,10 +6724,10 @@ document.addEventListener('DOMContentLoaded', function () {
     hid.value = String(n);
     try { sharedSubmitUnits(); } catch (e) {}
     inp.value = '';
-    inp.blur();          // close mobile keyboard after submit
+    inp.blur();          // close mobile keyboard after add
   });
 
-  // Pressing Enter behaves like clicking Submit
+  // Enter key acts like Add
   inp.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter') {
       ev.preventDefault();
@@ -6785,22 +6735,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Clicking anywhere on the pill (except Submit) focuses the input
+  // Tapping the bar (label area) focuses the input
   pad.addEventListener('click', (ev) => {
-    if (ev.target === sub) return;
+    if (ev.target === sub || ev.target === inp) return;
     inp.focus();
   });
 
-  // Global helpers so existing code can show/hide without touching layout math
+  // Global helpers used elsewhere when starting/ending shared picks
   window.showSharedPad = function(){
     pad.style.display = 'block';
-    // Reserve just enough space so nothing important is hidden
-    document.body.style.paddingBottom = '80px';
+    // Keep content above the bar so it never hides "Close Early..."
+    document.body.style.paddingBottom = '72px';
   };
   window.hideSharedPad = function(){
     pad.style.display = 'none';
-    inp.blur();
     document.body.style.paddingBottom = '';
+    inp.blur();
   };
 })();
 
