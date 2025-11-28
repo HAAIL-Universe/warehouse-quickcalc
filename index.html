@@ -359,6 +359,17 @@ td.small { font-size:12px; color:#9fb3c8; }
   border-radius:10px;     /* same rounding as input */
 }
 
+/* === FIXED Add Button Sizing & Text Fit ======================== */
+.shared-pad-add {
+  padding: 4px 20px !important;   /* slightly shorter height + more width */
+  font-size: 12px !important;     /* shrinks text so "Add" fits cleanly */
+  height: 30px !important;        /* matches Units field better */
+  line-height: 20px !important;
+  min-width: 60px !important;     /* guarantees enough horizontal space */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
 
 /* =====================================================================
    12. BREAK BAR (STICKY BOTTOM) + PROGRESS HEADER / BAR / PACE COLOURS
