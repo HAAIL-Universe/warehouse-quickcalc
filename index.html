@@ -1879,11 +1879,18 @@ function openSharedStart() {
   // Now set current.shared = true to indicate it's a shared order
   if (current) {
     current.shared = true;
-    persistSharedPadOpen(true);
-    updateSharedDockInfo?.();
-    setTimeout(()=> document.getElementById('padUnits')?.focus(), 0);
 
-    // NEW: same immediate UI kick as normal start
+    // Initialise shared counters for this session
+    window.sharedMySum = 0;
+    window.sharedBlock = 0;
+
+    // Open + persist the Shared Pick bar state
+    persistSharedPadOpen(true);
+    try { localStorage.setItem('sharedDockOpen', '1'); } catch(e) {}
+
+    updateSharedDockInfo?.();
+
+    // Same immediate UI kick as normal start (elapsed chip etc.)
     const chip = document.getElementById('chipElapsed');
     if (chip) {
       chip.style.display = '';
@@ -1893,26 +1900,29 @@ function openSharedStart() {
     updateElapsedChip?.();
     setElapsedChipClickable?.(true);
     updateCloseEarlyVisibility?.();
+
+    // CRITICAL: persist the updated current (with shared flag) for refresh restore
+    try {
+      localStorage.setItem('currentOrder', JSON.stringify(current));
+    } catch (e) {
+      console.warn('Failed to persist shared currentOrder:', e);
+    }
   }
 
-  // Update the Total Units, Left, and other progress bar elements (kept)
-  document.getElementById('progLeft').textContent = current.total;
+  // Update the Total Units, Left, and other progress bar elements
+  if (current && Number.isFinite(+current.total)) {
+    document.getElementById('progLeft').textContent = current.total;
+  } else {
+    document.getElementById('progLeft').textContent = '0';
+  }
   document.getElementById('progRate').textContent = '—';
   document.getElementById('progPct').textContent = '0%';
   document.getElementById('progFill').style.width = '0%';
   updateProgressHeader?.();
   updateHeaderActions?.();
 
-  // init shared counters
-  window.sharedMySum = 0;
-  window.sharedBlock = 0;
-  updateSharedDockInfo?.();
-
-  // Show merged shared pad
-  showSharedPad?.();
-  localStorage.setItem('sharedDockOpen','1');
-  updateSharedDockInfo?.();
-  setTimeout(()=> document.getElementById('padUnits')?.focus(), 0);
+  // Shared dock info already initialised above; just ensure focus on the bar input
+  setTimeout(() => document.getElementById('padUnits')?.focus(), 0);
 }
 
 // 2) Hook after startOrder completes: flip into shared mode & show dock
@@ -6744,12 +6754,17 @@ document.addEventListener('DOMContentLoaded', function () {
     updateEndPickingVisibility();
     updateCloseEarlyVisibility();
     updateElapsedChip();
+
+    // Wire Shared Pick bottom bar (padUnits / padSubmit) once DOM is ready
+    initSharedPad?.();
+
     saveAll?.();
   } catch (err) {
     console.error(err);
     showToast('Error on load: ' + (err.message || err));
   }
 });
+
 
 // Shared pad: wire up bar input + Add button → sharedSubmitUnits + visual confirm
 function initSharedPad(){
@@ -6945,6 +6960,23 @@ function submitWrapLeft(){
 
   updateHeaderActions?.();
   showToast?.(`Wrap logged (+${done})`);
+}
+// Global helpers to show/hide the bottom Shared Pick bar (#sharedPad)
+function showSharedPad(){
+  const pad = document.getElementById('sharedPad');
+  if (!pad) return;
+  pad.style.display = 'block';
+  // Keep content above the bar so it never hides "Close Early..."
+  document.body.style.paddingBottom = '72px';
+}
+
+function hideSharedPad(){
+  const pad = document.getElementById('sharedPad');
+  if (!pad) return;
+  pad.style.display = 'none';
+  document.body.style.paddingBottom = '';
+  const inp = document.getElementById('padUnits');
+  if (inp) inp.blur();
 }
 
 // Control and persist open/closed state
