@@ -371,6 +371,17 @@ td.small { font-size:12px; color:#9fb3c8; }
   justify-content: center !important;
 }
 
+/* Visual confirmation when units are added */
+#sharedPad .shared-pad-add.shared-pad-added{
+  background:
+    linear-gradient(#122819,#122819) padding-box,
+    linear-gradient(180deg,var(--rim1),var(--rim2)) border-box;
+  border-color:#1f5a32;
+  box-shadow:
+    0 0 0 1px #1f5a32,
+    0 0 14px rgba(16,151,60,.75);
+}
+
 /* =====================================================================
    12. BREAK BAR (STICKY BOTTOM) + PROGRESS HEADER / BAR / PACE COLOURS
    ===================================================================== */
@@ -1969,49 +1980,35 @@ function isFirstOrderToday(){ return !localStorage.getItem(shiftDateKey()); }
 function markFirstOrderStarted(){ localStorage.setItem(shiftDateKey(), '1'); }
 
 // Early restore pipeline for break + shared-order state on load
-function earlyRestore() {
-  try {
-    // ── 1. Restore active break/lunch early and bail if needed ──
-    try {
-      const raw = localStorage.getItem('breakDraft');
-      if (raw) {
-        breakDraft = JSON.parse(raw);
-        if (breakDraft) {
-          restoreBreakDraftIfAny();
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to restore active break/lunch:', e);
-    }
+function earlyRestore(){
+  try{
+    // ── 1. Reload persisted state once (no UI) ──
+    loadAll?.();
 
-    // ── 2. Load all saved data first ──
-    loadAll();
-    restoreBreakDraftIfAny();
+    // ── 2. Rebuild any break / delay UI drafts ──
+    restoreBreakDraftIfAny?.();
 
     // ── 3. Try to rehydrate any partial Shared Order state ──
     try {
-      const currRaw = localStorage.getItem('currentOrder');
-      if (currRaw && !window.current) {
-        window.current = JSON.parse(currRaw);
+      const stored = localStorage.getItem('currentOrder');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          window.current = parsed;
+        }
       }
-      // restore partial progress counters
-      const sm = parseInt(localStorage.getItem('sharedMySum') || '0', 10);
-      const sb = parseInt(localStorage.getItem('sharedBlock') || '0', 10);
-      window.sharedMySum = (isFinite(sm) && sm >= 0) ? sm : 0;
-      window.sharedBlock = (isFinite(sb) && sb >= 0) ? sb : 0;
-    } catch(e) {
-      console.warn('Shared session rehydrate failed', e);
-    }
+    } catch(e){}
 
-    // ── 4. Determine if pad should show ──
-    const sharedFlag = localStorage.getItem('sharedDockOpen') === '1';
-    const isShared   = !!(window.current && window.current.shared);
+    // Always treat "current.shared" as source of truth for the bottom bar
+    const isShared = !!(window.current && window.current.shared);
 
-    if (isShared && sharedFlag) {
-      // Show merged SharedPad and restore counters
-      showSharedPad?.();
+    // ── 4. Shared dock: always show pad when in a shared order ──
+    if (isShared) {
+      // Show the bar + keep bottom padding consistent
+      persistSharedPadOpen(true);
+      try { localStorage.setItem('sharedDockOpen','1'); } catch(e){}
 
+      // Rebuild shared progress + predictive ETA hooks if we have a live total
       if (current && Number.isFinite(+current.total)) {
         const total = +current.total;
         const left  = Math.max(0, total - (window.sharedMySum || 0));
@@ -2036,9 +2033,9 @@ function earlyRestore() {
       setTimeout(()=> document.getElementById('padUnits')?.focus(), 100);
 
     } else {
-      // hide pad if not in shared mode
-      hideSharedPad?.();
-      localStorage.setItem('sharedDockOpen','0');
+      // Not in shared mode → bar should be hidden and preference reset
+      persistSharedPadOpen(false);
+      try { localStorage.setItem('sharedDockOpen','0'); } catch(e){}
     }
 
     // ── 5. Ensure UI re-renders for any active order ──
@@ -6740,8 +6737,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     hid.value = String(n);
     try { sharedSubmitUnits(); } catch (e) {}
+
+    // Clear input + close mobile keyboard
     inp.value = '';
-    inp.blur();          // close mobile keyboard after add
+    inp.blur();
+
+    // Visual confirmation: flash the Add button green for ~3s
+    sub.classList.add('shared-pad-added');
+    setTimeout(() => {
+      sub.classList.remove('shared-pad-added');
+    }, 3000);
   });
 
   // Enter key acts like Add
@@ -6770,6 +6775,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inp.blur();
   };
 })();
+
 
 function openWrapModal(){
   if (!current) return;
