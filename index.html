@@ -2169,7 +2169,8 @@ function restoreBreakDraftIfAny(){
 })();
 
 // 2) Now restore UI & timers from the preloaded draft
-earlyRestore();
+// Defer so SharedPad helpers (showSharedPad/hideSharedPad) are defined first
+setTimeout(earlyRestore, 0);
 
 // 3) Keep persisting while a break is active
 setInterval(()=>{
