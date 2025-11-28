@@ -1961,12 +1961,14 @@ function openSharedStart() {
   };
 })()
 
-// Cancel/clear shared-mode UI & persistence, leaving normal order flow
 function sharedCancel(){
   if (!confirm('Discard shared progress?')) return;
 
-  hideSharedPad?.();
+  // Hide the bar now
+  try { persistSharedPadOpen(false); } catch(e){}
+  hideSharedPad?.?.(); // safe even if not defined
 
+  // Reset in-memory shared state
   sharedMySum = 0;
   window.sharedBlock = 0;
   sharedWraps = [];
@@ -1974,12 +1976,24 @@ function sharedCancel(){
   window._sharedProgressLeft = null;
 
   // Clear persistence flags/values
-  localStorage.removeItem('sharedDockOpen');
-  localStorage.removeItem('sharedMySum');
-  localStorage.removeItem('sharedBlock');
+  try {
+    localStorage.removeItem('sharedDockOpen');
+    localStorage.removeItem('sharedMySum');
+    localStorage.removeItem('sharedBlock');
+    localStorage.removeItem('currentOrder');   // <- important for refresh
+  } catch(e){}
 
-  // Optional: refresh header to remove overlay immediately
-  try { updateSharedDockInfo?.(); updateProgressHeader?.(); } catch(e){}
+  // Make sure the live current order is no longer "shared"
+  if (current && current.shared) {
+    delete current.shared;
+    try { saveAll?.(); } catch(e){}
+  }
+
+  // Refresh header to remove overlay immediately
+  try {
+    updateSharedDockInfo?.();
+    updateProgressHeader?.();
+  } catch(e){}
 }
 
 
@@ -4067,11 +4081,18 @@ function completeOrder() {
   tempWraps = [];
   undoStack = [];
 
-  // ▼▼▼ NEW: hide merged shared pad on order close ▼▼▼
   try { persistSharedPadOpen(false); } catch(e){}
-  try { localStorage.setItem('sharedDockOpen','0'); } catch(e){}
-  const _pu = document.getElementById('padUnits'); if (_pu) _pu.value = '';
-  // ▲▲▲ NEW ▲▲▲
+
+  try {
+    // Close the bar and nuke shared-only persistence
+    localStorage.setItem('sharedDockOpen','0');
+    localStorage.removeItem('sharedMySum');
+    localStorage.removeItem('sharedBlock');
+    localStorage.removeItem('currentOrder');  // <- critical: stop reviving dead shared orders
+  } catch(e){}
+
+  const _pu = document.getElementById('padUnits');
+  if (_pu) _pu.value = '';
 
   // Hide active order UI
   const hide = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
