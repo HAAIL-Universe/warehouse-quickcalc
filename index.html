@@ -6791,30 +6791,15 @@ document.addEventListener('DOMContentLoaded', function () {
     inp.focus();
   });
 
-  // Global helpers used elsewhere
+  // Global helpers so existing code can show/hide without touching layout math
   window.showSharedPad = function(){
     pad.style.display = 'block';
+    // Reserve just enough space so nothing important is hidden
+    document.body.style.paddingBottom = '80px';
   };
   window.hideSharedPad = function(){
     pad.style.display = 'none';
     inp.blur();
-  };
-})();
-
-  // Clicking anywhere on the bar (except the Submit button) focuses the input
-  pad.addEventListener('click', (ev) => {
-    if (ev.target === sub) return;
-    inp.focus();
-  });
-
-  // Global helpers so existing code can show/hide without touching layout math
-  window.showSharedPad = function(){
-    pad.style.display = 'block';
-    // Reserve just enough space for the slim bar so nothing important is hidden
-    document.body.style.paddingBottom = '72px';
-  };
-  window.hideSharedPad = function(){
-    pad.style.display = 'none';
     document.body.style.paddingBottom = '';
   };
 })();
