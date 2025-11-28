@@ -3580,9 +3580,9 @@ function restoreActiveOrderUI() {
     const chipBox2 = document.getElementById('chipElapsed');
     if (chipBox2) chipBox2.style.display = 'none';
 
-    persistSharedPadOpen(true);
+    // No active order: shared bar should NOT be visible
+    persistSharedPadOpen(false);
     updateSharedDockInfo?.();
-    setTimeout(()=> document.getElementById('padUnits')?.focus(), 0);
 
     predictiveStop?.();
   }
