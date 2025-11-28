@@ -943,41 +943,54 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
 
 
   <!-- ===================================================================
-       SECTION E – SHARED ORDER PAD (FIXED NUMPAD DOCK)
-       =================================================================== -->
-  <!-- Shared Order Pad (merged dock + keypad) -->
+      SECTION E – SHARED ORDER BAR (SLIM DOCK USING NATIVE KEYPAD)
+      =================================================================== -->
   <div id="sharedPad" style="
     position:fixed; bottom:0; left:0; right:0; z-index:40;
     background:#0f131b; border-top:1px solid #29364a;
     padding:8px 10px; display:none;
   ">
-    <div class="cbPad" style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
-      <!-- TOP ROW (Submit spans 3 cols) -->
-      <button class="btn ok" id="padSubmit"
-              style="grid-column:span 3; font-size:18px; padding:12px 0;">
-        Submit
-      </button>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div id="sharedPadLabel"
+           class="sub"
+           style="font-size:12px; color:#9fb3c8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        Shared pick — units for this block
+      </div>
 
-      <!-- NUMPAD -->
-      <button class="btn ok" data-val="1">1</button>
-      <button class="btn ok" data-val="2">2</button>
-      <button class="btn ok" data-val="3">3</button>
-      <button class="btn ok" data-val="4">4</button>
-      <button class="btn ok" data-val="5">5</button>
-      <button class="btn ok" data-val="6">6</button>
-      <button class="btn ok" data-val="7">7</button>
-      <button class="btn ok" data-val="8">8</button>
-      <button class="btn ok" data-val="9">9</button>
-
-      <!-- BOTTOM ROW (same size as others) -->
-      <button class="btn ghost" id="padDel"  style="padding:12px 0;">⌫</button>
-      <button class="btn ok"    id="padZero" style="padding:12px 0;">0</button>
-      <input  id="padUnits" type="text" inputmode="none" placeholder="Units"
-              style="padding:12px 0; text-align:center; font-size:18px;
-                    border:1px solid #244b2c; border-radius:8px; background:#1a1f27; color:#d2e2d2;">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <input
+          id="padUnits"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="1"
+          placeholder="Units"
+          style="
+            width:90px;
+            padding:8px 10px;
+            text-align:center;
+            font-size:16px;
+            border:1px solid #244b2c;
+            border-radius:8px;
+            background:#1a1f27;
+            color:#d2e2d2;
+          "
+        >
+        <button
+          class="btn ok"
+          id="padSubmit"
+          type="button"
+          style="min-width:80px;"
+        >
+          Submit
+        </button>
+      </div>
     </div>
+
+    <!-- Hidden field still used by sharedSubmitUnits() -->
     <input id="sharedUnitsDock" type="hidden">
   </div>
+
 
   <!-- ===================================================================
        SECTION F – BREAK BAR (GLOBAL BOTTOM STICKY)
@@ -6632,37 +6645,48 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 
-// ─── Shared Pad (merged bar + keypad) ────────────────────────────────────────
+// Shared order bar (slim dock using native mobile keypad)
 (function initSharedPad(){
-  const pad    = document.getElementById('sharedPad');
-  const inp    = document.getElementById('padUnits');
-  const hid    = document.getElementById('sharedUnitsDock'); // reused by sharedSubmitUnits()
-  const delBtn = document.getElementById('padDel');
-  const zeroBtn= document.getElementById('padZero');
-  const subBtn = document.getElementById('padSubmit');
+  const pad = document.getElementById('sharedPad');
+  const inp = document.getElementById('padUnits');
+  const hid = document.getElementById('sharedUnitsDock'); // reused by sharedSubmitUnits()
+  const sub = document.getElementById('padSubmit');
 
-  if (!pad || !inp || !hid || !delBtn || !zeroBtn || !subBtn) return;
+  if (!pad || !inp || !hid || !sub) return;
 
-  // numeric keys
-  pad.querySelectorAll('[data-val]').forEach(btn=>{
-    btn.addEventListener('click', ()=> { inp.value += btn.dataset.val; });
-  });
-  delBtn.addEventListener('click', ()=> { inp.value = inp.value.slice(0,-1); });
-  zeroBtn.addEventListener('click', ()=> { inp.value += '0'; });
-
-  subBtn.addEventListener('click', ()=>{
+  // Submit handler – feed existing sharedSubmitUnits() pipeline
+  sub.addEventListener('click', () => {
     const n = parseInt(inp.value || '0', 10);
-    if (!(n > 0)) { inp.focus(); return; }
-    hid.value = String(n);                 // feed existing logic
-    try { sharedSubmitUnits(); } catch(e){}
+    if (!(n > 0)) {
+      inp.focus();
+      return;
+    }
+
+    hid.value = String(n);              // feed existing logic
+    try { sharedSubmitUnits(); } catch(e) {}
     inp.value = '';
+    inp.blur();                         // close mobile keyboard after submit
   });
 
-  // global helpers so existing code can show/hide without touching layout math
+  // Pressing Enter on the keyboard should behave like clicking Submit
+  inp.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      sub.click();
+    }
+  });
+
+  // Clicking anywhere on the bar (except the Submit button) focuses the input
+  pad.addEventListener('click', (ev) => {
+    if (ev.target === sub) return;
+    inp.focus();
+  });
+
+  // Global helpers so existing code can show/hide without touching layout math
   window.showSharedPad = function(){
     pad.style.display = 'block';
-    // reserve space so content above doesn’t get covered
-    document.body.style.paddingBottom = '220px';
+    // Reserve just enough space for the slim bar so nothing important is hidden
+    document.body.style.paddingBottom = '72px';
   };
   window.hideSharedPad = function(){
     pad.style.display = 'none';
