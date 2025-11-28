@@ -359,16 +359,28 @@ td.small { font-size:12px; color:#9fb3c8; }
   border-radius:10px;     /* same rounding as input */
 }
 
-/* === FIXED Add Button Sizing & Text Fit ======================== */
 .shared-pad-add {
-  padding: 4px 20px !important;   /* slightly shorter height + more width */
-  font-size: 12px !important;     /* shrinks text so "Add" fits cleanly */
-  height: 30px !important;        /* matches Units field better */
-  line-height: 20px !important;
-  min-width: 60px !important;     /* guarantees enough horizontal space */
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #344563;
+  background: #182133;
+  color: #f5f7ff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.shared-pad-add:hover {
+  border-color: #3d6df2;
+}
+/* Flash state when units have just been added */
+.shared-pad-add.shared-pad-added {
+  background: #1f3d2c;
+  border-color: #39ff88;
+  box-shadow:
+    0 0 0 1px rgba(57,255,136,.4),
+    0 0 18px rgba(57,255,136,.25);
 }
 
 /* Visual confirmation when units are added */
@@ -1981,34 +1993,52 @@ function markFirstOrderStarted(){ localStorage.setItem(shiftDateKey(), '1'); }
 
 // Early restore pipeline for break + shared-order state on load
 function earlyRestore(){
-  try{
-    // ── 1. Reload persisted state once (no UI) ──
-    loadAll?.();
+  try {
+    // ── 1. Restore active break/lunch early and bail if needed ──
+    try {
+      const raw = localStorage.getItem('breakDraft');
+      if (raw) {
+        breakDraft = JSON.parse(raw);
+        if (breakDraft) {
+          restoreBreakDraftIfAny();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore active break/lunch:', e);
+    }
 
-    // ── 2. Rebuild any break / delay UI drafts ──
+    // ── 2. Load all saved data first ──
+    loadAll?.();
     restoreBreakDraftIfAny?.();
 
     // ── 3. Try to rehydrate any partial Shared Order state ──
     try {
       const stored = localStorage.getItem('currentOrder');
-      if (stored) {
+      if (stored && !window.current) {
         const parsed = JSON.parse(stored);
         if (parsed && typeof parsed === 'object') {
           window.current = parsed;
         }
       }
-    } catch(e){}
 
-    // Always treat "current.shared" as source of truth for the bottom bar
-    const isShared = !!(window.current && window.current.shared);
+      const sm = parseInt(localStorage.getItem('sharedMySum') || '0', 10);
+      const sb = parseInt(localStorage.getItem('sharedBlock') || '0', 10);
+      window.sharedMySum = (isFinite(sm) && sm >= 0) ? sm : 0;
+      window.sharedBlock = (isFinite(sb) && sb >= 0) ? sb : 0;
+    } catch(e) {
+      console.warn('Shared session rehydrate failed', e);
+    }
 
     // ── 4. Shared dock: always show pad when in a shared order ──
+    const isShared = !!(window.current && window.current.shared);
+
     if (isShared) {
-      // Show the bar + keep bottom padding consistent
+      // Keep bar open + bottom padding consistent
       persistSharedPadOpen(true);
       try { localStorage.setItem('sharedDockOpen','1'); } catch(e){}
 
-      // Rebuild shared progress + predictive ETA hooks if we have a live total
+      // Rebuild shared progress + predictive ETA if we have a live total
       if (current && Number.isFinite(+current.total)) {
         const total = +current.total;
         const left  = Math.max(0, total - (window.sharedMySum || 0));
@@ -2030,12 +2060,15 @@ function earlyRestore(){
       }
 
       try { updateSharedDockInfo?.(); } catch(e){}
-      setTimeout(()=> document.getElementById('padUnits')?.focus(), 100);
+      setTimeout(() => document.getElementById('padUnits')?.focus(), 100);
 
     } else {
       // Not in shared mode → bar should be hidden and preference reset
       persistSharedPadOpen(false);
       try { localStorage.setItem('sharedDockOpen','0'); } catch(e){}
+      window.sharedMySum = 0;
+      window.sharedBlock = 0;
+      try { updateSharedDockInfo?.(); } catch(e){}
     }
 
     // ── 5. Ensure UI re-renders for any active order ──
@@ -6718,64 +6751,47 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 
-// ─── Shared Pad (full-width bar using native keypad) ────────────────────────
-(function initSharedPad(){
-  const pad = document.getElementById('sharedPad');
-  const inp = document.getElementById('padUnits');
-  const hid = document.getElementById('sharedUnitsDock'); // reused by sharedSubmitUnits()
-  const sub = document.getElementById('padSubmit');
+// Shared pad: wire up bar input + Add button → sharedSubmitUnits + visual confirm
+function initSharedPad(){
+  const inp    = document.getElementById('padUnits');
+  const btn    = document.getElementById('padSubmit');
+  const hidden = document.getElementById('sharedUnitsDock');
+  if (!inp || !btn || !hidden) return;
 
-  if (!pad || !inp || !hid || !sub) return;
-
-  // Click "Add" → push units into existing sharedSubmitUnits() pipeline
-  sub.addEventListener('click', () => {
-    const n = parseInt(inp.value || '0', 10);
-    if (!(n > 0)) {
+  function doSubmit(){
+    const v = parseInt(inp.value || '0', 10);
+    if (!(v > 0)) {
       inp.focus();
       return;
     }
 
-    hid.value = String(n);
-    try { sharedSubmitUnits(); } catch (e) {}
+    // Pipe value into the hidden field used by sharedSubmitUnits()
+    hidden.value = String(v);
+    sharedSubmitUnits();
 
-    // Clear input + close mobile keyboard
+    // Clear + collapse keyboard
     inp.value = '';
     inp.blur();
 
-    // Visual confirmation: flash the Add button green for ~3s
-    sub.classList.add('shared-pad-added');
+    // Flash the Add button green for a few seconds
+    btn.classList.add('shared-pad-added');
+    // reset after ~3s
     setTimeout(() => {
-      sub.classList.remove('shared-pad-added');
+      btn.classList.remove('shared-pad-added');
     }, 3000);
-  });
+  }
 
-  // Enter key acts like Add
+  // Click Add
+  btn.addEventListener('click', doSubmit);
+
+  // Pressing Enter on the numeric field should act like Add
   inp.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter') {
       ev.preventDefault();
-      sub.click();
+      doSubmit();
     }
   });
-
-  // Tapping the bar (label area) focuses the input
-  pad.addEventListener('click', (ev) => {
-    if (ev.target === sub || ev.target === inp) return;
-    inp.focus();
-  });
-
-  // Global helpers used elsewhere when starting/ending shared picks
-  window.showSharedPad = function(){
-    pad.style.display = 'block';
-    // Keep content above the bar so it never hides "Close Early..."
-    document.body.style.paddingBottom = '72px';
-  };
-  window.hideSharedPad = function(){
-    pad.style.display = 'none';
-    document.body.style.paddingBottom = '';
-    inp.blur();
-  };
-})();
-
+}
 
 function openWrapModal(){
   if (!current) return;
