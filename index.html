@@ -278,6 +278,60 @@ td.small { font-size:12px; color:#9fb3c8; }
 .cbPad button { padding:28px 0; border-radius:10px; border:1px solid #32507a; background:#1a2a40; color:var(--ink); font-weight:500; font-size:22px; }
 .cbChips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .cbSummary { margin-left:auto; text-align:right; font-weight:800; }
+/* =====================================================================
+   11.5 SHARED ORDER BAR (BOTTOM DOCK)
+   ===================================================================== */
+.shared-pad-inner{
+  max-width:700px;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.shared-pad-label{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:#c8d4e4;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.shared-pad-controls{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.shared-pad-input{
+  width:96px;
+  padding:8px 10px;
+  text-align:center;
+  font-size:16px;
+  font-weight:600;
+  border-radius:10px;
+  border:1px solid #5e1a1e;
+  background:#05070b;
+  color:var(--ink);
+}
+
+/* Hide number spinners so it looks like a normal WQT field */
+#sharedPad input[type=number]::-webkit-outer-spin-button,
+#sharedPad input[type=number]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+#sharedPad input[type=number]{
+  -moz-appearance:textfield;
+}
+
+.shared-pad-submit{
+  padding:8px 16px;
+  font-size:14px;
+}
 
 /* =====================================================================
    12. BREAK BAR (STICKY BOTTOM) + PROGRESS HEADER / BAR / PACE COLOURS
@@ -946,18 +1000,23 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
       SECTION E – SHARED ORDER BAR (SLIM DOCK USING NATIVE KEYPAD)
       =================================================================== -->
   <div id="sharedPad" style="
-    position:fixed; bottom:0; left:0; right:0; z-index:40;
-    background:#0f131b; border-top:1px solid #29364a;
-    padding:8px 10px; display:none;
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    z-index:40;
+    background:#05070b;
+    border-top:1px solid #5e1a1e;
+    padding:8px 12px;
+    display:none;
+    box-shadow:0 -6px 20px rgba(0,0,0,.75);
   ">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-      <div id="sharedPadLabel"
-           class="sub"
-           style="font-size:12px; color:#9fb3c8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    <div class="shared-pad-inner">
+      <div id="sharedPadLabel" class="shared-pad-label">
         Shared pick — units for this block
       </div>
 
-      <div style="display:flex; align-items:center; gap:6px;">
+      <div class="shared-pad-controls">
         <input
           id="padUnits"
           type="number"
@@ -965,22 +1024,12 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
           min="0"
           step="1"
           placeholder="Units"
-          style="
-            width:90px;
-            padding:8px 10px;
-            text-align:center;
-            font-size:16px;
-            border:1px solid #244b2c;
-            border-radius:8px;
-            background:#1a1f27;
-            color:#d2e2d2;
-          "
+          class="shared-pad-input"
         >
         <button
-          class="btn ok"
+          class="btn ok shared-pad-submit"
           id="padSubmit"
           type="button"
-          style="min-width:80px;"
         >
           Submit
         </button>
@@ -990,7 +1039,6 @@ input[type="number"], input[type="time"], input[type="text"], select, textarea,
     <!-- Hidden field still used by sharedSubmitUnits() -->
     <input id="sharedUnitsDock" type="hidden">
   </div>
-
 
   <!-- ===================================================================
        SECTION F – BREAK BAR (GLOBAL BOTTOM STICKY)
