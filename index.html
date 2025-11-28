@@ -1966,7 +1966,7 @@ function sharedCancel(){
 
   // Hide the bar now
   try { persistSharedPadOpen(false); } catch(e){}
-  hideSharedPad?.?.(); // safe even if not defined
+  hideSharedPad?.();
 
   // Reset in-memory shared state
   sharedMySum = 0;
@@ -1980,10 +1980,10 @@ function sharedCancel(){
     localStorage.removeItem('sharedDockOpen');
     localStorage.removeItem('sharedMySum');
     localStorage.removeItem('sharedBlock');
-    localStorage.removeItem('currentOrder');   // <- important for refresh
+    localStorage.removeItem('currentOrder');   // stop earlyRestore reviving dead shared orders
   } catch(e){}
 
-  // Make sure the live current order is no longer "shared"
+  // Make sure the live current order is no longer “shared”
   if (current && current.shared) {
     delete current.shared;
     try { saveAll?.(); } catch(e){}
@@ -1995,7 +1995,6 @@ function sharedCancel(){
     updateProgressHeader?.();
   } catch(e){}
 }
-
 
 // Predictive ETA/live-rate state bundle
 let predictive = {
