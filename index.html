@@ -3187,9 +3187,10 @@ function showTab(which){
   if (which === 'tracker') document.getElementById('tabTrackBtn').classList.add('active');
   if (which === 'history') document.getElementById('tabHistBtn').classList.add('active');
 
-  // live banner only on tracker
+  // Live banner: only on Tracker *and* only once a shift has started
   const lb = document.getElementById('liveBanner');
-  if (lb) lb.classList.toggle('hidden', which !== 'tracker');
+  const hasShift = !!startTime;   // startTime is set when the shift begins / is restored
+  if (lb) lb.classList.toggle('hidden', which !== 'tracker' || !hasShift);
 
   // convenience handles
   const form = document.getElementById('orderHeaderForm');
@@ -3200,12 +3201,8 @@ function showTab(which){
   if (which === 'history') {
     renderWeeklySummary();
     initWeekCardToggle();
-    // hide order-only bottom controls on history
-    ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-    saveAll();
+    // hide order-area when on history
+    if (area) area.style.display = 'none';
     return;
   }
 
@@ -3242,7 +3239,7 @@ function showTab(which){
     return;
   }
 
-  // ---------- CALC TAB (default) ----------
+  // ---------- CALC TAB ----------
   ['btnDelay','btnUndo','btnB','btnL','btnCloseEarly'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -3322,11 +3319,16 @@ function beginShift(){
   updateEndShiftVisibility?.();
   updateEndShiftVisibility?.();
   updateCloseEarlyVisibility?.();
+
+  // Ensure live banner appears on Tracker now that a shift is active
+  if (typeof showTab === 'function') showTab('tracker');
+
   saveAll();
 
   // Lock the bottom action row layout
   ensureActionRowLayout?.();
 }
+
 
 // --- 12h time helpers (no seconds) ---
 // Simple hour label for buttons (7am / 12pm etc.)
